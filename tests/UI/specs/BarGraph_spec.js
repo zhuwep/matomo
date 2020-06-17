@@ -21,6 +21,7 @@ describe("BarGraph", function () {
 
     it.only("should load correctly", async function () {
         await page.goto(url);
+        await page.waitFor(5000);
         expect(await page.screenshot({ fullPage: true })).to.matchImage('load');
     });
 
