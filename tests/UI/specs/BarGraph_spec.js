@@ -19,7 +19,7 @@ describe("BarGraph", function () {
         testEnvironment.save();
     });
 
-    it("should load correctly", async function () {
+    it.only("should load correctly", async function () {
         await page.goto(url);
         expect(await page.screenshot({ fullPage: true })).to.matchImage('load');
     });
