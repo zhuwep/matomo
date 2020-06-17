@@ -15,7 +15,7 @@ const parseUrl = urlModule.parse,
     formatUrl = urlModule.format;
 
 const AJAX_IDLE_THRESHOLD = 500; // same as networkIdle event
-const VERBOSE = false;
+const VERBOSE = true;
 const PAGE_METHODS_TO_PROXY = [
     '$',
     '$$',
