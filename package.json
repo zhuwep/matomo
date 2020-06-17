@@ -38,7 +38,7 @@
     "jquery-ui-dist": "^1.12.1",
     "jquery.browser": "^0.1.0",
     "jquery.scrollto": "^2.1.2",
-    "jquery.dotdotdot": "^1.8.3",
+    "jquery.dotdotdot": "^3.2.3",
     "materialize-css": "^1.0.0",
     "mousetrap": "^1.6.5",
     "ng-dialog": "^1.4.0",
