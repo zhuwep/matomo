@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,7 @@
 
 namespace Piwik;
 
-use Piwik\Network\IPUtils;
+use Matomo\Network\IPUtils;
 
 /**
  * Contains IP address helper functions (for both IPv4 and IPv6).
@@ -17,9 +17,9 @@ use Piwik\Network\IPUtils;
  * As of Piwik 2.9, most methods in this class are deprecated. You are
  * encouraged to use classes from the Piwik "Network" component:
  *
- * @see \Piwik\Network\IP
- * @see \Piwik\Network\IPUtils
- * @link https://github.com/piwik/component-network
+ * @see \Matomo\Network\IP
+ * @see \Matomo\Network\IPUtils
+ * @link https://github.com/matomo-org/component-network
  *
  * As of Piwik 1.3, IP addresses are stored in the DB has VARBINARY(16),
  * and passed around in network address format which has the advantage of
@@ -78,7 +78,11 @@ class IP
             $proxyIps = array();
         }
 
-        $proxyIps[] = $default;
+        $shouldReadLastProxyIp = Config::getInstance()->General['proxy_ip_read_last_in_list'] == 1;
+
+        if (!$shouldReadLastProxyIp) {
+            $proxyIps[] = $default;
+        }
 
         // examine proxy headers
         foreach ($proxyHeaders as $proxyHeader) {
@@ -86,7 +90,11 @@ class IP
                 // this may be buggy if someone has proxy IPs and proxy host headers configured as
                 // `$_SERVER[$proxyHeader]` could be eg $_SERVER['HTTP_X_FORWARDED_HOST'] and
                 // include an actual host name, not an IP
-                $proxyIp = self::getFirstIpFromList($_SERVER[$proxyHeader], $proxyIps);
+                if ($shouldReadLastProxyIp) {
+                    $proxyIp = self::getLastIpFromList($_SERVER[$proxyHeader], $proxyIps);
+                } else {
+                    $proxyIp = self::getFirstIpFromList($_SERVER[$proxyHeader], $proxyIps);
+                }
                 if (strlen($proxyIp) && stripos($proxyIp, 'unknown') === false) {
                     return $proxyIp;
                 }
@@ -107,20 +115,38 @@ class IP
     {
         $p = strrpos($csv, ',');
         if ($p !== false) {
-            $elements = explode(',', $csv);
-            foreach ($elements as $ipString) {
-                $element = trim(Common::sanitizeInputValue($ipString));
-                if(empty($element)) {
-                    continue;
-                }
-                $ip = \Piwik\Network\IP::fromStringIP(IPUtils::sanitizeIp($element));
-                if (empty($excludedIps) || (!in_array($element, $excludedIps) && !$ip->isInRanges($excludedIps))) {
-                    return $element;
-                }
-            }
-
-            return '';
+            $elements = self::getIpsFromList($csv, $excludedIps);
+            return reset($elements) ?: '';
         }
         return trim(Common::sanitizeInputValue($csv));
+    }
+
+    public static function getLastIpFromList($csv, $excludedIps = null)
+    {
+        $p = strrpos($csv, ',');
+        if ($p !== false) {
+            $elements = self::getIpsFromList($csv, $excludedIps);
+            return end($elements) ?: '';
+        }
+        return trim(Common::sanitizeInputValue($csv));
+    }
+
+    private static function getIpsFromList(string $csv, ?array $excludedIps)
+    {
+        $result = [];
+
+        $elements = explode(',', $csv);
+        foreach ($elements as $ipString) {
+            $element = trim(Common::sanitizeInputValue($ipString));
+            if(empty($element)) {
+                continue;
+            }
+            $ip = \Matomo\Network\IP::fromStringIP(IPUtils::sanitizeIp($element));
+            if (empty($excludedIps) || (!in_array($element, $excludedIps) && !$ip->isInRanges($excludedIps))) {
+                $result[] = $element;
+            }
+        }
+
+        return $result;
     }
 }

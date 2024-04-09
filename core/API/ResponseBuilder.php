@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,10 +11,10 @@ namespace Piwik\API;
 use Exception;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\DataTable\Renderer;
 use Piwik\DataTable\DataTableInterface;
 use Piwik\DataTable\Filter\ColumnDelete;
 use Piwik\DataTable\Filter\Pattern;
+use Piwik\DataTable\Renderer;
 use Piwik\Http\HttpCodeException;
 use Piwik\Plugins\Monolog\Processor\ExceptionToTextProcessor;
 
@@ -136,7 +136,8 @@ class ResponseBuilder
         $e       = $this->decorateExceptionWithDebugTrace($e);
         $message = $this->formatExceptionMessage($e);
 
-        if ($this->sendHeader
+        if (
+            $this->sendHeader
             && $e instanceof HttpCodeException
             && $e->getCode() > 0
         ) {
@@ -174,7 +175,7 @@ class ResponseBuilder
      */
     private function formatExceptionMessage($exception)
     {
-        $message = ExceptionToTextProcessor::getWholeBacktrace($exception, $this->shouldPrintBacktrace);
+        $message = ExceptionToTextProcessor::getMessageAndWholeBacktrace($exception, $this->shouldPrintBacktrace);
 
         if ($exception instanceof \Piwik\Exception\Exception && $exception->isHtmlMessage() && Request::isRootRequestApiRequest()) {
             $message = strip_tags(str_replace('<br />', PHP_EOL, $message));

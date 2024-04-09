@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
@@ -56,7 +56,7 @@ class ManyVisitsWithGeoIP extends Fixture
     protected $idGoal;
     protected $idGoal2;
 
-    public function setUp()
+    public function setUp(): void
     {
         // set option, so tracked data for the past won't get converted
         Option::set(GeoIp2::SWITCH_TO_ISO_REGIONS_OPTION_NAME, 1);
@@ -78,30 +78,31 @@ class ManyVisitsWithGeoIP extends Fixture
         $this->setLocationProvider('GeoIP2-City.mmdb');
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->unsetLocationProvider();
     }
 
     private function setUpWebsitesAndGoals()
     {
-        if (!self::siteCreated($idSite = 1)) {
-            self::createWebsite($this->dateTime, 0, "Site 1");
+        if (!self::siteCreated($this->idSite)) {
+            self::createWebsite($this->dateTime, 0, "Site " . $this->idSite);
         }
 
-        if (!self::goalExists($idSite = 1, $idGoal = 1)) {
+        if (!self::goalExists($this->idSite, $idGoal = 1)) {
             $this->idGoal = API::getInstance()->addGoal($this->idSite, 'all', 'url', 'http', 'contains', false, 5);
         }
 
-        if (!self::goalExists($idSite = 1, $idGoal = 2)) {
+        if (!self::goalExists($this->idSite, $idGoal = 2)) {
             $this->idGoal2 = API::getInstance()->addGoal($this->idSite, 'two', 'url', 'xxxxxxxxxxxxx', 'contains', false, 5, false, 'twodesc');
         }
     }
 
+    protected $calledCounter = 0;
+
     private function trackVisits($visitorCount, $setIp = false, $useLocal = true, $doBulk = false)
     {
-        static $calledCounter = 0;
-        $calledCounter++;
+        $this->calledCounter++;
 
         $dateTime = $this->dateTime;
         $idSite = $this->idSite;
@@ -119,7 +120,7 @@ class ManyVisitsWithGeoIP extends Fixture
         $t->setTokenAuth(self::getTokenAuth());
 
         for ($i = 0; $i != $visitorCount; ++$i) {
-            $this->trackVisit($t, $calledCounter, $i, $doBulk, array('setIp' => $setIp));
+            $this->trackVisit($t, $this->calledCounter, $i, $doBulk, array('setIp' => $setIp));
         }
 
         if ($doBulk) {
@@ -129,18 +130,18 @@ class ManyVisitsWithGeoIP extends Fixture
 
     /**
      * Insert a new visit into the database.
-     * @param \PiwikTracker $t          The tracker to record the visits on
-     * @param int $fixtureCounter       Number of times this fixture has been run 
+     * @param \MatomoTracker $t          The tracker to record the visits on
+     * @param int $fixtureCounter       Number of times this fixture has been run
      * @param int $visitorCounter       Visitor counter within this execution of the fixture
      * @param boolean $doBulk           Should this visit be left for bulk insert later, or processed now?
      * @param array $params             Other params as required to set up the visit
      */
-    protected function trackVisit(\PiwikTracker $t, $fixtureCounter, $visitorCounter, $doBulk, array $params)
+    protected function trackVisit(\MatomoTracker $t, $fixtureCounter, $visitorCounter, $doBulk, array $params)
     {
         $setIp = isset($params['setIp']) && $params['setIp'];
 
         // NOTE: floor() is so some visits share the same visit ID
-        $t->setVisitorId( substr(md5(floor($visitorCounter / 2) + $fixtureCounter * 1000), 0, $t::LENGTH_VISITOR_ID));
+        $t->setVisitorId(substr(md5(floor($visitorCounter / 2) + $fixtureCounter * 1000), 0, $t::LENGTH_VISITOR_ID));
 
         $userAgent = null;
         if ($setIp) {
@@ -158,10 +159,10 @@ class ManyVisitsWithGeoIP extends Fixture
         $date = Date::factory($this->dateTime)->addDay($visitorCounter);
         $t->setForceVisitDateTime($date->getDatetime());
         $t->setUrl("http://piwik.net/grue/lair");
-        $t->setCustomVariable(1, 'Cvar 1 name', 'Cvar1 value is ' .$visitorCounter , 'visit');
-        $t->setCustomVariable(5, 'Cvar 5 name', 'Cvar5 value is ' .$visitorCounter , 'visit');
-        $t->setCustomVariable(2, 'Cvar 2 PAGE name', 'Cvar2 PAGE value is ' .$visitorCounter, 'page');
-        $t->setCustomVariable(5, 'Cvar 5 PAGE name', 'Cvar5 PAGE value is ' .$visitorCounter, 'page');
+        $t->setCustomVariable(1, 'Cvar 1 name', 'Cvar1 value is ' . $visitorCounter, 'visit');
+        $t->setCustomVariable(5, 'Cvar 5 name', 'Cvar5 value is ' . $visitorCounter, 'visit');
+        $t->setCustomVariable(2, 'Cvar 2 PAGE name', 'Cvar2 PAGE value is ' . $visitorCounter, 'page');
+        $t->setCustomVariable(5, 'Cvar 5 PAGE name', 'Cvar5 PAGE value is ' . $visitorCounter, 'page');
 
         $r = $t->doTrackPageView('It\'s <script> pitch black...');
         if (!$doBulk) {
@@ -178,12 +179,6 @@ class ManyVisitsWithGeoIP extends Fixture
         $t->setUrl("http://piwik.net/space/quest/iv");
 
         // Manually record some data
-        $t->setDebugStringAppend(
-            '&_idts='. $date->subDay(100)->getTimestampUTC(). // first visit timestamp
-            '&_ects='. $date->subDay(50)->getTimestampUTC(). // Timestamp ecommerce
-            '&_viewts='. $date->subDay(10)->getTimestampUTC(). // Last visit timestamp
-            '&_idvc=5' // Visit count
-        );
         $r = $t->doTrackPageView("Space Quest XII");
 
         if (!$doBulk) {
@@ -199,7 +194,7 @@ class ManyVisitsWithGeoIP extends Fixture
         $date = $date->addHour(0.1);
         $t->setForceVisitDateTime($date->getDatetime());
         if( ($visitorCounter % 2) == 0) {
-            $r = $t->doTrackSiteSearch('Bring on the party', 'CAT');
+            $r = $t->doTrackSiteSearch('Bring on the party', 'CAT', $visitorCounter * 6);
         }
 
         if (!$doBulk) {
@@ -215,23 +210,24 @@ class ManyVisitsWithGeoIP extends Fixture
 
         $date = $date->addHour(0.05);
         $t->setForceVisitDateTime($date->getDatetime());
-        $t->doTrackAction('http://example.org/path/file' . $visitorCounter . '.zip', "download" );
+        $t->doTrackAction('http://example.org/path/file' . $visitorCounter . '.zip', "download");
         if (!$doBulk) {
             self::checkResponse($r);
         }
 
         $date = $date->addHour(0.05);
         $t->setForceVisitDateTime($date->getDatetime());
-        $r = $t->doTrackAction('http://example-outlink.org/' . $visitorCounter . '.html', "link" );
+        $r = $t->doTrackAction('http://example-outlink.org/' . $visitorCounter . '.html', "link");
         if (!$doBulk) {
             self::checkResponse($r);
         }
 
         $date = $date->addHour(0.05);
         $t->setForceVisitDateTime($date->getDatetime());
-        $r = $t->doTrackEvent('Cat' . $visitorCounter, 
-            'Action' . $visitorCounter, 
-            'Name' . $visitorCounter, 
+        $r = $t->doTrackEvent(
+            'Cat' . $visitorCounter,
+            'Action' . $visitorCounter,
+            'Name' . $visitorCounter,
             345.678 + $visitorCounter
         );
         if (!$doBulk) {

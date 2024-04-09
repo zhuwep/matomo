@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,6 +15,7 @@ use Piwik\Http;
 use Piwik\Plugins\CoreUpdater\ReleaseChannel\LatestStable;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Unzip;
+use Piwik\Version;
 
 class LatestStableInstall extends Fixture
 {
@@ -30,7 +31,7 @@ class LatestStableInstall extends Fixture
         $this->subdirToInstall = $subdirToInstall;
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->removeLatestStableInstall();
 
@@ -40,7 +41,13 @@ class LatestStableInstall extends Fixture
         // install latest stable
         $this->downloadAndUnzipLatestStable();
         $tokenAuth = $this->installSubdirectoryInstall();
+        $this->placeAndActivateIncompatibleExamplePlugin();
         $this->verifyInstall($tokenAuth);
+    }
+
+    public function tearDown(): void
+    {
+        $this->removeLatestStableInstall();
     }
 
     private function removeLatestStableInstall()
@@ -52,16 +59,19 @@ class LatestStableInstall extends Fixture
             Filesystem::unlinkRecursive($installSubdirectory, true);
         }
 
+        if (file_exists($this->getBuildArchivePath())) {
+            Filesystem::unlinkRecursive($this->getBuildArchivePath(), true);
+        }
+
         $latestStableZip = $this->getArchiveDestPath();
         if (file_exists($latestStableZip)) {
             unlink($latestStableZip);
         }
     }
 
-    private function downloadAndUnzipLatestStable()
+    protected function downloadAndUnzipLatestStable()
     {
-        $latestStableChannel = new LatestStable();
-        $url = 'http' . $latestStableChannel->getDownloadUrlWithoutScheme(null);
+        $url = $this->getDownloadUrl();
 
         $archiveFile = $this->getArchiveDestPath();
         Http::fetchRemoteFile($url, $archiveFile, 0, self::DOWNLOAD_TIMEOUT);
@@ -72,13 +82,20 @@ class LatestStableInstall extends Fixture
         $archive = Unzip::factory('PclZip', $archiveFile);
         $archiveFiles = $archive->extract($installSubdirectory);
 
-        if (0 == $archiveFiles
+        if (
+            0 == $archiveFiles
             || 0 == count($archiveFiles)
         ) {
             throw new \Exception("Failed to extract matomo build ZIP archive.");
         }
 
-        shell_exec('mv "' . $installSubdirectory . '"/piwik/* "' . $installSubdirectory . '"');
+        shell_exec('mv "' . $installSubdirectory . '"/matomo/* "' . $installSubdirectory . '"');
+    }
+
+    protected function getDownloadUrl()
+    {
+        $latestStableChannel = new LatestStable();
+        return 'http' . $latestStableChannel->getDownloadUrlWithoutScheme(null);
     }
 
     private function installSubdirectoryInstall()
@@ -103,6 +120,28 @@ class LatestStableInstall extends Fixture
         return $tokenAuth;
     }
 
+    private function placeAndActivateIncompatibleExamplePlugin()
+    {
+        $source = PIWIK_DOCUMENT_ROOT . '/plugins/ExampleTracker/';
+        $target = $this->getInstallSubdirectoryPath() . '/plugins/ExampleTracker/';
+        Filesystem::mkdir($target);
+        Filesystem::copyRecursive($source, $target);
+        // remove columns to avoid adding them to the database
+        Filesystem::unlinkRecursive($target . '/Columns/', true);
+
+        $pluginJson = json_decode(file_get_contents($target . 'plugin.json'), true);
+        // mark plugin as incompatible with version we will be updating to
+        $pluginJson['require']['matomo'] = '>=4.0.0-b1,<' . Version::VERSION;
+        file_put_contents($target . 'plugin.json', json_encode($pluginJson));
+
+        // activate ExampleTracker, having it incompatible to next version
+        // deactivating the plugin during update will cause CustomJsTracker plugin to update the tracker file
+        chmod($this->getInstallSubdirectoryPath() . '/console', 0775);
+        passthru($this->getInstallSubdirectoryPath() . '/console plugin:activate ExampleTracker');
+        passthru($this->getInstallSubdirectoryPath() . '/console core:version');
+        passthru($this->getInstallSubdirectoryPath() . '/console plugin:list');
+    }
+
     private function verifyInstall($tokenAuth)
     {
         $url = Fixture::getRootUrl() . '/' . $this->subdirToInstall
@@ -123,6 +162,11 @@ class LatestStableInstall extends Fixture
         return PIWIK_INCLUDE_PATH . DIRECTORY_SEPARATOR . $this->subdirToInstall;
     }
 
+    private function getBuildArchivePath()
+    {
+        return PIWIK_INCLUDE_PATH . DIRECTORY_SEPARATOR . 'archives';
+    }
+
     private function getDbConfigJson()
     {
         $dbConfig = Config::getInstance()->database;
@@ -132,41 +176,22 @@ class LatestStableInstall extends Fixture
 
     private function generateMatomoPackageFromGit()
     {
-        $this->cloneMatomoPackageRepo();
-        $this->runMatomoPackage();
-    }
-
-    private function cloneMatomoPackageRepo()
-    {
-        $pathToMatomoPackage = PIWIK_INCLUDE_PATH . '/../matomo-package';
-        if (file_exists($pathToMatomoPackage)) {
-            Filesystem::unlinkRecursive($pathToMatomoPackage, true);
-        }
-
-        $command = 'git clone https://github.com/matomo-org/matomo-package.git --depth=1 "' . $pathToMatomoPackage . '"';
-        exec($command, $output, $returnCode);
-
-        if ($returnCode != 0) {
-            throw new \Exception("Could not clone matomo-package repo: " . implode("\n", $output));
-        }
-    }
-
-    private function runMatomoPackage()
-    {
         $matomoBuildPath = PIWIK_INCLUDE_PATH . '/matomo-build.zip';
         if (file_exists($matomoBuildPath)) {
             unlink($matomoBuildPath);
         }
 
-        $command = 'cd "' . PIWIK_INCLUDE_PATH . '/../matomo-package" && ';
-        $command .= './scripts/build-package.sh "' . PIWIK_INCLUDE_PATH . '" piwik true';
+        $command = 'cd ' . PIWIK_INCLUDE_PATH . ' && ';
+        $command .= 'chmod 755 ./.github/scripts/*.sh && ';
+        $command .= './.github/scripts/build-package.sh build matomo';
 
         exec($command, $output, $returnCode);
+        echo implode("\n", $output);
         if ($returnCode != 0) {
             throw new \Exception("matomo-package failed: " . implode("\n", $output));
         }
 
-        $path = PIWIK_INCLUDE_PATH . '/../matomo-package/piwik-build.zip';
+        $path = $this->getBuildArchivePath() . '/matomo-build.zip';
         rename($path, $matomoBuildPath);
     }
 }

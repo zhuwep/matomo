@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -36,7 +36,7 @@ class StorageTest extends IntegrationTestCase
      */
     protected $settingName = 'myname';
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -95,8 +95,10 @@ class StorageTest extends IntegrationTestCase
         $this->storage->setValue($this->settingName, 'myRandomVal');
         $this->storage->save();
 
-        $this->assertEquals(array($this->settingName => 'myRandomVal'),
-                            $this->loadValuesFromBackend());
+        $this->assertEquals(
+            array($this->settingName => 'myRandomVal'),
+            $this->loadValuesFromBackend()
+        );
     }
 
     public function test_save_shouldPersistMultipleValues_ContainingInt()
@@ -105,8 +107,10 @@ class StorageTest extends IntegrationTestCase
         $this->storage->setValue('mySecondName', 5);
         $this->storage->save();
 
-        $this->assertEquals(array($this->settingName => 'myRandomVal', 'mySecondName' => 5),
-                            $this->loadValuesFromBackend());
+        $this->assertEquals(
+            array($this->settingName => 'myRandomVal', 'mySecondName' => 5),
+            $this->loadValuesFromBackend()
+        );
     }
 
     public function test_save_shouldNotClearTrackerCacheEntries_IfThereWasNoChange()
@@ -149,5 +153,4 @@ class StorageTest extends IntegrationTestCase
     {
         return $this->backend->load();
     }
-
 }

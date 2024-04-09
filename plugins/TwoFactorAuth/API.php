@@ -22,10 +22,11 @@ class API extends \Piwik\Plugin\API
         $this->twoFa = $twoFa;
     }
 
-    public function resetTwoFactorAuth($userLogin)
+    public function resetTwoFactorAuth($userLogin, $passwordConfirmation = '')
     {
         Piwik::checkUserHasSuperUserAccess();
 
+        $this->confirmCurrentUserPassword($passwordConfirmation);
         $this->twoFa->disable2FAforUser($userLogin);
     }
 }

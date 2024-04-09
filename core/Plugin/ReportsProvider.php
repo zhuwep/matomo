@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -42,7 +42,7 @@ class ReportsProvider
 
         $klassName = $listApiToReport[$api];
 
-        return new $klassName;
+        return new $klassName();
     }
 
     private static function getMapOfModuleActionsToReport()
@@ -153,7 +153,7 @@ class ReportsProvider
              *     public function filterReports(&$reports)
              *     {
              *         foreach ($reports as $index => $report) {
-             *              if ($report->getCategory() === 'Actions') {}
+             *              if ($report->getCategoryId() === 'General_Actions') {
              *                  unset($reports[$index]); // remove all reports having this action
              *              }
              *         }
@@ -198,6 +198,16 @@ class ReportsProvider
         return $result;
     }
 
+    /**
+     * @param string|null $catIdA
+     * @param string|null $subcatIdA
+     * @param int $orderA
+     * @param string|null $catIdB
+     * @param string|null $subcatIdB
+     * @param int $orderB
+     *
+     * @return int
+     */
     public function compareCategories($catIdA, $subcatIdA, $orderA, $catIdB, $subcatIdB, $orderB)
     {
         if (!isset($this->categoryList)) {
@@ -228,7 +238,6 @@ class ReportsProvider
                     }
 
                     return $subcatA->getOrder() < $subcatB->getOrder() ? -1 : 1;
-
                 } elseif ($subcatA) {
                     return 1;
                 } elseif ($subcatB) {
@@ -243,7 +252,6 @@ class ReportsProvider
             }
 
             return $catA->getOrder() < $catB->getOrder() ? -1 : 1;
-
         } elseif (isset($catA)) {
             return -1;
         } elseif (isset($catB)) {
@@ -259,7 +267,7 @@ class ReportsProvider
             return $orderA < $orderB ? -1 : 1;
         }
 
-        return strnatcasecmp($catIdA, $catIdB);
+        return strnatcasecmp($catIdA ?? '', $catIdB ?? '');
     }
 
     /**
@@ -271,5 +279,11 @@ class ReportsProvider
     public function getAllReportClasses()
     {
         return Plugin\Manager::getInstance()->findMultipleComponents('Reports', '\\Piwik\\Plugin\\Report');
+    }
+
+    //Added this to trigger reset of category list as the list never gets rest after setting up due to isset check and affects testcases
+    public function unsetCategoryList()
+    {
+        unset($this->categoryList);
     }
 }

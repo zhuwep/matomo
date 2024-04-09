@@ -8,6 +8,7 @@
 @import "ui/_charts";
 @import "ui/_map";
 
+
 body {
   background: @theme-color-background-base;
   font-family: @theme-fontFamily-base;
@@ -20,6 +21,15 @@ button,
  select,
  textarea {
   color: @theme-color-text;
+}
+
+select {
+  // opacity is set to 0 by materialize css
+  opacity: 1;
+
+  &:disabled {
+    opacity: 0.7;
+  }
 }
 
 h2 {
@@ -44,10 +54,6 @@ h3 {
 
   font-weight: normal;
   margin: 32px 0 16px 0;
-}
-
-.pageWrap a:hover {
-  text-decoration: underline;
 }
 
 p {
@@ -80,6 +86,26 @@ p {
 
   p {
     color: @theme-color-headline-alternative;
+  }
+}
+
+.list-style-decimal {
+  list-style: none;
+  counter-reset: steplist;
+  display: table;
+  width: 100%;
+
+  > li {
+    counter-increment: steplist;
+    display: table-row;
+  }
+
+  > li::before {
+    content: counter(steplist) ".";
+    display: table-cell;
+    text-align: left;
+    padding-right: 5px;
+    width: 0;
   }
 }
 
@@ -120,7 +146,6 @@ p {
 .dashboardSettings {
   border: 1px solid @theme-color-background-lowContrast;
   background: @theme-color-background-base;
-  z-index: 10;
   .border-radius(0);
 
   > span {
@@ -333,7 +358,7 @@ table.dataTable {
           padding-left: 13px;
         }
 
-        #thDIV {
+        #thDIV,.thDIV {
           display: inline;
           position: relative;
         }
@@ -390,15 +415,24 @@ table.dataTable {
       background: @theme-color-background-contrast;
 
       &:not(.value) {
-        .font-default(13px, 16px);
+        font-size: 13px;
       }
 
       .label {
-        line-height: normal;
+        .font-default(13px, 18px);
+        height: 18px;
+
+        .value {
+          display: inline;
+          line-height: inherit;
+          vertical-align: bottom;
+        }
       }
 
       .value {
-        .font-default(13px, 16px);
+        .font-default(13px, 18px);
+        display: inline-block;
+        vertical-align: text-bottom;
       }
 
       &:first-child {
@@ -428,7 +462,6 @@ table.dataTable {
       }
 
       a {
-        text-decoration: none !important;
         color: @theme-color-link;
         width: inherit;
 
@@ -445,7 +478,7 @@ table.dataTable {
         text-overflow: ellipsis;
         width: inherit;
         display: inline-block;
-        vertical-align: sub;
+        vertical-align: text-bottom;
       }
     }
 
@@ -484,27 +517,27 @@ table.dataTable {
   }
 }
 
-div.dataTableVizHtmlTable:not(.dataTableActions),
+div.dataTableVizHtmlTable,
+ div.dataTableVizPerformanceColumns,
  div.dataTableVizAllColumns,
  div.dataTableVizGoals {
   tr.subDataTable > td > span.label::before {
-    display: inline-block;
-    float: left;
-    top: 0;
-    width: 12px;
-    height: 12px;
-    margin-left: -2px;
-    margin-top: 3px;
+    .matomo-icon();
+    .font-default(16px, 18px);
+    color: #aaa;
     margin-right: 8px;
+    padding-left: 1px; // icon might be cut of otherwise on some browsers
     content: '';
+    vertical-align: bottom;
+    display: inline-block;
   }
 
   tr.subDataTable:not(.expanded) > td > span.label::before {
-    background-image: url(plugins/Morpheus/images/plus.png);
+    content: "\f196"; // see .icon-plus-square
   }
 
   tr.subDataTable.expanded > td > span.label::before {
-    background-image: url(plugins/Morpheus/images/minus.png);
+    content: "\f147"; // see .icon-minus-square
   }
 }
 
@@ -547,12 +580,12 @@ h6.sparkline-title {
 
 div.sparkline {
   display: -ms-flexbox;
-  -ms-box-orient: horizontal;
-  -ms-box-pack: center;
   display: -webkit-flex;
   display: -moz-flex;
   display: -ms-flex;
   display: flex;
+  -ms-box-orient: horizontal;
+  -ms-box-pack: center;
   -webkit-justify-content: flex-start;
   -moz-justify-content: flex-start;
   -ms-justify-content: flex-start;
@@ -663,8 +696,7 @@ tr:hover #token_auth {
   background: #fffff7;
 }
 
-#header_message .dropdown a,
-#header_message #updateCheckLinkContainer:hover {
+#header_message .dropdown a {
   text-decoration: underline;
 }
 
@@ -682,6 +714,7 @@ tr:hover #token_auth {
 .dropdown-content li > a,
  .dropdown-content li > span {
   color: @theme-color-link !important;
+  text-decoration: none;
 }
 
 .dropdown-content li:hover,
@@ -699,4 +732,8 @@ tr:hover #token_auth {
 
 .ui-tooltip {
   z-index: 9999;
+}
+
+.icon-delete:hover {
+  color: @color-red-matomo !important;
 }

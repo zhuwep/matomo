@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,7 +15,16 @@ use Piwik\Piwik;
 
 function getTimeLabel($label)
 {
-    $date             = Date::factory(mktime($label));
+    if (!is_numeric($label)) {
+        return Piwik::translate('General_Unknown');
+    }
+
+    $time = mktime($label);
+    if (empty($time)) {
+        return Piwik::translate('General_Unknown');
+    }
+
+    $date             = Date::factory($time);
     $dateTimeProvider = StaticContainer::get('Piwik\Intl\Data\Provider\DateTimeFormatProvider');
 
     if ($dateTimeProvider->uses12HourClock()) {

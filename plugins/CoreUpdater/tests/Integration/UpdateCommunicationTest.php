@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -22,7 +22,7 @@ use Piwik\View;
  */
 class UpdateCommunicationTest extends IntegrationTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
     }
@@ -76,7 +76,7 @@ class UpdateCommunicationTest extends IntegrationTestCase
 <p>CoreUpdater_ThereIsNewVersionAvailableForUpdate</p>
 
 <p>CoreUpdater_YouCanUpgradeAutomaticallyOrDownloadPackage<br/>
-<a href=\"".$rootUrlEscaped."index.php?module=CoreUpdater&action=newVersionAvailable\">".$rootUrl."index.php?module=CoreUpdater&action=newVersionAvailable</a>
+<a href=\"" . $rootUrlEscaped . "index.php?module=CoreUpdater&action=newVersionAvailable\">" . $rootUrl . "index.php?module=CoreUpdater&action=newVersionAvailable</a>
 </p>
 
 <p>
@@ -101,7 +101,7 @@ class UpdateCommunicationTest extends IntegrationTestCase
 <p>CoreUpdater_ThereIsNewVersionAvailableForUpdate</p>
 
 <p>CoreUpdater_YouCanUpgradeAutomaticallyOrDownloadPackage<br/>
-<a href=\"".$rootUrlEscaped."index.php?module=CoreUpdater&action=newVersionAvailable\">".$rootUrl."index.php?module=CoreUpdater&action=newVersionAvailable</a>
+<a href=\"" . $rootUrlEscaped . "index.php?module=CoreUpdater&action=newVersionAvailable\">" . $rootUrl . "index.php?module=CoreUpdater&action=newVersionAvailable</a>
 </p>
 
 

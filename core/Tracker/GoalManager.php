@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,12 +13,13 @@ use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\Date;
 use Piwik\Exception\InvalidRequestParameterException;
+use Piwik\Log\LoggerInterface;
 use Piwik\Piwik;
 use Piwik\Plugin\Dimension\ConversionDimension;
 use Piwik\Plugin\Dimension\VisitDimension;
+use Piwik\Plugin\Manager;
 use Piwik\Plugins\CustomVariables\CustomVariables;
 use Piwik\Plugins\Events\Actions\ActionEvent;
-use Piwik\Tracker;
 use Piwik\Tracker\Visit\VisitProperties;
 
 /**
@@ -168,11 +169,12 @@ class GoalManager
         }
 
         // if the attribute to match is not the type of the current action
-        if ((($attribute == 'url' || $attribute == 'title') && $actionType != Action::TYPE_PAGE_URL)
-          || ($attribute == 'file' && $actionType != Action::TYPE_DOWNLOAD)
-          || ($attribute == 'external_website' && $actionType != Action::TYPE_OUTLINK)
-          || ($attribute == 'manually')
-          || self::isEventMatchingGoal($goal) && $actionType != Action::TYPE_EVENT
+        if (
+            (($attribute == 'url' || $attribute == 'title') && $actionType != Action::TYPE_PAGE_URL)
+            || ($attribute == 'file' && $actionType != Action::TYPE_DOWNLOAD)
+            || ($attribute == 'external_website' && $actionType != Action::TYPE_OUTLINK)
+            || ($attribute == 'manually')
+            || self::isEventMatchingGoal($goal) && $actionType != Action::TYPE_EVENT
         ) {
             return null;
         }
@@ -254,7 +256,7 @@ class GoalManager
         $goals = $this->getGoalDefinitions($idSite);
 
         if (!isset($goals[$idGoal])) {
-            return null;
+            throw new InvalidRequestParameterException('idGoal ' . $idGoal . ' does not exist');
         }
 
         $goal = $goals[$idGoal];
@@ -275,28 +277,33 @@ class GoalManager
     public function recordGoals(VisitProperties $visitProperties, Request $request)
     {
         $visitorInformation = $visitProperties->getProperties();
-        $visitCustomVariables = $request->getMetadata('CustomVariables', 'visitCustomVariables') ?: array();
 
         /** @var Action $action */
         $action = $request->getMetadata('Actions', 'action');
 
         $goal = $this->getGoalFromVisitor($visitProperties, $request, $action);
 
-        // Copy Custom Variables from Visit row to the Goal conversion
-        // Otherwise, set the Custom Variables found in the cookie sent with this request
-        $goal += $visitCustomVariables;
-        $maxCustomVariables = CustomVariables::getNumUsableCustomVariables();
+        if (Manager::getInstance()->isPluginActivated('CustomVariables')) {
+            // @todo move this to CustomVariables plugin if possible
+            // Copy Custom Variables from Visit row to the Goal conversion
+            // Otherwise, set the Custom Variables found in the cookie sent with this request
+            $visitCustomVariables = $request->getMetadata('CustomVariables', 'visitCustomVariables') ?: array();
+            $goal                 += $visitCustomVariables;
+            $maxCustomVariables   = CustomVariables::getNumUsableCustomVariables();
 
-        for ($i = 1; $i <= $maxCustomVariables; $i++) {
-            if (isset($visitorInformation['custom_var_k' . $i])
-                && strlen($visitorInformation['custom_var_k' . $i])
-            ) {
-                $goal['custom_var_k' . $i] = $visitorInformation['custom_var_k' . $i];
-            }
-            if (isset($visitorInformation['custom_var_v' . $i])
-                && strlen($visitorInformation['custom_var_v' . $i])
-            ) {
-                $goal['custom_var_v' . $i] = $visitorInformation['custom_var_v' . $i];
+            for ($i = 1; $i <= $maxCustomVariables; $i++) {
+                if (
+                    isset($visitorInformation['custom_var_k' . $i])
+                    && strlen($visitorInformation['custom_var_k' . $i])
+                ) {
+                    $goal['custom_var_k' . $i] = $visitorInformation['custom_var_k' . $i];
+                }
+                if (
+                    isset($visitorInformation['custom_var_v' . $i])
+                    && strlen($visitorInformation['custom_var_v' . $i])
+                ) {
+                    $goal['custom_var_v' . $i] = $visitorInformation['custom_var_v' . $i];
+                }
             }
         }
 
@@ -356,8 +363,8 @@ class GoalManager
 
             $conversionDimensions = ConversionDimension::getAllDimensions();
             $conversion = $this->triggerHookOnDimensions($request, $conversionDimensions, 'onEcommerceOrderConversion', $visitor, $action, $conversion);
-        } // If Cart update, select current items in the previous Cart
-        else {
+        } else {
+            // If Cart update, select current items in the previous Cart
             $debugMessage = 'The conversion is an Ecommerce Cart Update';
 
             $conversion['buster'] = 0;
@@ -385,7 +392,10 @@ class GoalManager
 
         if ($isThereExistingCartInVisit) {
             $recorded = $this->getModel()->updateConversion(
-                $visitProperties->getProperty('idvisit'), self::IDGOAL_CART, $conversion);
+                $visitProperties->getProperty('idvisit'),
+                self::IDGOAL_CART,
+                $conversion
+            );
         } else {
             $recorded = $this->insertNewConversion($conversion, $visitProperties->getProperties(), $request, $action);
         }
@@ -453,7 +463,8 @@ class GoalManager
 
             //Item in the cart in the DB, but not anymore in the cart
             if (!isset($itemInCartBySku[$itemInDb[0]])) {
-                $itemToUpdate = array_merge($itemInDb,
+                $itemToUpdate = array_merge(
+                    $itemInDb,
                     array('deleted'                => 1,
                           'idorder_original_value' => $itemInDbOriginal['idorder_original_value']
                     )
@@ -524,12 +535,14 @@ class GoalManager
                 $category = $item[self::INDEX_ITEM_CATEGORY];
             }
 
-            if (isset($item[self::INDEX_ITEM_PRICE])
+            if (
+                isset($item[self::INDEX_ITEM_PRICE])
                 && is_numeric($item[self::INDEX_ITEM_PRICE])
             ) {
                 $price = $this->getRevenue($item[self::INDEX_ITEM_PRICE]);
             }
-            if (!empty($item[self::INDEX_ITEM_QUANTITY])
+            if (
+                !empty($item[self::INDEX_ITEM_QUANTITY])
                 && is_numeric($item[self::INDEX_ITEM_QUANTITY])
             ) {
                 $quantity = (int)$item[self::INDEX_ITEM_QUANTITY];
@@ -557,15 +570,17 @@ class GoalManager
 
         foreach ($cleanedItems as $item) {
             $actionsToLookup = array();
-            list($sku, $name, $category, $price, $quantity) = $item;
+            [$sku_check, $name_check, $category, $price, $quantity] = $item;
+            $sku = is_array($sku_check) ? join(',', $sku_check) : $sku_check;
             $actionsToLookup[] = array(trim($sku), Action::TYPE_ECOMMERCE_ITEM_SKU);
+            $name = is_array($name_check) ? join(',', $name_check) : $name_check;
             $actionsToLookup[] = array(trim($name), Action::TYPE_ECOMMERCE_ITEM_NAME);
 
             // Only one category
             if (!is_array($category)) {
                 $actionsToLookup[] = array(trim($category), Action::TYPE_ECOMMERCE_ITEM_CATEGORY);
-            } // Multiple categories
-            else {
+            } else {
+                // Multiple categories
                 $countCategories = 0;
                 foreach ($category as $productCategory) {
                     $productCategory = trim($productCategory);
@@ -727,7 +742,7 @@ class GoalManager
                 if (empty($lastActionTime)) {
                     $conversion['buster'] = $this->makeRandomMySqlUnsignedInt(10);
                 } else {
-                    $conversion['buster'] = $this->makeRandomMySqlUnsignedInt(2) . Common::mb_substr($visitProperties->getProperty('visit_last_action_time'), 2);
+                    $conversion['buster'] = $this->makeRandomMySqlUnsignedInt(2) . mb_substr($visitProperties->getProperty('visit_last_action_time'), 2);
                 }
             }
 
@@ -737,7 +752,7 @@ class GoalManager
             $this->insertNewConversion($conversion, $visitProperties->getProperties(), $request, $action, $convertedGoal);
         }
     }
-    
+
     private function makeRandomMySqlUnsignedInt($length)
     {
         // mysql int unsgined max value is 4294967295 so we want to allow max 39999...
@@ -753,6 +768,7 @@ class GoalManager
      * @param array $visitInformation
      * @param Request $request
      * @param Action|null $action
+     * @param int|null $convertedGoal
      * @return bool
      */
     protected function insertNewConversion($conversion, $visitInformation, Request $request, $action, $convertedGoal = null)
@@ -776,7 +792,8 @@ class GoalManager
          */
         Piwik::postEvent('Tracker.newConversionInformation', array(&$conversion, $visitInformation, $request, $action));
 
-        if (!empty($convertedGoal)
+        if (
+            !empty($convertedGoal)
             && $this->isEventMatchingGoal($convertedGoal)
             && !empty($convertedGoal['event_value_as_revenue'])
         ) {
@@ -793,7 +810,8 @@ class GoalManager
         $idorder = $request->getParam('ec_id');
 
         $wasInserted = $this->getModel()->createConversion($conversion);
-        if (!$wasInserted
+        if (
+            !$wasInserted
             && !empty($idorder)
         ) {
             $idSite = $request->getIdSite();
@@ -877,10 +895,22 @@ class GoalManager
 
     private function getGoalFromVisitor(VisitProperties $visitProperties, Request $request, $action)
     {
+        $lastVisitTime = $visitProperties->getProperty('visit_last_action_time');
+        if (!$lastVisitTime) {
+            $lastVisitTime = $request->getCurrentTimestamp(); // fallback in case visit_last_action_time is not set
+        }
+
+        if (!empty($lastVisitTime) && is_numeric($lastVisitTime)) {
+            // visit last action time might be 2020-05-05 00:00:00
+            // we want it to prevent this being converted to a timestamp of 2020
+            // resulting in some day in 1970
+            $lastVisitTime = Date::getDatetimeFromTimestamp($lastVisitTime);
+        }
+
         $goal = array(
             'idvisit'     => $visitProperties->getProperty('idvisit'),
             'idvisitor'   => $visitProperties->getProperty('idvisitor'),
-            'server_time' => Date::getDatetimeFromTimestamp($visitProperties->getProperty('visit_last_action_time')),
+            'server_time' => $lastVisitTime,
         );
 
         $visitDimensions = VisitDimension::getAllDimensions();
@@ -930,7 +960,7 @@ class GoalManager
                 break;
             default:
                 try {
-                    StaticContainer::get('Psr\Log\LoggerInterface')->warning(Piwik::translate('General_ExceptionInvalidGoalPattern', array($pattern_type)));
+                    StaticContainer::get(LoggerInterface::class)->warning(Piwik::translate('General_ExceptionInvalidGoalPattern', array($pattern_type)));
                 } catch (\Exception $e) {
                 }
                 $match = false;
@@ -947,7 +977,8 @@ class GoalManager
      */
     public static function formatRegex($pattern)
     {
-        if (strpos($pattern, '/') !== false
+        if (
+            strpos($pattern, '/') !== false
             && strpos($pattern, '\\/') === false
         ) {
             $pattern = str_replace('/', '\\/', $pattern);

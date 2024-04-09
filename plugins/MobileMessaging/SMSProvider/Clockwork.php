@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -99,13 +99,7 @@ class Clockwork extends SMSProvider
             $result = Http::sendHttpRequestBy(
                 Http::getTransportMethod(),
                 $url,
-                $timeout,
-                $userAgent = null,
-                $destinationPath = null,
-                $file = null,
-                $followDepth = 0,
-                $acceptLanguage = false,
-                $acceptInvalidSslCertificate = true
+                $timeout
             );
         } catch (Exception $e) {
             $result = self::ERROR_STRING . " " . $e->getMessage();

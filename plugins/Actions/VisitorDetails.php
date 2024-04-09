@@ -1,24 +1,22 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
 namespace Piwik\Plugins\Actions;
 
 use Piwik\Common;
-use Piwik\Config;
 use Piwik\Date;
-use Piwik\Db;
 use Piwik\Metrics\Formatter;
 use Piwik\Piwik;
+use Piwik\Plugin;
 use Piwik\Plugins\Live\VisitorDetailsAbstract;
 use Piwik\Site;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\PageUrl;
-use Piwik\View;
 
 class VisitorDetails extends VisitorDetailsAbstract
 {
@@ -52,52 +50,66 @@ class VisitorDetails extends VisitorDetailsAbstract
         $nextActionId = 0;
         foreach ($actionDetails as $idx => &$action) {
 
-            if ($idx < $nextActionId || !$this->shouldHandleAction($action)) {
-                continue; // skip to next action having timeSpentRef
+            if ($idx < $nextActionId || !$this->isPageView($action)) {
+                unset($action['timeSpentRef']);
+                continue; // skip to next page view
             }
+
+            $action['timeSpent'] = 0;
 
             // search for next action with timeSpentRef
-            $nextActionId = $idx + 1;
+            $nextActionId = $idx;
             $nextAction   = null;
 
-            while (isset($actionDetails[$nextActionId]) &&
-                (!$this->shouldHandleAction($actionDetails[$nextActionId]) ||
-                    !array_key_exists('timeSpentRef', $actionDetails[$nextActionId]))) {
+            do {
                 $nextActionId++;
-            }
-            $nextAction = isset($actionDetails[$nextActionId]) ? $actionDetails[$nextActionId] : null;
 
-            // Set the time spent for this action (which is the timeSpentRef of the next action)
-            if ($nextAction) {
-                $action['timeSpent'] = $nextAction['timeSpentRef'];
-            } else {
+                $nextAction = isset($actionDetails[$nextActionId]) ? $actionDetails[$nextActionId] : null;
 
-                // Last action of a visit.
-                // By default, Piwik does not know how long the user stayed on the page
-                // If enableHeartBeatTimer() is used in piwik.js then we can find the accurate time on page for the last pageview
-                $visitTotalTime   = $visitorDetails['visitDuration'];
-                $timeOfLastAction = Date::factory($action['serverTimePretty'])->getTimestamp();
+                if (is_null($nextAction)) {
+                    // Last action of a visit.
+                    // By default, Matomo does not know how long the user stayed on the page
+                    // If enableHeartBeatTimer() is used in piwik.js then we can find the accurate time on page for the last pageview
+                    $visitTotalTime   = $visitorDetails['visitDuration'];
+                    $timeOfLastAction = Date::factory($action['serverTimePretty'])->getTimestamp();
 
-                $timeSpentOnAllActionsApartFromLastOne = ($timeOfLastAction - $visitorDetails['firstActionTimestamp']);
-                $timeSpentOnPage                       = $visitTotalTime - $timeSpentOnAllActionsApartFromLastOne;
+                    $timeSpentOnAllActionsApartFromLastOne = ($timeOfLastAction - $visitorDetails['firstActionTimestamp']);
+                    $timeSpentOnPage                       = $visitTotalTime - $timeSpentOnAllActionsApartFromLastOne;
 
-                // Safe net, we assume the time is correct when it's more than 10 seconds
-                if ($timeSpentOnPage > 10) {
-                    $action['timeSpent'] = $timeSpentOnPage;
+                    // Safe net, we assume the time is correct when it's more than 10 seconds
+                    if ($timeSpentOnPage > 10) {
+                        $action['timeSpent'] = $timeSpentOnPage;
+                    }
+                    break;
                 }
-            }
+
+                if (!array_key_exists('timeSpentRef', $nextAction)) {
+                    continue;
+                }
+
+                // Set the time spent for this action (which is the timeSpentRef of the next action)
+                if ($nextAction) {
+                    $action['timeSpent'] += $nextAction['timeSpentRef'] ?? 0;
+                }
+
+                // sum spent time until next page view
+                if ($this->isPageView($nextAction)) {
+                    break;
+                }
+            } while (isset($actionDetails[$nextActionId]));
 
             if (isset($action['timeSpent'])) {
                 $action['timeSpentPretty'] = $formatter->getPrettyTimeFromSeconds($action['timeSpent'], true);
             }
 
-            unset($action['timeSpentRef']); // not needed after timeSpent is added
+            unset($action['timeSpentRef']);
         }
 
         $actions = $actionDetails;
     }
 
-    private function shouldHandleAction($action) {
+    private function shouldHandleAction($action)
+    {
         $actionTypesToHandle = array(
             Action::TYPE_PAGE_URL,
             Action::TYPE_PAGE_TITLE,
@@ -110,6 +122,16 @@ class VisitorDetails extends VisitorDetailsAbstract
         return in_array($action['type'], $actionTypesToHandle) || !empty($action['eventType']);
     }
 
+    private function isPageView($action)
+    {
+        $pageViewTypes = array(
+            Action::TYPE_PAGE_URL,
+            Action::TYPE_PAGE_TITLE,
+        );
+
+        return in_array($action['type'], $pageViewTypes);
+    }
+
     public function extendActionDetails(&$action, $nextAction, $visitorDetails)
     {
         $formatter = new Formatter();
@@ -117,8 +139,13 @@ class VisitorDetails extends VisitorDetailsAbstract
         if ($action['type'] == Action::TYPE_SITE_SEARCH) {
             // Handle Site Search
             $action['siteSearchKeyword'] = $action['pageTitle'];
+            $action['siteSearchCategory'] = $action['search_cat'];
+            $action['siteSearchCount'] = $action['search_count'];
             unset($action['pageTitle']);
         }
+
+        unset($action['search_cat']);
+        unset($action['search_count']);
 
         // Generation time
         if ($this->shouldHandleAction($action) && empty($action['eventType']) && isset($action['custom_float']) && $action['custom_float'] > 0) {
@@ -131,18 +158,35 @@ class VisitorDetails extends VisitorDetailsAbstract
             unset($action['custom_float']);
         }
 
-        if (array_key_exists('interaction_position', $action)) {
-            $action['interactionPosition'] = $action['interaction_position'];
-            unset($action['interaction_position']);
+        if (!array_key_exists('pageLoadTime', $action) || $action['pageLoadTime'] <= 0) {
+            unset($action['pageLoadTime']);
+        } else {
+            $action['pageLoadTimeMilliseconds'] = $action['pageLoadTime'];
+            $action['pageLoadTime'] = $formatter->getPrettyTimeFromSeconds($action['pageLoadTime'] / 1000, true);
+        }
+
+        if (array_key_exists('pageview_position', $action)) {
+            $action['pageviewPosition'] = $action['pageview_position'];
+            unset($action['pageview_position']);
         }
 
         // Reconstruct url from prefix
         if (array_key_exists('url', $action) && array_key_exists('url_prefix', $action)) {
-            $url = PageUrl::reconstructNormalizedUrl($action['url'], $action['url_prefix']);
-            $url = Common::unsanitizeInputValue($url);
+            if ($action['url'] && stripos($action['url'], 'http://') !== 0 && stripos($action['url'], 'https://') !== 0) {
+                $url = PageUrl::reconstructNormalizedUrl($action['url'], $action['url_prefix']);
+                $url = Common::unsanitizeInputValue($url);
+                $action['url'] = $url;
+            }
 
-            $action['url'] = $url;
             unset($action['url_prefix']);
+        }
+
+        if (!empty($action['url']) && strpos($action['url'], 'http://') === 0) {
+            $host = parse_url($action['url'], PHP_URL_HOST);
+
+            if ($host && PageUrl::shouldUseHttpsHost($visitorDetails['idSite'], $host)) {
+                $action['url'] = 'https://' . mb_substr($action['url'], 7 /* = strlen('http://') */);
+            }
         }
 
         switch ($action['type']) {
@@ -167,7 +211,7 @@ class VisitorDetails extends VisitorDetailsAbstract
 
                 $itemNames = implode(', ', array_column($action['itemDetails'], 'itemName'));
                 $action['subtitle'] = Piwik::translate('Goals_NRevenue', $formatter->getPrettyMoney($action['revenue'], $visitorDetails['idSite']));
-                $action['subtitle'] .= ' - ' .  Piwik::translate('Goals_NItems', $action['items']) . ': ' . $itemNames .')';
+                $action['subtitle'] .= ' - ' .  Piwik::translate('Goals_NItems', $action['items']) . ': ' . $itemNames . ')';
                 break;
             case Action::TYPE_CONTENT:
                 if (!empty($action['contentInteraction'])) {
@@ -205,6 +249,15 @@ class VisitorDetails extends VisitorDetailsAbstract
                 $action['iconSVG'] = 'plugins/Morpheus/images/search.svg';
                 $action['title'] = Piwik::translate('Actions_SubmenuSitesearch');
                 $action['subtitle'] = $action['siteSearchKeyword'];
+
+                if (!empty($action['siteSearchCategory'])) {
+                    $action['subtitle'] .= ' - ' . Piwik::translate('Actions_ColumnSearchCategory') . ': ' . $action['siteSearchCategory'];
+                }
+
+                if (!empty($action['siteSearchCount'])) {
+                    $action['subtitle'] .= ' - ' . Piwik::translate('Actions_ColumnSearchResultsCount') . ': ' . $action['siteSearchCount'];
+                }
+
                 break;
             case Action::TYPE_PAGE_URL:
             case Action::TYPE_PAGE_TITLE:
@@ -220,8 +273,10 @@ class VisitorDetails extends VisitorDetailsAbstract
         }
 
         // Convert datetimes to the site timezone
-        $dateTimeVisit              = Date::factory($action['serverTimePretty'],
-            Site::getTimezoneFor($visitorDetails['idSite']));
+        $dateTimeVisit              = Date::factory(
+            $action['serverTimePretty'],
+            Site::getTimezoneFor($visitorDetails['idSite'])
+        );
         $action['serverTimePretty'] = $dateTimeVisit->getLocalized(Date::DATETIME_FORMAT_SHORT);
         $action['timestamp']        = $dateTimeVisit->getTimestamp();
 
@@ -246,6 +301,16 @@ class VisitorDetails extends VisitorDetailsAbstract
 
         // The second join is a LEFT join to allow returning records that don't have a matching page title
         // eg. Downloads, Outlinks. For these, idaction_name is set to 0
+        $pagePerformanceSelect = '';
+        if (Plugin\Manager::getInstance()->isPluginActivated('PagePerformance')) {
+            $pagePerformanceSelect = '( log_link_visit_action.time_network +
+					log_link_visit_action.time_server +
+					log_link_visit_action.time_transfer +
+					log_link_visit_action.time_dom_completion +
+					log_link_visit_action.time_dom_processing +
+					log_link_visit_action.time_on_load ) AS pageLoadTime,';
+        }
+
         $sql           = "
 				SELECT
 					log_link_visit_action.idvisit,
@@ -260,7 +325,10 @@ class VisitorDetails extends VisitorDetailsAbstract
 					log_link_visit_action.time_spent_ref_action as timeSpentRef,
 					log_link_visit_action.idlink_va AS pageId,
 					log_link_visit_action.custom_float,
-					log_link_visit_action.interaction_position
+					$pagePerformanceSelect
+					log_link_visit_action.pageview_position,
+					log_link_visit_action.search_cat,
+					log_link_visit_action.search_count
 					" . $customActionDimensionFields . "
 				FROM " . Common::prefixTable('log_link_visit_action') . " AS log_link_visit_action
 					LEFT JOIN " . Common::prefixTable('log_action') . " AS log_action
@@ -279,21 +347,24 @@ class VisitorDetails extends VisitorDetailsAbstract
     private $visitedPageUrls         = array();
     private $siteSearchKeywords      = array();
     private $pageGenerationTimeTotal = 0;
+    private $pageLoadTimeTotal = 0;
 
     public function initProfile($visits, &$profile)
     {
-        $this->visitedPageUrls               = array();
-        $this->siteSearchKeywords            = array();
-        $this->pageGenerationTimeTotal       = 0;
-        $profile['totalActions']             = 0;
-        $profile['totalOutlinks']            = 0;
-        $profile['totalDownloads']           = 0;
-        $profile['totalSearches']            = 0;
-        $profile['totalPageViews']           = 0;
-        $profile['totalUniquePageViews']     = 0;
-        $profile['totalRevisitedPages']      = 0;
-        $profile['totalPageViewsWithTiming'] = 0;
-        $profile['searches']                 = array();
+        $this->visitedPageUrls                 = array();
+        $this->siteSearchKeywords              = array();
+        $this->pageGenerationTimeTotal         = 0;
+        $this->pageLoadTimeTotal               = 0;
+        $profile['totalActions']               = 0;
+        $profile['totalOutlinks']              = 0;
+        $profile['totalDownloads']             = 0;
+        $profile['totalSearches']              = 0;
+        $profile['totalPageViews']             = 0;
+        $profile['totalUniquePageViews']       = 0;
+        $profile['totalRevisitedPages']        = 0;
+        $profile['totalPageViewsWithTiming']   = 0;
+        $profile['totalPageViewsWithLoadTime'] = 0;
+        $profile['searches']                   = array();
     }
 
     public function handleProfileVisit($visit, &$profile)
@@ -308,6 +379,7 @@ class VisitorDetails extends VisitorDetailsAbstract
         $this->handleIfSiteSearchAction($action, $profile);
         $this->handleIfPageViewAction($action, $profile);
         $this->handleIfPageGenerationTime($action, $profile);
+        $this->handleIfPageLoadTime($action, $profile);
     }
 
     public function finalizeProfile($visits, &$profile)
@@ -321,7 +393,7 @@ class VisitorDetails extends VisitorDetailsAbstract
             ];
         }
 
-        usort($profile['visitedPages'], function($a, $b) {
+        usort($profile['visitedPages'], function ($a, $b) {
             if ($a['count'] == $b['count']) {
                 return strcmp($a['url'], $b['url']);
             }
@@ -331,6 +403,7 @@ class VisitorDetails extends VisitorDetailsAbstract
 
         $this->handleSiteSearches($profile);
         $this->handleAveragePageGenerationTime($profile);
+        $this->handleAveragePageLoadTime($profile);
     }
 
     /**
@@ -417,6 +490,22 @@ class VisitorDetails extends VisitorDetailsAbstract
         if ($profile['totalPageViewsWithTiming']) {
             $profile['averagePageGenerationTime'] =
                 round($this->pageGenerationTimeTotal / (1000 * $profile['totalPageViewsWithTiming']), $precision = 3);
+        }
+    }
+
+    private function handleIfPageLoadTime($action, &$profile)
+    {
+        if (isset($action['pageLoadTimeMilliseconds'])) {
+            $this->pageLoadTimeTotal += $action['pageLoadTimeMilliseconds'];
+            ++$profile['totalPageViewsWithLoadTime'];
+        }
+    }
+
+    private function handleAveragePageLoadTime(&$profile)
+    {
+        if ($profile['totalPageViewsWithLoadTime']) {
+            $profile['averagePageLoadTime'] =
+                round($this->pageLoadTimeTotal / (1000 * $profile['totalPageViewsWithLoadTime']), $precision = 3);
         }
     }
 }

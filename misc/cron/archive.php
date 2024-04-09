@@ -1,12 +1,9 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- *
- * @category Piwik
- * @package Piwik
  */
 
 if (!defined('PIWIK_DOCUMENT_ROOT')) {
@@ -57,7 +54,7 @@ try 'php archive.php --url=http://your.piwik/path'
     $_GET['method'] = 'CoreAdminHome.runCronArchiving';
     $_GET['format'] = 'console'; // will use Content-type text/plain
 
-    if(!isset($_GET['token_auth'])) {
+    if('' === Piwik\Common::getRequestVar('token_auth', '', 'string')) {
         echo "
 <b>You must specify the Super User token_auth as a parameter to this script, eg. <code>?token_auth=XYZ</code> if you wish to run this script through the browser. </b><br>
 However it is recommended to run it <a href='https://matomo.org/docs/setup-auto-archiving/'>via cron in the command line</a>, since it can take a long time to run.<br/>

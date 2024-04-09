@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\ExampleUI\Reports;
 
 use Piwik\Piwik;
-use Piwik\Plugin\Report;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugins\CoreVisualizations\Visualizations\Cloud;
 
@@ -25,6 +24,7 @@ class GetPlanetRatiosWithLogos extends Base
         parent::init();
 
         $this->name = Piwik::translate('Advanced tag cloud: with logos and links');
+        $this->documentation = 'This report shows a sample tab cloud.';
         $this->subcategoryId = 'Tag clouds';
         $this->order = 113;
     }
@@ -40,5 +40,4 @@ class GetPlanetRatiosWithLogos extends Base
         $view->config->columns_to_display = array('label', 'value');
         $view->config->addTranslation('value', 'times the diameter of Earth');
     }
-
 }

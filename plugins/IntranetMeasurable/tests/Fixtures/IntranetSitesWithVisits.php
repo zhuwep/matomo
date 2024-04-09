@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\IntranetMeasurable\tests\Fixtures;
@@ -22,14 +22,14 @@ class IntranetSitesWithVisits extends Fixture
     public $idSite = 1;
     public $idSiteNotIntranet = 2;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsites();
         $this->trackVisits($this->idSite);
         $this->trackVisits($this->idSiteNotIntranet);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -38,9 +38,15 @@ class IntranetSitesWithVisits extends Fixture
     {
         if (!self::siteCreated($this->idSite)) {
             Fixture::createWebsite(
-                '2014-01-02 03:04:05', $ecommerce = 0, $siteName = false, $siteUrl = false,
-                $siteSearch = 1, $searchKeywordParameters = null,
-                $searchCategoryParameters = null, $timezone = null, Type::ID
+                '2014-01-02 03:04:05',
+                $ecommerce = 0,
+                $siteName = false,
+                $siteUrl = false,
+                $siteSearch = 1,
+                $searchKeywordParameters = null,
+                $searchCategoryParameters = null,
+                $timezone = null,
+                Type::ID
             );
         }
 
@@ -49,7 +55,7 @@ class IntranetSitesWithVisits extends Fixture
         }
     }
 
-    private function configureSameDevice(\PiwikTracker $t)
+    private function configureSameDevice(\MatomoTracker $t)
     {
         // to make purpose of test more clear we configure the device partially...
         $t->setIp('56.11.55.70');
@@ -90,5 +96,4 @@ class IntranetSitesWithVisits extends Fixture
         $t->setUrl('http://example.com/?search=this is a site search query');
         self::checkResponse($t->doTrackPageView('Site search query'));
     }
-
 }

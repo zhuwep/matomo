@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Plugins\ScheduledReports\tests;
 
-use Piwik\Db;
 use Piwik\Piwik;
 use Piwik\Plugins\ScheduledReports\API;
 use Piwik\Plugins\ScheduledReports\ScheduledReports;
@@ -29,7 +28,7 @@ class ScheduledReportsTest extends IntegrationTestCase
     private $reports;
     private $reportIds = array();
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -55,7 +54,7 @@ class ScheduledReportsTest extends IntegrationTestCase
         $this->assertHasReport('userlogin', 4);
         $this->assertHasReport('otherUser', 1);
         $this->assertHasReport('anotherUser', 2);
-        
+
         $this->reports->deleteUserReportForSites('', array(1, 2, 3, 4));
 
         $this->assertHasReport('userlogin', 1);
@@ -130,7 +129,7 @@ class ScheduledReportsTest extends IntegrationTestCase
             $this->getReport($login, $idSite);
             $this->fail("Report for $login, $idSite should not exist but does");
         } catch (\Exception $e) {
-            $this->assertContains("Requested report couldn't be found", $e->getMessage());
+            self::assertStringContainsString("Requested report couldn't be found", $e->getMessage());
         }
     }
 

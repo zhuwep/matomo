@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -31,46 +32,44 @@ class APITest extends SystemTestCase
      */
     private $api;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->api = API::getInstance();
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage No list of visits given
-     */
-    public function test_exportDataSubjects_failsWhenNoVisitsGiven()
+    public function testExportDataSubjectsFailsWhenNoVisitsGiven()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No list of visits given');
+
         $this->assertNull($this->api->exportDataSubjects(false));
     }
 
-    public function test_exportDataSubjects_whenOneVisitGiven()
+    public function testExportDataSubjectsWhenOneVisitGiven()
     {
         $result = $this->api->exportDataSubjects([['idsite' => '1', 'idvisit' => '1']]);
         $this->assertJsonResponse('exportDataSubject_oneVisitGiven', $result);
     }
 
-    public function test_exportDataSubjects_whenNotMatchingVisitGiven()
+    public function testExportDataSubjectsWhenNotMatchingVisitGiven()
     {
         $noMatch = $this->api->exportDataSubjects([['idsite' => '9999', 'idvisit' => '9999']]);
         $this->assertJsonResponse('exportDataSubject_noMatch', $noMatch);
     }
 
-    public function test_exportDataSubjects_whenAllVisitsGiven()
+    public function testExportDataSubjectsWhenAllVisitsGiven()
     {
         $rows = Db::fetchAll('SELECT idsite, idvisit from ' . Common::prefixTable('log_visit'));
         $result = $this->api->exportDataSubjects($rows);
         $this->assertJsonResponse('exportDataSubject_allVisits', $result);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage No idsite key set for visit at index 1
-     */
-    public function test_exportDataSubjects_failsWhenMissingIdSite()
+    public function testExportDataSubjectsFailsWhenMissingIdSite()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No idsite key set for visit at index 1');
+
         $this->assertNull($this->api->exportDataSubjects([['idsite' => '9999', 'idvisit' => '9999'], []]));
     }
 
@@ -91,48 +90,64 @@ class APITest extends SystemTestCase
      */
     public function testApi($api, $params)
     {
-        $params['xmlFieldsToRemove'] = array('totalEcommerceRevenue', 'revenue', 'revenueDiscount');
+        $params['xmlFieldsToRemove'] = ['totalEcommerceRevenue', 'revenue', 'revenueDiscount'];
         $this->runApiTests($api, $params);
     }
 
     public function getApiForTesting()
     {
-        $api = array(
+        $api = [
             'PrivacyManager.getAvailableVisitColumnsToAnonymize',
             'PrivacyManager.getAvailableLinkVisitActionColumnsToAnonymize',
-        );
+        ];
 
-        $apiToTest   = array();
-        $apiToTest[] = array($api,
-            array(
+        $apiToTest   = [];
+        $apiToTest[] = [$api,
+            [
                 'idSite'     => 1,
                 'date'       => self::$fixture->dateTime,
-                'periods'    => array('day'),
+                'periods'    => ['day'],
                 'testSuffix' => ''
-            )
-        );
+            ]
+        ];
 
-        $apiToTest[] = array(array('Live.getLastVisitsDetails'),
-            array(
+        $apiToTest[] = [['Live.getLastVisitsDetails'],
+            [
                 'idSite'     => 'all',
                 'date'       => self::$fixture->dateTime,
-                'periods'    => array('year'),
-                'otherRequestParameters' => array('filter_limit' => '-1'),
+                'periods'    => ['year'],
+                'otherRequestParameters' => ['filter_limit' => '-1'],
                 'testSuffix' => 'allSites'
-            )
-        );
+            ]
+        ];
 
-        $apiToTest[] = array(array('Live.getLastVisitsDetails'),
-            array(
+        $apiToTest[] = [['Live.getLastVisitsDetails'],
+            [
                 'idSite'     => 'all',
                 'date'       => self::$fixture->dateTime,
-                'periods'    => array('year'),
-                'otherRequestParameters' => array('doNotFetchActions' => '1', 'filter_limit' => '-1'),
+                'periods'    => ['year'],
+                'otherRequestParameters' => ['doNotFetchActions' => '1', 'filter_limit' => '-1'],
                 'testSuffix' => 'allSites_noActions'
-            )
-        );
+            ]
+        ];
 
         return $apiToTest;
+    }
+
+    public function testFindDataSubjectsAllSites()
+    {
+        $this->runAnyApiTest('PrivacyManager.findDataSubjects', 'allSites', [
+            'idSite'     => 'all',
+            'segment'    => 'countryCode==CN',
+        ]);
+    }
+
+    public function testFindDataSubjectsSpecificSite()
+    {
+        $this->runAnyApiTest('PrivacyManager.findDataSubjects', 'specificSite', [
+            'idSite'     => '5',
+            'segment'    => 'countryCode==CN',
+        ]);
     }
 
     public static function getOutputPrefix()
@@ -144,7 +159,6 @@ class APITest extends SystemTestCase
     {
         return dirname(__FILE__);
     }
-
 }
 
 APITest::$fixture = new MultipleSitesMultipleVisitsFixture();

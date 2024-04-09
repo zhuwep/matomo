@@ -585,14 +585,14 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     protected function validate()
     {
         foreach ($this->rules as $rule) {
-            if (strlen($this->error)) {
+            if (strlen($this->error ?? '')) {
                 break;
             }
             if ($rule[1] & HTML_QuickForm2_Rule::RUNAT_SERVER) {
                 $rule[0]->validate();
             }
         }
-        return !strlen($this->error);
+        return !strlen($this->error ?? '');
     }
 
    /**
@@ -678,7 +678,7 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
         return $value;
     }
 
-    protected static function applyFilter(&$value, $key = null, $filter)
+    protected static function applyFilter(&$value, $key, $filter)
     {
         $callback = $filter[0];
         $options  = $filter[1];

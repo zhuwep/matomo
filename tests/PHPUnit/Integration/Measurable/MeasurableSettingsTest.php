@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,8 +8,6 @@
 
 namespace Piwik\Tests\Integration\Measurable;
 
-use Piwik\Access;
-use Piwik\Db;
 use Piwik\Plugin;
 use Piwik\Plugins\WebsiteMeasurable\Type as WebsiteType;
 use Piwik\Plugins\WebsiteMeasurable\MeasurableSettings;
@@ -29,7 +27,7 @@ class MeasurableSettingsTest extends IntegrationTestCase
      */
     private $settings;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -37,10 +35,17 @@ class MeasurableSettingsTest extends IntegrationTestCase
 
         if (!Fixture::siteCreated($this->idSite)) {
             $type = WebsiteType::ID;
-            Fixture::createWebsite('2015-01-01 00:00:00',
-                $ecommerce = 0, $siteName = false, $siteUrl = false,
-                $siteSearch = 1, $searchKeywordParameters = null,
-                $searchCategoryParameters = null, $timezone = null, $type);
+            Fixture::createWebsite(
+                '2015-01-01 00:00:00',
+                $ecommerce = 0,
+                $siteName = false,
+                $siteUrl = false,
+                $siteSearch = 1,
+                $searchKeywordParameters = null,
+                $searchCategoryParameters = null,
+                $timezone = null,
+                $type
+            );
         }
 
         $this->settings = $this->createSettings();
@@ -56,12 +61,11 @@ class MeasurableSettingsTest extends IntegrationTestCase
         $this->assertStoredSettingsValue(array('value3'), 'sitesearch_category_parameters');
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage CoreAdminHome_PluginSettingChangeNotAllowed
-     */
     public function test_save_shouldCheckAdminPermissionsForThatSite()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('CoreAdminHome_PluginSettingChangeNotAllowed');
+
         FakeAccess::clearAccess();
 
         $this->settings = $this->createSettings();

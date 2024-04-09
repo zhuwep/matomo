@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,9 +11,7 @@ namespace Piwik\Tests\Integration\Settings\Plugin;
 use Piwik\Db;
 use Piwik\Settings\FieldConfig;
 use Piwik\Settings\Plugin\UserSetting;
-use Piwik\Settings\Storage\Storage;
 use Piwik\Tests\Framework\Mock\FakeAccess;
-use Piwik\Tests\Framework\Mock\Settings\FakeBackend;
 use Piwik\Tests\Framework\Mock\Settings\FakeUserSettings;
 use Piwik\Tests\Integration\Settings\IntegrationTestCase;
 
@@ -68,12 +66,11 @@ class UserSettingTest extends IntegrationTestCase
         $this->assertDbConnectionCreated();
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage CoreAdminHome_PluginSettingChangeNotAllowed
-     */
     public function test_setSettingValue_shouldThrowException_IfAnonymousIsTryingToSetASettingWhichNeedsUserPermission()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('CoreAdminHome_PluginSettingChangeNotAllowed');
+
         $this->setAnonymousUser();
         $setting = $this->buildSetting('mysystem');
 
@@ -141,12 +138,11 @@ class UserSettingTest extends IntegrationTestCase
         $this->assertSettingHasValue($setting, 43939, 'integer');
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Validation Fail
-     */
     public function test_setSettingValue_shouldValidateAValue_IfAFilterIsSet()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Validation Fail');
+
         $this->setUser();
         $self = $this;
 
@@ -223,5 +219,4 @@ class UserSettingTest extends IntegrationTestCase
 
         return $userSetting;
     }
-
 }

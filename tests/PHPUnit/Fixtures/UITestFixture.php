@@ -1,15 +1,18 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+
 namespace Piwik\Tests\Fixtures;
 
 use Exception;
 use Piwik\API\Proxy;
 use Piwik\API\Request;
+use Piwik\ArchiveProcessor\Rules;
 use Piwik\Columns\Dimension;
 use Piwik\Common;
 use Piwik\DataTable;
@@ -17,13 +20,14 @@ use Piwik\DataTable\Row;
 use Piwik\Date;
 use Piwik\Db;
 use Piwik\DbHelper;
+use Piwik\EventDispatcher;
+use Piwik\Filesystem;
 use Piwik\FrontController;
 use Piwik\Option;
-use Piwik\Piwik;
 use Piwik\Plugin\Dimension\VisitDimension;
+use Piwik\Plugin\Manager;
 use Piwik\Plugin\ProcessedMetric;
 use Piwik\Plugin\Report;
-use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugins\API\API;
 use Piwik\Plugins\GeoIp2\LocationProvider\GeoIp2;
 use Piwik\Plugins\Monolog\Handler\WebNotificationHandler;
@@ -39,7 +43,8 @@ use Piwik\Plugins\VisitsSummary\API as VisitsSummaryAPI;
 use Piwik\ReportRenderer;
 use Piwik\Tests\Framework\XssTesting;
 use Piwik\Plugins\ScheduledReports\API as APIScheduledReports;
-use Psr\Container\ContainerInterface;
+use Piwik\Container\Container;
+use Piwik\CronArchive\SegmentArchiving;
 
 /**
  * Fixture for UI tests.
@@ -65,24 +70,47 @@ class UITestFixture extends SqlDump
         $this->xssTesting = new XssTesting();
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        self::resetPluginsInstalledConfig();
-        self::updateDatabase();
-        self::installAndActivatePlugins($this->getTestEnvironment());
+        // We need to disable events for running updates below.
+        // Otherwise PHP will run into a segfault when trying to execute updates for plugins.
+        EventDispatcher::$_SKIP_EVENTS_IN_TESTS = true;
+
+        // fetch the installed versions of all plugins from options table
+        $pluginVersions = Option::getLike('version_%');
+        $plugins = [];
+
+        foreach ($pluginVersions as $pluginName => $version) {
+            $name = substr($pluginName, 8);
+            if (Manager::getInstance()->isValidPluginName($name) && Manager::getInstance()->isPluginInFilesystem($name)) {
+                $plugins[] = $name;
+            }
+        }
+
+        self::resetPluginsInstalledConfig($plugins);
+
         self::updateDatabase();
 
+        self::installAndActivatePlugins($this->getTestEnvironment());
+
+        self::updateDatabase();
+
+        EventDispatcher::$_SKIP_EVENTS_IN_TESTS = false;
+
         // make sure site has an early enough creation date (for period selector tests)
-        Db::get()->update(Common::prefixTable("site"),
-            array('ts_created' => '2011-01-01'),
+        Db::get()->update(
+            Common::prefixTable("site"),
+            ['ts_created' => '2011-01-01'],
             "idsite = 1"
         );
 
         // for proper geolocation
         LocationProvider::setCurrentProvider(GeoIp2\Php::ID);
         IPAnonymizer::deactivate();
+
+        self::createSuperUser(false);
 
         $this->addOverlayVisits();
         $this->addNewSitesForSiteSelector();
@@ -93,12 +121,12 @@ class UITestFixture extends SqlDump
         SitesManagerAPI::getInstance()->updateSite(1, null, null, true);
 
         // create non super user
-        UsersManagerAPI::getInstance()->addUser('oliverqueen', 'smartypants', 'oli@queenindustries.com', $this->xssTesting->forTwig('useralias'));
-        UsersManagerAPI::getInstance()->setUserAccess('oliverqueen', 'view', array(1));
+        UsersManagerAPI::getInstance()->addUser('oliverqueen', 'smartypants', 'oli@queenindustries.com');
+        UsersManagerAPI::getInstance()->setUserAccess('oliverqueen', 'view', [1]);
 
         // another non super user
-        UsersManagerAPI::getInstance()->addUser('anotheruser', 'anotheruser', 'someemail@email.com', $this->xssTesting->forAngular('useralias'));
-        UsersManagerAPI::getInstance()->setUserAccess('anotheruser', 'view', array(1));
+        UsersManagerAPI::getInstance()->addUser('anotheruser', 'anotheruser', 'someemail@email.com');
+        UsersManagerAPI::getInstance()->setUserAccess('anotheruser', 'view', [1]);
 
         // add xss scheduled report
         APIScheduledReports::getInstance()->addReport(
@@ -109,7 +137,7 @@ class UITestFixture extends SqlDump
             ScheduledReports::EMAIL_TYPE,
             ReportRenderer::HTML_FORMAT,
             ['ExampleAPI_xssReportforTwig', 'ExampleAPI_xssReportforAngular'],
-            array(ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY)
+            [ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY]
         );
         APIScheduledReports::getInstance()->addReport(
             $idSite = 1,
@@ -119,33 +147,49 @@ class UITestFixture extends SqlDump
             ScheduledReports::EMAIL_TYPE,
             ReportRenderer::HTML_FORMAT,
             ['ExampleAPI_xssReportforTwig', 'ExampleAPI_xssReportforAngular'],
-            array(ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY)
+            [ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY]
         );
 
         $this->addDangerousLinks();
+
+        $model = new \Piwik\Plugins\UsersManager\Model();
+        $user  = $model->getUser(self::VIEW_USER_LOGIN);
+
+        if (empty($user)) {
+            $model->addUser(self::VIEW_USER_LOGIN, self::VIEW_USER_PASSWORD, 'hello2@example.org', Date::now()->getDatetime());
+            $model->addUserAccess(self::VIEW_USER_LOGIN, 'view', [1, 3]);
+        } else {
+            $model->updateUser(self::VIEW_USER_LOGIN, self::VIEW_USER_PASSWORD, 'hello2@example.org');
+        }
+        if (!$model->getUserByTokenAuth(self::VIEW_USER_TOKEN)) {
+            $model->addTokenAuth(self::VIEW_USER_LOGIN, self::VIEW_USER_TOKEN, 'View user token', Date::now()->getDatetime());
+        }
     }
 
     public function performSetUp($setupEnvironmentOnly = false)
     {
-        $this->extraTestEnvVars = array(
+        $this->extraTestEnvVars = [
             'loadRealTranslations' => 1,
-        );
-        $this->extraPluginsToLoad = array(
+        ];
+        $this->extraPluginsToLoad = [
             'CustomDirPlugin'
-        );
+        ];
 
         parent::performSetUp($setupEnvironmentOnly);
+
+        self::createSuperUser(false);
 
         $this->createSegments();
         $this->setupDashboards();
 
         $visitorIdDeterministic = bin2hex(Db::fetchOne(
             "SELECT idvisitor FROM " . Common::prefixTable('log_visit')
-            . " WHERE idsite = 2 AND location_latitude IS NOT NULL LIMIT 1"));
+            . " WHERE idsite = 2 AND location_latitude IS NOT NULL LIMIT 1"
+        ));
         $this->testEnvironment->forcedIdVisitor = $visitorIdDeterministic;
 
-        $this->testEnvironment->overlayUrl = $this->getLocalTestSiteUrl();
-        $this->createOverlayTestSite();
+        $this->testEnvironment->overlayUrl = self::getLocalTestSiteUrl();
+        self::createOverlayTestSite();
 
         $forcedNowTimestamp = Option::get("Tests.forcedNowTimestamp");
         if ($forcedNowTimestamp == false) {
@@ -174,50 +218,71 @@ class UITestFixture extends SqlDump
     {
         $baseUrl = $this->getLocalTestSiteUrl();
 
-        $visitProfiles = array(
-            array('', 'page-1.html', 'page-2.html', 'page-3.html', ''),
-            array('', 'page-3.html', 'page-4.html'),
-            array('', 'page-4.html'),
-            array('', 'page-1.html', 'page-3.html', 'page-4.html'),
-            array('', 'page-4.html', 'page-1.html'),
-            array('', 'page-1.html', ''),
-            array('page-4.html', ''),
-            array('', 'page-2.html', 'page-3.html'),
-            array('', 'page-1.html', 'page-2.html'),
-            array('', 'page-6.html', 'page-5.html', 'page-4.html', 'page-3.html', 'page-2.html', 'page-1.html', ''),
-            array('', 'page-5.html', 'page-3.html', 'page-1.html'),
-            array('', 'page-1.html', 'page-2.html', 'page-3.html'),
-            array('', 'page-4.html', 'page-3.html'),
-            array('', 'page-1.html', ''),
-            array('page-6.html', 'page-3.html', ''),
-        );
+        $visitProfiles = [
+            ['', 'page-1.html', 'page-2.html', 'page-3.html', ''],
+            ['', 'page-3.html', 'page-4.html'],
+            ['', 'page-4.html'],
+            ['', 'page-1.html', 'page-3.html', 'page-4.html'],
+            ['', 'page-4.html', 'page-1.html'],
+            ['', 'page-1.html', ''],
+            ['page-4.html', ''],
+            ['', 'page-2.html', 'page-3.html'],
+            ['', 'page-1.html', 'page-2.html'],
+            ['', 'page-6.html', 'page-5.html', 'page-4.html', 'page-3.html', 'page-2.html', 'page-1.html', ''],
+            ['', 'page-5.html', 'page-3.html', 'page-1.html'],
+            ['', 'page-1.html', 'page-2.html', 'page-3.html'],
+            ['', 'page-4.html', 'page-3.html'],
+            ['', 'page-1.html', ''],
+            ['page-6.html', 'page-3.html', ''],
+        ];
 
-        $ips = array( // ip's chosen for geolocation data
-            "72.44.32.12",
-            "50.112.3.5",
-            "70.117.169.113",
-            "73.77.55.45",
-            "206.190.75.8",
-            "108.211.181.12",
-            "174.97.139.63",
-            "24.125.31.147",
-            "67.51.31.21",
-            "156.5.3.1",
-            "194.57.91.215",
-            "137.82.130.1",
-            "113.62.1.1",
-            "151.100.101.92",
-            "72.44.32.10",
-            "95.81.66.139",
-        );
+        // ip's chosen for geolocation data
+        $ips = [
+            '72.44.32.12', // not mapped, so defaults to France, without details
+            '50.112.3.5', // San Jose, California, United States
+            '70.117.169.113', // El Paso, Texas, United States
+            '73.77.55.45', // Mount Laurel, New Jersey, United States
+            '206.190.75.8', // Lake Forest, California, United States
+            '108.211.181.12', // San Francisco, California, United States
+            '174.97.139.63', // Raleigh, North Carolina, United States
+            '24.125.31.147', // Mechanicsville, Virginia, United States
+            '67.51.31.21', // Ogden, Utah, United States
+            '156.5.3.1', // Englewood Cliffs, New Jersey, United States
+            '194.57.91.215', // Besançon, Bourgogne-Franche-Comte, France
+            '137.82.130.1', // Vancouver, British Columbia, Canada
+            '113.62.1.1', // Lhasa, Tibet, China
+            '151.100.101.92', // Rome, Latium, Italy
+            '72.44.32.10', // Ashburn, Virginia, United States
+            '95.81.66.139', // Tabriz, East Azerbaijan, Iran
+        ];
+
+        $userAgents = [
+            'Mozilla/5.0 (Linux; Android 4.4.2; Nexus 4 Build/KOT49H) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.136 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; U; Android 2.3.7; fr-fr; HTC Desire Build/GRI40; MildWild CM-8.0 JG Stable) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1',
+            'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.76 Safari/537.36',
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0; GTB6.3; Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.5.30729; .NET CLR 3.0.30729; OfficeLiveConnector.1.4; OfficeLivePatch.1.3)',
+            'Mozilla/5.0 (Windows NT 6.1; Trident/7.0; MDDSJS; rv:11.0) like Gecko',
+            'Mozilla/5.0 (Linux; Android 4.1.1; SGPT13 Build/TJDS0170) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.114 Safari/537.36',
+            'Mozilla/5.0 (Linux; U; Android 4.3; zh-cn; SM-N9006 Build/JSS15J) AppleWebKit/537.36 (KHTML, like Gecko)Version/4.0 MQQBrowser/5.0 Mobile Safari/537.36',
+            'Mozilla/5.0 (X11; U; Linux i686; ru; rv:1.9.0.14) Gecko/2009090216 Ubuntu/9.04 (jaunty) Firefox/3.0.14',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
+            'Mozilla/5.0 (Linux; U; Android 4.4.2; en-us; SCH-I535 Build/KOT49H) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30',
+            'Mozilla/5.0 (Linux; Android 7.0; SM-G930V Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 7.0; SM-A310F Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.91 Mobile Safari/537.36 OPR/42.7.2246.114996',
+            'Opera/9.80 (J2ME/MIDP; Opera Mini/5.1.21214/28.2725; U; ru) Presto/2.8.119 Version/11.10',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_2 like Mac OS X) AppleWebKit/603.2.4 (KHTML, like Gecko) FxiOS/7.5b3349 Mobile/14F89 Safari/603.2.4',
+            'Mozilla/5.0 (Android 7.0; Mobile; rv:54.0) Gecko/54.0 Firefox/54.0',
+            'Mozilla/5.0 (Linux; Android 6.0.1; SM-G920V Build/MMB29K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.98 Mobile Safari/537.36',
+        ];
 
         $date = Date::factory('yesterday');
-        $t = self::getTracker($idSite = 3, $dateTime = $date->getDatetime(), $defaultInit = true);
+        $t = self::getTracker(3, $date->getDatetime(), true);
         $t->enableBulkTracking();
 
         foreach ($visitProfiles as $visitCount => $visit) {
             $t->setNewVisitorId();
             $t->setIp($ips[$visitCount]);
+            $t->setUserAgent($userAgents[$visitCount]);
 
             foreach ($visit as $idx => $action) {
                 $t->setForceVisitDateTime($date->addHour($visitCount)->addHour(0.01 * $idx)->getDatetime());
@@ -237,20 +302,22 @@ class UITestFixture extends SqlDump
         self::checkBulkTrackingResponse($t->doBulkTrack());
     }
 
-    private function createOverlayTestSite()
+    public static function createOverlayTestSite($idSite = 3)
     {
         $realDir = PIWIK_INCLUDE_PATH . "/tests/resources/overlay-test-site-real";
         if (is_dir($realDir)) {
-            return;
+            Filesystem::unlinkRecursive($realDir, true);
         }
 
-        $files = array('index.html', 'page-1.html', 'page-2.html', 'page-3.html', 'page-4.html', 'page-5.html', 'page-6.html');
+        $files = ['index.html', 'page-1.html', 'page-2.html', 'page-3.html', 'page-4.html', 'page-5.html', 'page-6.html'];
 
         // copy templates to overlay-test-site-real
         mkdir($realDir);
         foreach ($files as $file) {
-            copy(PIWIK_INCLUDE_PATH . "/tests/resources/overlay-test-site/$file",
-                 PIWIK_INCLUDE_PATH . "/tests/resources/overlay-test-site-real/$file");
+            copy(
+                PIWIK_INCLUDE_PATH . "/tests/resources/overlay-test-site/$file",
+                PIWIK_INCLUDE_PATH . "/tests/resources/overlay-test-site-real/$file"
+            );
         }
 
         // replace URL in copied files
@@ -263,58 +330,101 @@ class UITestFixture extends SqlDump
 
             $contents = file_get_contents($path);
             $contents = str_replace("%trackerBaseUrl%", $url, $contents);
+            $contents = str_replace("%idSite%", $idSite, $contents);
             file_put_contents($path, $contents);
         }
     }
 
-    private function getLocalTestSiteUrl()
+    public static function getLocalTestSiteUrl()
     {
-        return self::getRootUrl() . "tests/resources/overlay-test-site-real/";
+        $url = self::getRootUrl() . "tests/resources/overlay-test-site-real/";
+
+        // when running tests on localhost we use 127.0.0.1 as url instead, so we have a different host in the iframe
+        // otherwise we would only test on the same host, which causes a lot less issues
+        return str_replace('localhost', '127.0.0.1', $url);
     }
 
     private function addNewSitesForSiteSelector()
     {
         for ($i = 0; $i != 8; ++$i) {
-            self::createWebsite("2011-01-01 00:00:00", $ecommerce = 1, $siteName = "Site #$i", $siteUrl = "http://site$i.com");
+            self::createWebsite(
+                "2011-01-01 00:00:00",
+                $ecommerce = 1,
+                $siteName = "Site #$i",
+                $siteUrl = "http://site$i.com",
+                1,
+                null,
+                null,
+                null,
+                null,
+                0,
+                implode(',', [$this->xssTesting->forTwig('excludedparameter'),
+                $this->xssTesting->forAngular('excludedparameter'),
+                'sid'])
+            );
         }
     }
 
     /** Creates two dashboards that split the widgets up into different groups. */
     public function setupDashboards()
     {
+        $oldGet = $_GET;
+
+        $_GET['idSite'] = 1;
+        $_GET['token_auth'] = \Piwik\Piwik::getCurrentUserTokenAuth();
+
+        // create almost empty dashboard first, as this will be loaded as default quite often
+        $dashboard = [
+            [
+                [
+                    'uniqueId' => "widgetVisitsSummarygetEvolutionGraphforceView1viewDataTablegraphEvolution",
+                    'parameters' => [
+                        'module' => 'VisitsSummary',
+                        'action' => 'getEvolutionGraph',
+                        'forceView' => '1',
+                        'viewDataTable' => 'graphEvolution'
+                    ]
+                ]
+            ],
+            [],
+            []
+        ];
+
+        $_GET['name'] = 'D4';
+        $_GET['layout'] = json_encode($dashboard);
+        $_GET['idDashboard'] = 1;
+        FrontController::getInstance()->fetchDispatch('Dashboard', 'saveLayout');
+
         $dashboardColumnCount = 3;
         $dashboardCount = 4;
 
-        $layout = array();
+        $layout = [];
         for ($j = 0; $j != $dashboardColumnCount; ++$j) {
-            $layout[] = array();
+            $layout[] = [];
         }
 
-        $dashboards = array();
+        $dashboards = [];
         for ($i = 0; $i != $dashboardCount; ++$i) {
             $dashboards[] = $layout;
         }
 
-        $oldGet = $_GET;
-        $_GET['idSite'] = 1;
-        $_GET['token_auth'] = Piwik::getCurrentUserTokenAuth();
-
         // collect widgets & sort them so widget order is not important
-        $allWidgets = Request::processRequest('API.getWidgetMetadata', array(
+        $allWidgets = Request::processRequest('API.getWidgetMetadata', [
             'idSite' => 1
-        ));
+        ]);
 
         usort($allWidgets, function ($lhs, $rhs) {
             return strcmp($lhs['uniqueId'], $rhs['uniqueId']);
         });
 
-        $widgetsPerDashboard = ceil((count($allWidgets)+1) / $dashboardCount);
+        $widgetsPerDashboard = ceil(count($allWidgets) / $dashboardCount);
 
         // group widgets so they will be spread out across 3 dashboards
-        $groupedWidgets = array();
+        $groupedWidgets = [];
         $dashboard = 0;
         foreach ($allWidgets as $widget) {
-            if ($widget['uniqueId'] == 'widgetSEOgetRank'
+            if (
+                $widget['uniqueId'] == 'widgetSEOgetRank'
                 || $widget['uniqueId'] == 'widgetLivegetVisitorProfilePopup'
                 || $widget['uniqueId'] == 'widgetActionsgetPageTitles'
                 || $widget['uniqueId'] == 'widgetCoreHomequickLinks'
@@ -323,10 +433,10 @@ class UITestFixture extends SqlDump
                 continue;
             }
 
-            $widgetEntry = array(
+            $widgetEntry = [
                 'uniqueId' => $widget['uniqueId'],
                 'parameters' => $widget['parameters']
-            );
+            ];
 
             // for realtime map, disable some randomness
             if ($widget['uniqueId'] == 'widgetUserCountryMaprealtimeMap') {
@@ -366,57 +476,51 @@ class UITestFixture extends SqlDump
         foreach ($dashboards as $id => $layout) {
             if ($id == 0) {
                 $_GET['name'] = $this->xssTesting->forTwig('dashboard name' . $id);
-            } else if ($id == 1) {
+            } elseif ($id == 1) {
                 $_GET['name'] = $this->xssTesting->forAngular('dashboard name' . $id);
             } else {
                 $_GET['name'] = 'dashboard name' . $id;
             }
             $_GET['layout'] = json_encode($layout);
-            $_GET['idDashboard'] = $id + 1;
+            $_GET['idDashboard'] = $id + 2;
             FrontController::getInstance()->fetchDispatch('Dashboard', 'saveLayout');
         }
-
-        // create empty dashboard
-        $dashboard = array(
-            array(
-                array(
-                    'uniqueId' => "widgetVisitsSummarygetEvolutionGraphforceView1viewDataTablegraphEvolution",
-                    'parameters' => array(
-                        'module' => 'VisitsSummary',
-                        'action' => 'getEvolutionGraph',
-                        'forceView' => '1',
-                        'viewDataTable' => 'graphEvolution'
-                    )
-                )
-            ),
-            array(),
-            array()
-        );
-
-        $_GET['name'] = 'D4';
-        $_GET['layout'] = json_encode($dashboard);
-        $_GET['idDashboard'] = 5;
-        $_GET['idSite'] = 2;
-        FrontController::getInstance()->fetchDispatch('Dashboard', 'saveLayout');
 
         $_GET = $oldGet;
     }
 
     public function createSegments()
     {
+        Rules::setBrowserTriggerArchiving(false);
         Db::exec("TRUNCATE TABLE " . Common::prefixTable('segment'));
 
         $segmentName = $this->xssTesting->forTwig('segment');
         $segmentDefinition = "browserCode==FF";
         APISegmentEditor::getInstance()->add(
-            $segmentName, $segmentDefinition, $idSite = 1, $autoArchive = true, $enabledAllUsers = true);
+            $segmentName,
+            $segmentDefinition,
+            $idSite = 1,
+            $autoArchive = true,
+            $enabledAllUsers = true
+        );
 
         // create two more segments
         $segmentName = $this->xssTesting->forAngular("From Europe segment");
         APISegmentEditor::getInstance()->add(
-            'From Europe ' . $segmentName, "continentCode==eur", $idSite = 1, $autoArchive = false, $enabledAllUsers = true);
+            'From Europe ' . $segmentName,
+            "continentCode==eur",
+            $idSite = 1,
+            $autoArchive = false,
+            $enabledAllUsers = true
+        );
         APISegmentEditor::getInstance()->add(
-            "Multiple actions", "actions>=2", $idSite = 1, $autoArchive = false, $enabledAllUsers = true);
+            "Multiple actions",
+            "actions>=2",
+            $idSite = 1,
+            $autoArchive = false,
+            $enabledAllUsers = true
+        );
+        Rules::setBrowserTriggerArchiving(true);
     }
 
     public function provideContainerConfig()
@@ -425,8 +529,11 @@ class UITestFixture extends SqlDump
         API::$_autoSuggestLookBack = floor(Date::today()->getTimestamp() - Date::factory('2012-01-01')->getTimestamp()) / (24 * 60 * 60);
 
         return [
-            'observers.global' => \DI\add([
-                ['Report.addReports', function (&$reports) {
+            'Tests.now' => \Piwik\DI::decorate(function () {
+                return Option::get("Tests.forcedNowTimestamp");
+            }),
+            'observers.global' => \Piwik\DI::add([
+                ['Report.addReports', \Piwik\DI::value(function (&$reports) {
                     $report = new XssReport();
                     $report->initForXss('forTwig');
                     $reports[] = $report;
@@ -434,11 +541,11 @@ class UITestFixture extends SqlDump
                     $report = new XssReport();
                     $report->initForXss('forAngular');
                     $reports[] = $report;
-                }],
-                ['Dimension.addDimensions', function (&$instances) {
+                })],
+                ['Dimension.addDimensions', \Piwik\DI::value(function (&$instances) {
                     $instances[] = new XssDimension();
-                }],
-                ['API.Request.intercept', function (&$result, $finalParameters, $pluginName, $methodName) {
+                })],
+                ['API.Request.intercept', \Piwik\DI::value(function (&$result, $finalParameters, $pluginName, $methodName) {
                     if ($pluginName != 'ExampleAPI' && $methodName != 'xssReportforTwig' && $methodName != 'xssReportforAngular') {
                         return;
                     }
@@ -457,13 +564,16 @@ class UITestFixture extends SqlDump
                         'nb_visits' => 15,
                     ]);
                     $result = $dataTable;
-                }],
+                })],
             ]),
-            Proxy::class => \DI\get(CustomApiProxy::class),
-            'log.handlers' => \DI\decorate(function ($previous, ContainerInterface $c) {
+            Proxy::class => \Piwik\DI::get(CustomApiProxy::class),
+            'log.handlers' => \Piwik\DI::decorate(function ($previous, Container $c) {
                 $previous[] = $c->get(WebNotificationHandler::class);
                 return $previous;
             }),
+
+            SegmentArchiving::class => \Piwik\DI::autowire()
+                ->constructorParameter('beginningOfTimeLastNInYears', 15)
         ];
     }
 
@@ -485,13 +595,13 @@ class XssReport extends Report
     {
         parent::init();
 
-        $this->metrics        = array('nb_visits');
+        $this->metrics        = ['nb_visits'];
         $this->order = 10;
 
         $action = Common::getRequestVar('actionToWidgetize', false) ?: Common::getRequestVar('action', false);
         if ($action == 'xssReportforTwig') {
             $this->initForXss('forTwig');
-        } else if ($action == 'xssReportforAngular') {
+        } elseif ($action == 'xssReportforAngular') {
             $this->initForXss('forAngular');
         }
     }
@@ -510,7 +620,6 @@ class XssReport extends Report
         $this->processedMetrics = [new XssProcessedMetric($type)];
         $this->module = 'ExampleAPI';
         $this->action = 'xssReport' . $type;
-        $this->id = 'ExampleAPI.xssReport' . $type;
     }
 }
 

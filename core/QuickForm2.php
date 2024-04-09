@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -67,9 +67,12 @@ abstract class QuickForm2 extends HTML_QuickForm2
      * @throws   HTML_QuickForm2_InvalidArgumentException
      * @throws   HTML_QuickForm2_NotFoundException
      */
-    public function addElement($elementOrType, $name = null, $attributes = null,
-                               array $data = array())
-    {
+    public function addElement(
+        $elementOrType,
+        $name = null,
+        $attributes = null,
+        array $data = array()
+    ) {
         if ($name != 'submit') {
             $this->a_formElements[] = $name;
         }

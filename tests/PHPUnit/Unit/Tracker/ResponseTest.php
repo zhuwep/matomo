@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,13 +9,14 @@
 namespace Piwik\Tests\Unit\Tracker;
 
 use Piwik\Common;
+use Piwik\Config;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tracker\Response;
 use Piwik\Tests\Framework\Mock\Tracker;
 use Exception;
 
-class TestResponse extends Response {
-
+class TestResponse extends Response
+{
     protected function logExceptionToErrorLog($e)
     {
         // prevent console from outputting the error_log message
@@ -33,14 +34,14 @@ class TestResponse extends Response {
  * @group Plugins
  * @group Tracker
  */
-class ResponseTest extends \PHPUnit_Framework_TestCase
+class ResponseTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var TestResponse
      */
     private $response;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->response = new TestResponse();
@@ -65,8 +66,8 @@ class ResponseTest extends \PHPUnit_Framework_TestCase
 
         $content = $this->response->getOutput();
 
-        $this->assertContains('<title>Matomo &rsaquo; Error</title>', $content);
-        $this->assertContains('<p>My Custom Message', $content);
+        self::assertStringContainsString('An exception occurred', $content);
+        self::assertStringContainsString('My Custom Message', $content);
     }
 
     public function test_outputResponse_shouldOutputStandardApiResponse()
@@ -127,8 +128,10 @@ class ResponseTest extends \PHPUnit_Framework_TestCase
         $tracker->setCountOfLoggedRequests(0);
         $this->response->outputResponse($tracker);
 
-        $this->assertEquals("This resource is part of Matomo. Keep full control of your data with the leading free and open source <a href='https://matomo.org' target='_blank' rel='noopener noreferrer nofollow'>web analytics & conversion optimisation platform</a>.",
-            $this->response->getOutput());
+        $this->assertEquals(
+            "This resource is part of Matomo. Keep full control of your data with the leading free and open source <a href='https://matomo.org' target='_blank' rel='noopener noreferrer nofollow'>web analytics & conversion optimisation platform</a>.<br>\nThis file is the endpoint for the Matomo tracking API. If you want to access the Matomo UI or use the Reporting API, please use <a href='index.php'>index.php</a> instead.\n",
+            $this->response->getOutput()
+        );
     }
 
     public function test_getMessageFromException_ShouldNotOutputAnyDetails_IfErrorContainsDbCredentials()
@@ -143,7 +146,7 @@ class ResponseTest extends \PHPUnit_Framework_TestCase
     public function test_getMessageFromException_ShouldReturnMessageAndTrace_InCaseIsCli()
     {
         $message = $this->response->getMessageFromException(new Exception('Test Message', 8150));
-        $this->assertStringStartsWith("Test Message\n#0 [internal function]", $message);
+        $this->assertStringStartsWith("Test Message\n#0 ", $message);
     }
 
     public function test_getMessageFromException_ShouldOnlyReturnMessage_InCaseIsNotCli()
@@ -167,11 +170,56 @@ class ResponseTest extends \PHPUnit_Framework_TestCase
         Fixture::checkResponse($this->response->getOutput());
     }
 
+    public function test_outputResponse_shouldOuputCustomImage_IfCustomBase64ImageSet()
+    {
+        // Base64 sample image string (4x4px red PNG made in GIMP)
+        $base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAIAAAACDbGyAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAB3RJTUUH5QgLFiABlwQnpwAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAAUSURBVAjXY/wjLMyABJgYUAGpfABbJQEsALGyNgAAAABJRU5ErkJggg==';
+
+        // Initialise the custom_image setting
+        $config = Config::getInstance();
+        $trackerSettings = $config->Tracker;
+        $trackerSettings['custom_image'] = $base64Image;
+        $config->Tracker = $trackerSettings;
+
+        // Get the response
+        $tracker = $this->getTracker();
+        $this->response->init($tracker);
+        $this->response->outputResponse($tracker);
+        $response = $this->response->getOutput();
+
+        // Encode the response back into base64 and compare with the original
+        $this->assertSame($base64Image, base64_encode($response));
+    }
+
+    public function test_outputResponse_shouldOuputCustomImage_IfCustomImageFileSet()
+    {
+
+        // Using the Matomo logo file from the Morpheus theme plugin
+        $testImagePath = PIWIK_INCLUDE_PATH . '/plugins/Morpheus/images/logo.png';
+        $this->assertFileExists($testImagePath, "Unable to find the test image for custom image file test");
+        $md5File = md5_file($testImagePath);
+
+        // Initialise the custom_image setting
+        $config = Config::getInstance();
+        $trackerSettings = $config->Tracker;
+        $trackerSettings['custom_image'] = $testImagePath;
+        $config->Tracker = $trackerSettings;
+
+        // Get the response
+        $tracker = $this->getTracker();
+        $this->response->init($tracker);
+        $this->response->outputResponse($tracker);
+        $response = $this->response->getOutput();
+        $md5Response = md5($response);
+
+        // Compare the hash of the response with the file hash
+        $this->assertSame($md5Response, $md5File);
+    }
+
     private function getTracker()
     {
         $tracker = new Tracker();
         $tracker->setCountOfLoggedRequests(5);
         return $tracker;
     }
-
 }

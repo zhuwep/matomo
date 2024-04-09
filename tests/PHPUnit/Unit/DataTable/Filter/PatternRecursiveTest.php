@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,7 @@ use Piwik\DataTable\Row;
 /**
  * @group DataTableTest
  */
-class DataTable_Filter_PatternRecursiveTest extends \PHPUnit_Framework_TestCase
+class PatternRecursiveTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * Returns a data table for testing
@@ -35,7 +35,7 @@ class DataTable_Filter_PatternRecursiveTest extends \PHPUnit_Framework_TestCase
                                             array(Row::COLUMNS => array('label' => 'index.html')),
                                        ));
 
-        $table = new DataTable;
+        $table = new DataTable();
         $rows = array(
             array(Row::COLUMNS              => array('label' => 'http://www.ask.com'),
                   Row::DATATABLE_ASSOCIATED => $subtableAsk),

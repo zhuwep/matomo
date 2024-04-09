@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,12 +8,12 @@
 
 namespace Piwik\Plugins\Marketplace\tests\Framework\Mock;
 
-use Piwik\Cache\Backend\NullCache;
-use Piwik\Cache\Lazy;
-use Psr\Log\NullLogger;
+use Matomo\Cache\Backend\NullCache;
+use Matomo\Cache\Lazy;
+use Piwik\Log\NullLogger;
 
-class Client {
-
+class Client
+{
     public static function build($service)
     {
         $environment = new Environment();

@@ -1,6 +1,6 @@
 <?php
 /**
-* Piwik - free/libre analytics platform
+* Matomo - free/libre analytics platform
 *
 * @link https://matomo.org
 * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Plugins\BulkTracking\tests\Framework\Mock\Tracker;
 
-use Piwik\Tracker;
 
 class Requests extends \Piwik\Plugins\BulkTracking\Tracker\Requests
 {
@@ -38,5 +37,4 @@ class Requests extends \Piwik\Plugins\BulkTracking\Tracker\Requests
     {
         return $this->requiresAuth;
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,9 +12,10 @@ use Piwik\Common;
 use Piwik\Filesystem;
 use Piwik\NumberFormatter;
 use Piwik\Piwik;
-use Piwik\Plugins\API\API;
+use Piwik\Plugins\CoreAdminHome\CustomLogo;
 use Piwik\ReportRenderer;
 use Piwik\TCPDF;
+use TCPDF_FONTS;
 
 /**
  * @see libs/tcpdf
@@ -38,6 +39,8 @@ class Pdf extends ReportRenderer
     const NO_DATA_ROW_COUNT = 6;
     const MAX_GRAPH_REPORTS = 3;
     const MAX_2COL_TABLE_REPORTS = 2;
+
+    const IMPORT_FONT_PATH = 'plugins/ImageGraph/fonts/unifont.ttf';
 
     const PDF_CONTENT_TYPE = 'pdf';
 
@@ -135,6 +138,10 @@ class Pdf extends ReportRenderer
         }
         // WARNING: Did you read the warning above?
 
+        // When user follow the FAQ https://matomo.org/faq/how-to-install/faq_142/, imported unifont font, it will apply across the entire report
+        if (is_file(self::IMPORT_FONT_PATH)) {
+            $reportFont = TCPDF_FONTS::addTTFfont(self::IMPORT_FONT_PATH, 'TrueTypeUnicode');
+        }
         $this->reportFont = $reportFont;
     }
 
@@ -162,7 +169,7 @@ class Pdf extends ReportRenderer
 
     public function getRenderedReport()
     {
-        return $this->TCPDF->Output(null, 'S');
+        return $this->TCPDF->Output('', 'S');
     }
 
     public function renderFrontPage($reportTitle, $prettyDate, $description, $reportMetadata, $segment)
@@ -172,7 +179,7 @@ class Pdf extends ReportRenderer
 
         // footer
         $this->TCPDF->SetFooterFont(array($this->reportFont, $this->reportFontStyle, $this->reportSimpleFontSize));
-        $this->TCPDF->SetFooterContent($reportTitle . " | " . $dateRange . " | ");
+        $this->TCPDF->SetFooterContent((strlen($reportTitle) > 64 ? substr($reportTitle, 0, 61) . "..." : $reportTitle) . " | " . $dateRange . " | ");
 
         // add first page
         $this->TCPDF->setPrintHeader(false);
@@ -182,22 +189,24 @@ class Pdf extends ReportRenderer
         $this->TCPDF->Bookmark(Piwik::translate('ScheduledReports_FrontPage'));
 
         // logo
-        $this->TCPDF->Image(API::getInstance()->getLogoUrl(true), $this->logoImagePosition[0], $this->logoImagePosition[1], 180 / $factor = 2, 0, $type = '', $link = '', $align = '', $resize = false, $dpi = 300);
+        $customLogo = new CustomLogo();
+        $this->TCPDF->Image($customLogo->getLogoUrl(true), $this->logoImagePosition[0], $this->logoImagePosition[1], 180 / $factor = 2, 0, $type = '', $link = '', $align = '', $resize = false, $dpi = 300);
         $this->TCPDF->Ln(8);
 
         // report title
         $this->TCPDF->SetFont($this->reportFont, '', $this->reportHeaderFontSize + 5);
         $this->TCPDF->SetTextColor($this->headerTextColor[0], $this->headerTextColor[1], $this->headerTextColor[2]);
-        $this->TCPDF->Cell(40, 210, $reportTitle);
-        $this->TCPDF->Ln(8 * 4);
+        $this->TCPDF->SetXY(10, 119);
+        $this->TCPDF->MultiCell(0, 40, $reportTitle, 0, 'L');
 
         // date and period
+        $this->TCPDF->SetXY(10, 152);
         $this->TCPDF->SetFont($this->reportFont, '', $this->reportHeaderFontSize);
         $this->TCPDF->SetTextColor($this->reportTextColor[0], $this->reportTextColor[1], $this->reportTextColor[2]);
-        $this->TCPDF->Cell(40, 210, $dateRange);
-        $this->TCPDF->Ln(8 * 20);
+        $this->TCPDF->MultiCell(0, 40, $dateRange, 0, 'L');
 
         // description
+        $this->TCPDF->SetXY(10, 210);
         $this->TCPDF->Write(1, $this->formatText($description));
 
         // segment
@@ -247,9 +256,10 @@ class Pdf extends ReportRenderer
         $rowCount = $reportHasData ? $this->report->getRowsCount() + self::TABLE_HEADER_ROW_COUNT : self::NO_DATA_ROW_COUNT;
 
         // Only a page break before if the current report has some data
-        if ($reportHasData &&
+        if (
+            $reportHasData
             // and
-            (
+            && (
                 // it is the first report
                 $this->currentPage == 0
                 // or, it is a graph-only report and it is the first of a series of self::MAX_GRAPH_REPORTS
@@ -368,7 +378,7 @@ class Pdf extends ReportRenderer
                     $posX = $this->TCPDF->GetX();
                     $posY = $this->TCPDF->GetY();
                     if (isset($rowMetrics[$columnId])) {
-                        $text = substr($rowMetrics[$columnId], 0, $this->truncateAfter);
+                        $text = mb_substr($rowMetrics[$columnId], 0, $this->truncateAfter);
                         if ($isLogoDisplayable) {
                             $text = $leftSpacesBeforeLogo . $text;
                         }
@@ -399,8 +409,9 @@ class Pdf extends ReportRenderer
                         }
                         $this->TCPDF->SetXY($restoreX, $restoreY);
                     }
-                } // metrics column
-                else {
+                } else {
+                    // metrics column
+
                     // No value means 0
                     if (empty($rowMetrics[$columnId])) {
                         $rowMetrics[$columnId] = 0;
@@ -473,7 +484,8 @@ class Pdf extends ReportRenderer
 
         $columnsCount = count($this->reportColumns);
         // Computes available column width
-        if ($this->orientation == self::PORTRAIT
+        if (
+            $this->orientation == self::PORTRAIT
             && $columnsCount <= 3
         ) {
             $totalWidth = $this->reportWidthPortrait * 2 / 3;

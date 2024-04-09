@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,6 +18,7 @@ interface DataTableInterface
     public function queueFilter($className, $parameters = array());
     public function applyQueuedFilters();
     public function filter($className, $parameters = array());
+    public function multiFilter($otherTables, $filter);
     public function getFirstRow();
     public function __toString();
     public function enableRecursiveSort();
@@ -27,4 +28,5 @@ interface DataTableInterface
     public function deleteColumn($name);
     public function getColumn($name);
     public function getColumns();
+    public function deleteRowsMetadata($name, $deleteRecursiveInSubtables = false);
 }

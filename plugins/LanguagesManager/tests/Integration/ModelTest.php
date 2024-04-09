@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -20,13 +20,12 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class ModelTest extends IntegrationTestCase
 {
-
     /**
      * @var Model
      */
     protected $model;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->model = new Model();
         parent::setUp();
@@ -101,7 +100,6 @@ class ModelTest extends IntegrationTestCase
         $entryCount = Db::fetchOne('SELECT COUNT(*) FROM ' . Common::prefixTable('user_language'));
 
         $this->assertEquals($count, $entryCount);
-
     }
 
     private function assertContainTables($expectedTables)
@@ -109,7 +107,7 @@ class ModelTest extends IntegrationTestCase
         $tableNames = $this->getCurrentAvailableTableNames();
 
         foreach ($expectedTables as $expectedTable) {
-            $this->assertContains(Common::prefixTable($expectedTable), $tableNames);
+            self::assertTrue(in_array(Common::prefixTable($expectedTable), $tableNames));
         }
     }
 
@@ -118,7 +116,7 @@ class ModelTest extends IntegrationTestCase
         $tableNames = $this->getCurrentAvailableTableNames();
 
         foreach ($expectedTables as $expectedTable) {
-            $this->assertNotContains(Common::prefixTable($expectedTable), $tableNames);
+            self::assertTrue(!in_array(Common::prefixTable($expectedTable), $tableNames));
         }
     }
 

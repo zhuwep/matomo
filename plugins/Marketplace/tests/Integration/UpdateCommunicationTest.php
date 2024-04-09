@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,6 +15,7 @@ use Piwik\Plugins\CoreUpdater\SystemSettings;
 use Piwik\Plugins\Marketplace\UpdateCommunication;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
+use Piwik\Twig;
 use Piwik\View;
 
 /**
@@ -33,7 +34,7 @@ class UpdateCommunicationTest extends IntegrationTestCase
      */
     private $settings;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -118,6 +119,8 @@ class UpdateCommunicationTest extends IntegrationTestCase
     {
         $subject = 'CoreUpdater_NotificationSubjectAvailablePluginUpdate';
         $rootUrl = Fixture::getTestRootUrl();
+        $twig = new Twig();
+
         $message = "<p>ScheduledReports_EmailHello</p>
 <p>CoreUpdater_ThereIsNewPluginVersionAvailableForUpdate</p>
 
@@ -130,7 +133,7 @@ class UpdateCommunicationTest extends IntegrationTestCase
 
 <p>
 CoreUpdater_NotificationClickToUpdatePlugins<br/>
-{$rootUrl}index.php?module=CorePluginsAdmin&action=plugins
+<a href=\"" . twig_escape_filter($twig->getTwigEnvironment(), $rootUrl, 'html_attr') . "index.php?module=CorePluginsAdmin&action=plugins\">{$rootUrl}index.php?module=CorePluginsAdmin&action=plugins</a>
 </p>
 
 <p>

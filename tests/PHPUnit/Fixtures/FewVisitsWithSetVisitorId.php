@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,9 +9,8 @@ namespace Piwik\Tests\Fixtures;
 
 use Piwik\Date;
 use Piwik\Plugins\Goals\API;
-use Piwik\Tracker\Visit;
 use Piwik\Tests\Framework\Fixture;
-use PiwikTracker;
+use MatomoTracker;
 use Exception;
 
 /**
@@ -25,7 +24,7 @@ class FewVisitsWithSetVisitorId extends Fixture
 
     const USER_ID_EXAMPLE_COM = 'email@example.com';
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         $this->trackVisits_setVisitorId();
@@ -35,7 +34,7 @@ class FewVisitsWithSetVisitorId extends Fixture
         $this->trackVisits_oneWeekLater_setUserId();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -44,7 +43,7 @@ class FewVisitsWithSetVisitorId extends Fixture
     {
         // tests run in UTC, the Tracker in UTC
         if (!self::siteCreated($this->idSite)) {
-            self::createWebsite($this->dateTime);
+            self::createWebsite($this->dateTime, 1);
         }
         if (!self::goalExists($this->idSite, $this->idGoal)) {
             API::getInstance()->addGoal($this->idSite, 'triggered js', 'manually', '', '');
@@ -75,7 +74,6 @@ class FewVisitsWithSetVisitorId extends Fixture
         $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(0.1)->getDatetime());
         $t->setUrl('http://example.org/index3.htm');
         self::checkResponse($t->doTrackPageView('incredible title!'));
-
     }
 
     private function trackVisits_setUserId()
@@ -92,7 +90,7 @@ class FewVisitsWithSetVisitorId extends Fixture
         $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(1.9)->getDatetime());
         $t->setVisitorId('6be121d126d93581');
         $t->setUrl('http://example.org/no-user-id-set-but-should-appear-in-user-id-visit');
-        self::checkResponse($t->doTrackPageView('no User Id set but it should appear in '. $userId .'!'));
+        self::checkResponse($t->doTrackPageView('no User Id set but it should appear in ' . $userId . '!'));
 
         // A NEW VISIT
         // Setting both Visitor ID and User ID
@@ -148,7 +146,7 @@ class FewVisitsWithSetVisitorId extends Fixture
         // Request from a different computer not yet logged in, this should not be added to our User ID session
         $t->setUserId(false);
         // make sure the Id is not so random as to not fail the test
-        $t->randomVisitorId = '5e15b4d842cc294d';
+        $t->setVisitorId('5e15b4d842cc294d');
 
         $t->setIp('1.2.4.7');
         $t->setUserAgent("New unique device");
@@ -167,7 +165,6 @@ class FewVisitsWithSetVisitorId extends Fixture
         $t->setUrl('http://nsa.gov/buy/prism');
         $t->addEcommerceItem('sku-007-PRISM', 'My secret spy tech', 'Surveillance', '10000000000');
         $t->doTrackEcommerceCartUpdate(10000000000 + 500 /* add some for shipping PRISM */);
-
     }
 
     private function trackVisits_oneWeekLater_setUserId()
@@ -190,10 +187,9 @@ class FewVisitsWithSetVisitorId extends Fixture
         $t->setVisitorId('6ccebef4faef4969'); // this should not be ignored
         self::checkResponse($t->doTrackPageView('A page view by ' . $userId));
         $t->setForceVisitDateTime($oneWeekLater->addHour(0.8)->getDatetime());
-
     }
 
-    private function settingInvalidVisitorIdShouldThrow(PiwikTracker $t)
+    private function settingInvalidVisitorIdShouldThrow(MatomoTracker $t)
     {
         try {
             $t->setVisitorId('test');
@@ -215,7 +211,7 @@ class FewVisitsWithSetVisitorId extends Fixture
         }
     }
 
-    private function settingInvalidUserIdShouldThrow(PiwikTracker $t)
+    private function settingInvalidUserIdShouldThrow(MatomoTracker $t)
     {
         try {
             $t->setUserId('');

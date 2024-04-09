@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,15 +17,14 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class SimpleTest extends IntegrationTestCase
 {
-
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         // set up your test here if needed
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // clean up your test here if needed
 
@@ -37,7 +36,6 @@ class SimpleTest extends IntegrationTestCase
      */
     public function testSimpleAddition()
     {
-        $this->assertEquals(2, 1+1);
+        $this->assertEquals(2, 1 + 1);
     }
-
 }

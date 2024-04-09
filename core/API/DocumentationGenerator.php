@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -50,9 +50,9 @@ class DocumentationGenerator
      */
     public function getApiDocumentationAsString($outputExampleUrls = true)
     {
-        list($toc, $str) = $this->generateDocumentation($outputExampleUrls, $prefixUrls = '', $displayTitlesAsAngularDirective = true);
+        list($toc, $str) = $this->generateDocumentation($outputExampleUrls, $prefixUrls = '', $displayTitlesAsEnrichedHeadline = true);
 
-        return "<div piwik-content-block content-title='Quick access to APIs' id='topApiRef' name='topApiRef'>
+        return "<div vue-entry=\"CoreHome.ContentBlock\" content-title='Quick access to APIs' id='topApiRef' name='topApiRef'>
 				$toc</div>
 				$str";
     }
@@ -66,7 +66,7 @@ class DocumentationGenerator
      */
     public function getApiDocumentationAsStringForDeveloperReference($outputExampleUrls = true, $prefixUrls = '')
     {
-        list($toc, $str) = $this->generateDocumentation($outputExampleUrls, $prefixUrls, $displayTitlesAsAngularDirective = false);
+        list($toc, $str) = $this->generateDocumentation($outputExampleUrls, $prefixUrls, $displayTitlesAsEnrichedHeadline = false);
 
         return "<h2 id='topApiRef' name='topApiRef'>Quick access to APIs</h2>
 				$toc
@@ -78,12 +78,12 @@ class DocumentationGenerator
         return "<a href='#$moduleName'>$moduleName</a><br/>";
     }
 
-    protected function prepareMethodToDisplay($moduleName, $info, $methods, $class, $outputExampleUrls, $prefixUrls, $displayTitlesAsAngularDirective)
+    protected function prepareMethodToDisplay($moduleName, $info, $methods, $class, $outputExampleUrls, $prefixUrls, $displayTitlesAsEnrichedHeadline)
     {
         $str = '';
         $str .= "\n<a name='$moduleName' id='$moduleName'></a>";
-        if($displayTitlesAsAngularDirective) {
-            $str .= "<div piwik-content-block content-title='Module " . $moduleName . "'>";
+        if($displayTitlesAsEnrichedHeadline) {
+            $str .= "<div vue-entry=\"CoreHome.ContentBlock\" content-title='Module " . $moduleName . "'>";
         } else {
             $str .= "<h2>Module " . $moduleName . "</h2>";
         }
@@ -105,7 +105,7 @@ class DocumentationGenerator
             $str .= "</div>\n";
         }
 
-        if($displayTitlesAsAngularDirective) {
+        if($displayTitlesAsEnrichedHeadline) {
             $str .= "</div>";
         }
 
@@ -128,7 +128,11 @@ class DocumentationGenerator
 
     protected function addExamples($class, $methodName, $prefixUrls)
     {
-        $token_auth = "&token_auth=" . Piwik::getCurrentUserTokenAuth();
+        $token = Piwik::getCurrentUserTokenAuth();
+        $token_auth_url = "&token_auth=" . $token;
+        if ($token !== 'anonymous') {
+            $token_auth_url .= "&force_api_session=1";
+        }
         $parametersToSet = array(
             'idSite' => Common::getRequestVar('idSite', 1, 'int'),
             'period' => Common::getRequestVar('period', 'day', 'string'),
@@ -141,13 +145,13 @@ class DocumentationGenerator
             $lastNUrls = '';
             if (preg_match('/(&period)|(&date)/', $exampleUrl)) {
                 $exampleUrlRss = $prefixUrls . $this->getExampleUrl($class, $methodName, array('date' => 'last10', 'period' => 'day') + $parametersToSet);
-                $lastNUrls = ", RSS of the last <a target='_blank' href='$exampleUrlRss&format=rss$token_auth&translateColumnNames=1'>10 days</a>";
+                $lastNUrls = ", RSS of the last <a target='_blank' href='$exampleUrlRss&format=rss$token_auth_url&translateColumnNames=1'>10 days</a>";
             }
             $exampleUrl = $prefixUrls . $exampleUrl;
             $str .= " [ Example in
-                                                                    <a target='_blank' href='$exampleUrl&format=xml$token_auth'>XML</a>,
-                                                                    <a target='_blank' href='$exampleUrl&format=JSON$token_auth'>Json</a>,
-                                                                    <a target='_blank' href='$exampleUrl&format=Tsv$token_auth&translateColumnNames=1'>Tsv (Excel)</a>
+                                                                    <a target='_blank' href='$exampleUrl&format=xml$token_auth_url'>XML</a>,
+                                                                    <a target='_blank' href='$exampleUrl&format=JSON$token_auth_url'>Json</a>,
+                                                                    <a target='_blank' href='$exampleUrl&format=Tsv$token_auth_url&translateColumnNames=1'>Tsv (Excel)</a>
                                                                     $lastNUrls
                                                                     ]";
         } else {
@@ -265,19 +269,19 @@ class DocumentationGenerator
         $aParameters['labelSeries'] = false;
         $aParameters['flat'] = false;
         $aParameters['include_aggregate_rows'] = false;
-        $aParameters['filter_offset'] = false; 
-        $aParameters['filter_limit'] = false; 
-        $aParameters['filter_sort_column'] = false; 
-        $aParameters['filter_sort_order'] = false; 
-        $aParameters['filter_excludelowpop'] = false; 
-        $aParameters['filter_excludelowpop_value'] = false; 
-        $aParameters['filter_column_recursive'] = false; 
-        $aParameters['filter_pattern'] = false; 
-        $aParameters['filter_pattern_recursive'] = false; 
+        $aParameters['filter_offset'] = false;
+        $aParameters['filter_limit'] = false;
+        $aParameters['filter_sort_column'] = false;
+        $aParameters['filter_sort_order'] = false;
+        $aParameters['filter_excludelowpop'] = false;
+        $aParameters['filter_excludelowpop_value'] = false;
+        $aParameters['filter_column_recursive'] = false;
+        $aParameters['filter_pattern'] = false;
+        $aParameters['filter_pattern_recursive'] = false;
         $aParameters['filter_truncate'] = false;
         $aParameters['hideColumns'] = false;
+        $aParameters['hideColumnsRecursively'] = false;
         $aParameters['showColumns'] = false;
-        $aParameters['filter_pattern_recursive'] = false;
         $aParameters['pivotBy'] = false;
         $aParameters['pivotByColumn'] = false;
         $aParameters['pivotByColumnLimit'] = false;
@@ -292,13 +296,16 @@ class DocumentationGenerator
         $aParameters['compareSegments'] = false;
         $aParameters['comparisonIdSubtables'] = false;
         $aParameters['invert_compare_change_compute'] = false;
+        $aParameters['filter_update_columns_when_show_all_goals'] = false;
+        $aParameters['filter_show_goal_columns_process_goals'] = false;
 
-        $entityNames = StaticContainer::get('entities.idNames');
-        foreach ($entityNames as $entityName) {
-            if (isset($aParameters[$entityName])) {
+        $extraParameters = StaticContainer::get('entities.idNames');
+        $extraParameters = array_merge($extraParameters, StaticContainer::get('DocumentationGenerator.customParameters'));
+        foreach ($extraParameters as $paramName) {
+            if (isset($aParameters[$paramName])) {
                 continue;
             }
-            $aParameters[$entityName] = false;
+            $aParameters[$paramName] = false;
         }
 
         $moduleName = Proxy::getInstance()->getModuleNameFromClassName($class);
@@ -307,9 +314,9 @@ class DocumentationGenerator
         foreach ($aParameters as $nameVariable => &$defaultValue) {
             if (isset($knowExampleDefaultParametersValues[$nameVariable])) {
                 $defaultValue = $knowExampleDefaultParametersValues[$nameVariable];
-            } // if there isn't a default value for a given parameter,
-            // we need a 'know default value' or we can't generate the link
-            elseif ($defaultValue instanceof NoDefaultValue) {
+            } elseif ($defaultValue instanceof NoDefaultValue) {
+                // if there isn't a default value for a given parameter,
+                // we need a 'know default value' or we can't generate the link
                 return false;
             }
         }
@@ -325,18 +332,34 @@ class DocumentationGenerator
      */
     protected function getParametersString($class, $name)
     {
-        $aParameters = Proxy::getInstance()->getParametersList($class, $name);
+        $aParameters = Proxy::getInstance()->getParametersListWithTypes($class, $name);
         $asParameters = array();
-        foreach ($aParameters as $nameVariable => $defaultValue) {
+        foreach ($aParameters as $nameVariable => $parameter) {
             // Do not show API parameters starting with _
             // They are supposed to be used only in internal API calls
             if (strpos($nameVariable, '_') === 0) {
                 continue;
             }
-            $str = $nameVariable;
+
+            $str = '';
+
+            if(!empty($parameter['type'])) {
+                $prefix = $parameter['allowsNull'] ? '?' : '';
+                $str = '<i>' . $prefix . $parameter['type'] . '</i> ';
+            }
+
+            $str .= $nameVariable;
+            $defaultValue = $parameter['default'];
+
             if (!($defaultValue instanceof NoDefaultValue)) {
                 if (is_array($defaultValue)) {
                     $str .= " = 'Array'";
+                } elseif (!empty($parameter['type']) && $parameter['allowsNull']) {
+                    $str .= ""; // don't display default value, as the ? before the type hint indicates it's optional
+                } elseif ($parameter['type'] === 'bool' && $defaultValue === true) {
+                    $str .= " = true";
+                } elseif ($parameter['type'] === 'bool' && $defaultValue === false) {
+                    $str .= " = false";
                 } else {
                     $str .= " = '$defaultValue'";
                 }
@@ -350,10 +373,10 @@ class DocumentationGenerator
     /**
      * @param $outputExampleUrls
      * @param $prefixUrls
-     * @param $displayTitlesAsAngularDirective
+     * @param $displayTitlesAsEnrichedHeadline
      * @return array
      */
-    protected function generateDocumentation($outputExampleUrls, $prefixUrls, $displayTitlesAsAngularDirective)
+    protected function generateDocumentation($outputExampleUrls, $prefixUrls, $displayTitlesAsEnrichedHeadline)
     {
         $str = $toc = '';
 
@@ -389,7 +412,7 @@ class DocumentationGenerator
 
             foreach ($toDisplay as $moduleName => $methods) {
                 $toc .= $this->prepareModuleToDisplay($moduleName);
-                $str .= $this->prepareMethodToDisplay($moduleName, $info, $methods, $class, $outputExampleUrls, $prefixUrls, $displayTitlesAsAngularDirective);
+                $str .= $this->prepareMethodToDisplay($moduleName, $info, $methods, $class, $outputExampleUrls, $prefixUrls, $displayTitlesAsEnrichedHeadline);
             }
         }
         return array($toc, $str);

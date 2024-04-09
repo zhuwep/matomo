@@ -34,7 +34,7 @@ describe("CoreUpdaterDb", function () {
         });
     }
 
-    var formats = ['CSV', 'TSV', 'XML', 'JSON', 'PHP'];
+    var formats = ['CSV', 'TSV', 'XML', 'JSON'];
     formats.forEach(apiUpgradeTest);
 
     it("should start the updater when an old version of Piwik is detected in the DB", async function() {
@@ -47,6 +47,13 @@ describe("CoreUpdaterDb", function () {
         });
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('main');
+    });
+
+    it("should show the file integrity dialog", async function() {
+        await page.click('#more-results');
+        await page.waitForTimeout(50);
+
+        expect(await page.screenshot({ fullPage: true })).to.matchImage('file-integrity');
     });
 
     it("should show instance id in updating screen", async function() {

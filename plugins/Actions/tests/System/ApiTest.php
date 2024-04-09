@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -70,7 +70,6 @@ class ApiTest extends IntegrationTestCase
             'segment' => $pageSegment,
             'flat' => '1',
         ]);
-
         $this->assertEquals(1, $pagesWithSegment->getRowsCount());
 
         // NOTE: the label here is incorrect due to SafeDecodeLabel. this is a known issue, but changing it would

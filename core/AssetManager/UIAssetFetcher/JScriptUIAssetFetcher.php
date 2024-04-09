@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,11 +13,9 @@ use Piwik\Piwik;
 
 class JScriptUIAssetFetcher extends UIAssetFetcher
 {
-
     protected function retrieveFileLocations()
     {
         if (!empty($this->plugins)) {
-
             /**
              * Triggered when gathering the list of all JavaScript files needed by Piwik
              * and its plugins.
@@ -46,6 +44,8 @@ class JScriptUIAssetFetcher extends UIAssetFetcher
         }
 
         $this->addThemeFiles();
+
+        $this->mapBowerComponentFilesForBC($this->fileLocations);
     }
 
     protected function addThemeFiles()
@@ -68,11 +68,16 @@ class JScriptUIAssetFetcher extends UIAssetFetcher
     protected function getPriorityOrder()
     {
         return array(
-            'libs/bower_components/jquery/dist/jquery.min.js',
-            'libs/bower_components/jquery-ui/ui/minified/jquery-ui.min.js',
-            'libs/jquery/jquery.browser.js',
+            'node_modules/jquery/dist/jquery.min.js',
+            'node_modules/jquery/dist/jquery.js',
+            'node_modules/@materializecss/materialize/dist/js/materialize.min.js', // so jquery ui datepicker overrides materializecss
+            'node_modules/jquery-ui-dist/jquery-ui.min.js',
+            'node_modules/jquery-ui-dist/jquery-ui.js',
+            "plugins/CoreHome/javascripts/materialize-bc.js",
+            'node_modules/',
             'libs/',
             'js/',
+            'plugins/CoreVue/polyfills/dist/MatomoPolyfills',
             'piwik.js',
             'matomo.js',
             'plugins/CoreHome/javascripts/require.js',

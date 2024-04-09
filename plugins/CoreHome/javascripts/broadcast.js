@@ -1,7 +1,7 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -12,12 +12,6 @@
  * @type {object}
  */
 var broadcast = {
-
-    /**
-     * Initialisation state
-     * @type {Boolean}
-     */
-    _isInit: false,
 
     /**
      * Last known hash url without popover parameter
@@ -50,135 +44,13 @@ var broadcast = {
      */
     updateHashOnly: false,
 
-    /**
-     * Initializes broadcast object
-     *
-     * @deprecated in 3.2.2, will be removed in Piwik 4
-     *
-     * @return {void}
-     */
-    init: function (noLoadingMessage) {
-        if (broadcast._isInit) {
-            return;
-        }
-        broadcast._isInit = true;
-
-        angular.element(document).injector().invoke(function (historyService) {
-            historyService.init();
-        });
-
-        if(noLoadingMessage != true) {
-            piwikHelper.showAjaxLoading();
-        }
-    },
-
-    /**
-     * ========== PageLoad function =================
-     * This function is called when:
-     * 1. after calling $.history.init();
-     * 2. after calling $.history.load();  //look at broadcast.changeParameter();
-     * 3. after pushing "Go Back" button of a browser
-     *
-     * * Note: the method is manipulated in Overlay/javascripts/Piwik_Overlay.js - keep this in mind when making changes.
-     *
-     * @deprecated since 3.2.2, will be removed in Piwik 4
-     *
-     * @param {string}  hash to load page with
-     * @return {void}
-     */
-    pageload: function (hash) {
-        broadcast.init();
-
-        // Unbind any previously attached resize handlers
-        $(window).off('resize');
-
-        // do not update content if it should be suppressed
-        if (broadcast.updateHashOnly) {
-            broadcast.updateHashOnly = false;
-            return;
-        }
-
-        // hash doesn't contain the first # character.
-        if (hash && 0 === (''+hash).indexOf('/')) {
-            hash = (''+hash).substr(1);
-        }
-
-
-        if (hash) {
-
-            if (/^popover=/.test(hash)) {
-                var hashParts = [
-                    '',
-                    hash.replace(/^popover=/, '')
-                ];
-            } else {
-                var hashParts = hash.split('&popover=');
-            }
-            var hashUrl = hashParts[0];
-            var popoverParam = '';
-            if (hashParts.length > 1) {
-                popoverParam = hashParts[1];
-                // in case the $ was encoded (e.g. when using copy&paste on urls in some browsers)
-                popoverParam = decodeURIComponent(popoverParam);
-                // revert special encoding from broadcast.propagateNewPopoverParameter()
-                popoverParam = popoverParam.replace(/\$/g, '%');
-                popoverParam = decodeURIComponent(popoverParam);
-            }
-
-            var pageUrlUpdated = (popoverParam == '' ||
-                (broadcast.currentHashUrl !== false && broadcast.currentHashUrl != hashUrl));
-
-            var popoverParamUpdated = (popoverParam != '' && hashUrl == broadcast.currentHashUrl);
-
-            if (broadcast.currentHashUrl === false) {
-                // new page load
-                pageUrlUpdated = true;
-                popoverParamUpdated = (popoverParam != '');
-            }
-
-            if (!broadcast.isWidgetizedDashboard() && (pageUrlUpdated || broadcast.forceReload)) {
-                Piwik_Popover.close();
-
-                if (hashUrl != broadcast.currentHashUrl || broadcast.forceReload) {
-                    // restore ajax loaded state
-                    broadcast.loadAjaxContent(hashUrl);
-
-                    // make sure the "Widgets & Dashboard" is deleted on reload
-                    $('.top_controls .dashboard-manager').hide();
-                    $('#dashboardWidgetsArea').dashboard('destroy');
-
-                    // remove unused controls
-                    require('piwik/UI').UIControl.cleanupUnusedControls();
-                }
-            }
-
-            broadcast.forceReload = false;
-            broadcast.currentHashUrl = hashUrl;
-            broadcast.currentPopoverParameter = popoverParam;
-
-            Piwik_Popover.close();
-
-            if (popoverParamUpdated) {
-                var popoverParamParts = popoverParam.split(':');
-                var handlerName = popoverParamParts[0];
-                popoverParamParts.shift();
-                var param = popoverParamParts.join(':');
-                if (typeof broadcast.popoverHandlers[handlerName] != 'undefined' && !broadcast.isLoginPage()) {
-                    broadcast.popoverHandlers[handlerName](param);
-                }
-            }
-
-        } else {
-            // start page
-            Piwik_Popover.close();
-            if (!broadcast.isWidgetizedDashboard()) {
-                $('.pageWrap #content:not(.admin)').empty();
-            }
-        }
-    },
-
     isWidgetizedDashboard: function() {
         return broadcast.getValueFromUrl('module') == 'Widgetize' && broadcast.getValueFromUrl('moduleToWidgetize') == 'Dashboard';
+    },
+
+    isWidgetizeRequestWithoutSession: function() {
+        // whenever a token_auth is set in the URL, we assume a widget or page is tried to be shown widgetized.
+        return broadcast.getValueFromUrl('token_auth') != '' && broadcast.getValueFromUrl('force_api_session') != '1';
     },
 
     /**
@@ -190,70 +62,11 @@ var broadcast = {
     },
 
     /**
-     * propagateAjax -- update hash values then make ajax calls.
-     *    example :
-     *       1) <a href="javascript:broadcast.propagateAjax('module=Referrers&action=getKeywords')">View keywords report</a>
-     *       2) Main menu li also goes through this function.
-     *
-     * Will propagate your new value into the current hash string and make ajax calls.
-     *
-     * NOTE: this method will only make ajax call and replacing main content.
-     *
-     * @deprecated in 3.2.2, will be removed in Piwik 4.
-     *
-     * @param {string} ajaxUrl  querystring with parameters to be updated
-     * @param {boolean} [disableHistory]  the hash change won't be available in the browser history
-     * @return {void}
+     * Returns if the current page is the no data page
+     * @return {boolean}
      */
-    propagateAjax: function (ajaxUrl, disableHistory) {
-        broadcast.init();
-
-        // abort all existing ajax requests
-        globalAjaxQueue.abort();
-
-        // available in global scope
-        var currentHashStr = broadcast.getHash();
-
-        ajaxUrl = ajaxUrl.replace(/^\?|&#/, '');
-
-        var params_vals = ajaxUrl.split("&");
-        for (var i = 0; i < params_vals.length; i++) {
-            currentHashStr = broadcast.updateParamValue(params_vals[i], currentHashStr);
-        }
-
-        // if the module is not 'Goals', we specifically unset the 'idGoal' parameter
-        // this is to ensure that the URLs are clean (and that clicks on graphs work as expected - they are broken with the extra parameter)
-        var action = broadcast.getParamValue('action', currentHashStr);
-        if (action != 'goalReport'
-            && action != 'ecommerceReport'
-            && action != 'products'
-            && action != 'sales'
-            && (''+ ajaxUrl).indexOf('&idGoal=') === -1) {
-            currentHashStr = broadcast.updateParamValue('idGoal=', currentHashStr);
-        }
-        // unset idDashboard if use doesn't display a dashboard
-        var module = broadcast.getParamValue('module', currentHashStr);
-        if (module != 'Dashboard') {
-            currentHashStr = broadcast.updateParamValue('idDashboard=', currentHashStr);
-        }
-
-        if (module != 'CustomDimensions') {
-            currentHashStr = broadcast.updateParamValue('idDimension=', currentHashStr);
-        }
-
-        if (disableHistory) {
-            var $window = piwikHelper.getAngularDependency('$window');
-            var newLocation = $window.location.href.split('#')[0] + '#?' + currentHashStr;
-            // window.location.replace changes the current url without pushing it on the browser's history stack
-            $window.location.replace(newLocation);
-        }
-        else {
-            // Let history know about this new Hash and load it.
-            broadcast.forceReload = true;
-            angular.element(document).injector().invoke(function (historyService) {
-                historyService.load(currentHashStr);
-            });
-        }
+    isNoDataPage: function() {
+        return !!$('body#site-without-data').length;
     },
 
     /**
@@ -310,7 +123,7 @@ var broadcast = {
      * @param {array} paramsToRemove Optional parameters to remove from the URL.
      * @return {void}
      */
-    propagateNewPage: function (str, showAjaxLoading, strHash, paramsToRemove) {
+    propagateNewPage: function (str, showAjaxLoading, strHash, paramsToRemove, wholeNewUrl) {
         // abort all existing ajax requests
         globalAjaxQueue.abort();
 
@@ -322,87 +135,81 @@ var broadcast = {
 
         var params_vals = str.split("&");
 
-        var $window = piwikHelper.getAngularDependency('$window');
-
         // available in global scope
-        var currentSearchStr = $window.location.search;
+        var currentSearchStr = window.location.search;
         var currentHashStr = broadcast.getHashFromUrl();
-        
+
         if (!currentSearchStr) {
             currentSearchStr = '?';
         }
 
         var oldUrl = currentSearchStr + currentHashStr;
+        var newUrl;
 
-        // remove all array query params that are currently set. if we don't do this the array parameters we add
-        // just get added to the existing parameters.
-        params_vals.forEach(function (param) {
+        if (!wholeNewUrl) {
+          // remove all array query params that are currently set. if we don't do this the array parameters we add
+          // just get added to the existing parameters.
+          params_vals.forEach(function (param) {
             if (/\[]=/.test(decodeURIComponent(param))) {
-                var paramName = decodeURIComponent(param).split('[]=')[0];
-                removeParam(paramName);
+              var paramName = decodeURIComponent(param).split('[]=')[0];
+              removeParam(paramName);
             }
-        });
+          });
 
-        // remove parameters if needed
-        paramsToRemove.forEach(function (paramName) {
+          // remove parameters if needed
+          paramsToRemove.forEach(function (paramName) {
             removeParam(paramName);
-        });
+          });
 
-        // update/add parameters based on whether the parameter is an array param or not
-        params_vals.forEach(function (param) {
-            if(!param.length) {
-                return; // updating with empty string would destroy some values
+          // update/add parameters based on whether the parameter is an array param or not
+          params_vals.forEach(function (param) {
+            if (!param.length) {
+              return; // updating with empty string would destroy some values
             }
 
             if (/\[]=/.test(decodeURIComponent(param))) { // array param value
-                currentSearchStr = broadcast.addArrayParamValue(param, currentSearchStr);
+              currentSearchStr = broadcast.addArrayParamValue(param, currentSearchStr);
 
-                if (currentHashStr.length !== 0) {
-                    currentHashStr = broadcast.addArrayParamValue(param, currentHashStr);
-                }
+              if (currentHashStr.length !== 0) {
+                currentHashStr = broadcast.addArrayParamValue(param, currentHashStr);
+              }
             } else {
-                // update both the current search query and hash string
-                currentSearchStr = broadcast.updateParamValue(param, currentSearchStr);
+              // update both the current search query and hash string
+              currentSearchStr = broadcast.updateParamValue(param, currentSearchStr);
 
-                if (currentHashStr.length !== 0) {
-                    currentHashStr = broadcast.updateParamValue(param, currentHashStr);
-                }
+              if (currentHashStr.length !== 0) {
+                currentHashStr = broadcast.updateParamValue(param, currentHashStr);
+              }
             }
-        });
+          });
 
-        var updatedUrl = new RegExp('&updated=([0-9]+)');
-        var updatedCounter = updatedUrl.exec(currentSearchStr);
-        if (!updatedCounter) {
+          var updatedUrl = new RegExp('&updated=([0-9]+)');
+          var updatedCounter = updatedUrl.exec(currentSearchStr);
+          if (!updatedCounter) {
             currentSearchStr += '&updated=1';
-        } else {
+          } else {
             updatedCounter = 1 + parseInt(updatedCounter[1]);
             currentSearchStr = currentSearchStr.replace(new RegExp('(&updated=[0-9]+)'), '&updated=' + updatedCounter);
-        }
+          }
 
-        if (strHash && currentHashStr.length != 0) {
+          if (strHash && currentHashStr.length != 0) {
             var params_hash_vals = strHash.split("&");
             for (var i = 0; i < params_hash_vals.length; i++) {
-                currentHashStr = broadcast.updateParamValue(params_hash_vals[i], currentHashStr);
+              currentHashStr = broadcast.updateParamValue(params_hash_vals[i], currentHashStr);
             }
-        }
+          }
 
-        // Now load the new page.
-        var newUrl = currentSearchStr + currentHashStr;
-
-        var $rootScope = piwikHelper.getAngularDependency('$rootScope');
-        if ($rootScope) {
-            $rootScope.$on('$locationChangeStart', function (event) {
-                if (event) {
-                    event.preventDefault();
-                }
-            });
+          // Now load the new page.
+          newUrl = currentSearchStr + currentHashStr;
+        } else {
+          newUrl = wholeNewUrl;
         }
 
         if (oldUrl == newUrl) {
-            $window.location.reload();
+            window.location.reload();
         } else {
             this.forceReload = true;
-            $window.location.href = newUrl;
+            window.location.href = newUrl;
         }
         return false;
 
@@ -437,7 +244,7 @@ var broadcast = {
         var p_v = newParamValue.split("=");
 
         var paramName = p_v[0];
-        var valFromUrl = broadcast.getParamValue(paramName, urlStr);
+        var valFromUrl = broadcast.getParamValue(paramName, urlStr) || broadcast.getParamValue(encodeURIComponent(paramName), urlStr);
         // if set 'idGoal=' then we remove the parameter from the URL automatically (rather than passing an empty value)
         var paramValue = p_v[1];
         if (paramValue == '') {
@@ -453,7 +260,7 @@ var broadcast = {
             var regToBeReplace = new RegExp(paramName + '=' + valFromUrl, 'ig');
             if (newParamValue == '') {
                 // if new value is empty remove leading &, as well
-                regToBeReplace = new RegExp('[\&]?' + paramName + '=' + valFromUrl, 'ig');
+                regToBeReplace = new RegExp('[\&]?(' + paramName + '|' + encodeURIComponent(paramName) + ')=' + valFromUrl, 'ig');
             }
             urlStr = urlStr.replace(regToBeReplace, newParamValue);
         } else if (newParamValue != '') {
@@ -495,8 +302,6 @@ var broadcast = {
      *                       handler.
      */
     propagateNewPopoverParameter: function (handlerName, value) {
-        var $location = angular.element(document).injector().get('$location');
-
         var popover = '';
         if (handlerName && '' != value && 'undefined' != typeof value) {
             popover = handlerName + ':' + value;
@@ -515,15 +320,10 @@ var broadcast = {
             }
         }
 
-        var $window = piwikHelper.getAngularDependency('$window');
-        var urlStr = $window.location.hash;
-        urlStr = broadcast.updateParamValue('popover=' + encodeURIComponent(popover), urlStr);
-        urlStr = urlStr.replace(/^[#?]+/, '');
-        $location.search(urlStr);
-
-        setTimeout(function () {
-            angular.element(document).injector().get('$rootScope').$apply();
-        }, 1);
+        var MatomoUrl = window.CoreHome.MatomoUrl;
+        MatomoUrl.updateHash(
+          Object.assign({}, MatomoUrl.hashParsed.value, { popover }),
+        );
     },
 
     /**
@@ -606,7 +406,7 @@ var broadcast = {
                 piwikHelper.hideAjaxLoading();
                 broadcast.lastUrlRequested = null;
 
-                piwikHelper.compileAngularComponents('#content');
+                piwikHelper.compileVueDirectives('#content');
             }
 
             initTopControls();
@@ -707,15 +507,29 @@ var broadcast = {
      * @param queryString
      * @returns {object}
      */
-    extractKeyValuePairsFromQueryString: function (queryString) {
-        var pairs = queryString.split('&');
+    extractKeyValuePairsFromQueryString: function (queryString, decode) {
+        var pairs = queryString.replace(/%5B%5D/g, '[]').split('&');
         var result = {};
         for (var i = 0; i != pairs.length; ++i) {
+            if (pairs[i] === '') {
+              continue;
+            }
+
             // attn: split with regex has bugs in several browsers such as IE 8
             // so we need to split, use the first part as key and rejoin the rest
             var pair = pairs[i].split('=');
             var key = pair.shift();
-            result[key] = pair.join('=');
+            var value = pair.join('=');
+            if (decode) {
+              value = decodeURIComponent(value);
+            }
+            if (/\[.*?]$/.test(key)) {
+              key = key.replace(/\[.*?]$/, '');
+              result[key] = result[key] || [];
+              result[key].push(value);
+            } else {
+              result[key] = value;
+            }
         }
         return result;
     },
@@ -724,11 +538,13 @@ var broadcast = {
      * Returns all key-value pairs in query string of url.
      *
      * @param {string} url url to check. if undefined, null or empty, current url is used.
+     * @param {boolean} decodeValues if true, also applies decodeURIComponent to values. (Not
+     *                               true by default for BC.)
      * @return {object} key value pair describing query string parameters
      */
-    getValuesFromUrl: function (url) {
+    getValuesFromUrl: function (url, decode) {
         var searchString = this._removeHashFromUrl(url).split('?')[1] || '';
-        return this.extractKeyValuePairsFromQueryString(searchString);
+        return this.extractKeyValuePairsFromQueryString(searchString, decode);
     },
 
     /**
@@ -755,8 +571,8 @@ var broadcast = {
      */
     getValueFromHash: function (param, url) {
         var hashStr = broadcast.getHashFromUrl(url);
-        if (hashStr.substr(0, 1) == '#') {
-            hashStr = hashStr.substr(1);
+        if (hashStr.slice(0, 1) == '#') {
+            hashStr = hashStr.slice(1);
         }
         hashStr = hashStr.split('#')[0];
 
@@ -775,37 +591,42 @@ var broadcast = {
      */
     getParamValue: function (param, url) {
         var lookFor = param + '=';
-        var startStr = url.indexOf(lookFor);
 
-        if (startStr >= 0) {
-            return getSingleValue(startStr, url);
-        } else {
-            url = decodeURIComponent(url);
+        if (url.indexOf('?') >= 0) {
+            url = url.slice(url.indexOf('?')+1);
+        }
 
-            // try looking for multi value param
-            lookFor = param + '[]=';
-            startStr = url.indexOf(lookFor);
-            if (startStr >= 0) {
-                var result = [getSingleValue(startStr)];
-                while ((startStr = url.indexOf(lookFor, startStr + 1)) !== -1) {
-                    result.push(getSingleValue(startStr));
-                }
-                return result;
-            } else {
-                return '';
+        var urlPieces = url.split('&');
+
+        // look for the latest occurrence of the parameter if available
+        for (var i=urlPieces.length-1; i>=0; i--) {
+            if (urlPieces[i].indexOf(lookFor) === 0) {
+                return getSingleValue(urlPieces[i]);
             }
         }
 
-        function getSingleValue(startPos) {
-            var endStr = url.indexOf("&", startPos);
-            if (endStr === -1) {
-                endStr = url.length;
+        // gather parameter array if available
+        lookFor = param + '[]=';
+        var result = [];
+        for (var j=0; j<urlPieces.length; j++) {
+            if (urlPieces[j].indexOf(lookFor) === 0) {
+                result.push(getSingleValue(urlPieces[j]));
+            } else if (decodeURIComponent(urlPieces[j]).indexOf(lookFor) === 0) {
+                result.push(getSingleValue(decodeURIComponent(urlPieces[j])));
             }
-            var value = url.substring(startPos + lookFor.length, endStr);
+        }
+        return result.length ? result : '';
+
+        function getSingleValue(urlPart) {
+            var startPos = urlPart.indexOf("=");
+            if (startPos === -1) {
+                return '';
+            }
+            var value = urlPart.substring(startPos+1);
 
             // we sanitize values to add a protection layer against XSS
-            // &segment= value is not sanitized, since segments are designed to accept any user input
-            if(param != 'segment') {
+            // parameters 'segment', 'popover' and 'compareSegments' are not sanitized, since segments are designed to accept any user input
+            if(param != 'segment' && param != 'popover' && param != 'compareSegments') {
                 value = value.replace(/[^_%~\*\+\-\<\>!@\$\.()=,;0-9a-zA-Z]/gi, '');
             }
             return value;
@@ -837,3 +658,5 @@ var broadcast = {
         return searchString;
     }
 };
+
+window.broadcast = broadcast; // hack to get broadcast to work in vue (jest) tests

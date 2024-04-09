@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,8 +10,9 @@
 namespace Piwik\Plugins\SEO\tests\Integration;
 
 use Piwik\DataTable\Renderer;
+use Piwik\Piwik;
 use Piwik\Plugins\SEO\API;
-use Exception;
+use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\Mock\FakeAccess;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -21,41 +23,37 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class SEOTest extends IntegrationTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        // setup the access layer
-        FakeAccess::setIdSitesView(array(1, 2));
-        FakeAccess::setIdSitesAdmin(array(3, 4));
+        // Setup the access layer
+        FakeAccess::setIdSitesView([1, 2]);
+        FakeAccess::setIdSitesAdmin([3, 4]);
 
-        //finally we set the user as a Super User by default
+        // Finally we set the user as a Super User by default
         FakeAccess::$superUser = true;
 
-        $user_agents = array(
-            'Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36',
-        );
+        // Needed to load the Intl_NumberFormatNumber translation string used when formatting the ranking numbers
+        Fixture::loadAllTranslations();
 
-        $_SERVER['HTTP_USER_AGENT'] = $user_agents[mt_rand(0, count($user_agents) - 1)];
+        // Google and Bing may not show the indexed pages count for some user agents, some UA strings will work for
+        // Google, but not Bing and visa-versa. This user agent string works for both as of 2023-06-26:
+        $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
     }
 
     /**
      * tell us when the API is broken
      */
-    public function test_API()
+    public function testAPI()
     {
-        try {
-            $dataTable = API::getInstance()->getRank('http://www.microsoft.com/');
-        } catch(Exception $e) {
-            $this->markTestSkipped('A SEO http request failed, Skipping this test for now. Error was: '.$e->getMessage());
-        }
-        $renderer = Renderer::factory('php');
-        $renderer->setSerialize(false);
-        $ranks = $renderer->render($dataTable);
+        $dataTable = API::getInstance()->getRank('http://matomo.org/');
+        $renderer = Renderer::factory('json');
+        $renderer->setTable($dataTable);
+        $ranks = json_decode($renderer->render(), true);
         foreach ($ranks as $rank) {
-            if ($rank["id"] == "alexa") { // alexa is broken at the moment
+            if ($rank['rank'] == Piwik::translate('General_ErrorTryAgain')) {
+                $this->markTestSkipped('An exception raised when fetching data. Skipping this test for now.');
                 continue;
             }
             $this->assertNotEmpty($rank['rank'], $rank['id'] . ' expected non-zero rank, got [' . $rank['rank'] . ']');
@@ -64,8 +62,8 @@ class SEOTest extends IntegrationTestCase
 
     public function provideContainerConfig()
     {
-        return array(
-            'Piwik\Access' => new FakeAccess()
-        );
+        return [
+          'Piwik\Access' => new FakeAccess()
+        ];
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,9 +18,8 @@ use Piwik\Plugins\Referrers\DataTable\Filter\GroupDifferentSocialWritings;
  * @group Core
  * @group sort
  */
-class GroupDifferentSocialWritingsTest extends \PHPUnit_Framework_TestCase
+class GroupDifferentSocialWritingsTest extends \PHPUnit\Framework\TestCase
 {
-
     public function testRowsAreGrouped()
     {
         $table = new DataTable();
@@ -34,5 +33,4 @@ class GroupDifferentSocialWritingsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(['Instagram', 'Facebook'], $table->getColumn('label'));
         $this->assertEquals([110, 5], $table->getColumn('count'));
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -37,11 +37,11 @@ class Inconsistencies
             'bounce_rate_returning',
             'nb_visits_percentage',
             '/.*_evolution/',
-            '/goal_.*_conversion_rate/',
             '/step_.*_rate/',
             '/funnel_.*_rate/',
             '/form_.*_rate/',
             '/field_.*_rate/',
+            '/Referrers.*_percent/',
         );
     }
 }

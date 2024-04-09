@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -48,7 +48,6 @@ class InsightReport
             $minGrowthPercentNegative = -70;         // min -70%
             $minDisappearedPercent = 8;              // min 12
             $minNewPercent = min(($totalEvolution / 100) * 3, 10);    // min 6% = min 10 of total visits up to max 10%
-
         } elseif ($totalEvolution >= 0) {
             // eg change from 50 to 75 = 50%
             $minGrowthPercentPositive = $totalEvolution + 20;  // min 70%

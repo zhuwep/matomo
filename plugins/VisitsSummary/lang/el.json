@@ -17,11 +17,12 @@
         "NbUniquePageviewsDescription": "μοναδικές προβολές σελίδων",
         "NbUniqueVisitors": "μοναδικοί επισκέπτες",
         "NbUsersDescription": "χρήστες",
-        "NbVisitsDescription": "επισκέψεις",
         "NbVisitsBounced": "επισκέψεις από τις οποίες έγινε απομάκρυνση (έφυγαν από τον ιστοτόπο από την πρώτη σελίδα)",
+        "NbVisitsDescription": "επισκέψεις",
         "PluginDescription": "Αναφέρει γενικές μετρικές αναλυτικών: επισκέψεις, μοναδικοί επισκέπτες, αριθμός ενεργειών, ρυθμός αναπήδησης, κτλ.",
         "VisitsSummary": "Περίληψη επισκέψεων",
         "VisitsSummaryDocumentation": "Αυτή είναι μια επισκόπηση της εξέλιξης των επισκέψεων.",
+        "VisitsSummaryReportDocumentation": "Αυτή η αναφορά δείχνει μια πολύ γενική σύνοψη γύρω από την συμπεριφορά των επισκεπτών σας.",
         "WidgetLastVisits": "Διάγραμμα τελευταίων επισκέψεων",
         "WidgetOverviewGraph": "Επισκόπηση με διάγραμμα",
         "WidgetVisits": "Επισκόπηση επισκέψεων"

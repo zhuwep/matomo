@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,7 +12,7 @@ use Piwik\Archive;
 use Piwik\DataTable;
 use Piwik\Metrics;
 use Piwik\Piwik;
-use Piwik\Plugins\DevicesDetection\Archiver AS DDArchiver;
+use Piwik\Plugins\DevicesDetection\Archiver as DDArchiver;
 use Piwik\Plugins\CoreHome\Columns\Metrics\VisitsPercent;
 
 /**
@@ -86,6 +86,7 @@ class API extends \Piwik\Plugin\API
             $visitsSum = $visitsSumTotal - $ieVisits;
 
             $extraProcessedMetrics = $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME);
+            $extraProcessedMetrics = is_array($extraProcessedMetrics) ? $extraProcessedMetrics : [];
             $extraProcessedMetrics[] = new VisitsPercent($visitsSum);
             $table->setMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME, $extraProcessedMetrics);
         }

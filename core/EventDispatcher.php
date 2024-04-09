@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -60,6 +60,8 @@ class EventDispatcher
 
     private $pluginHooks = array();
 
+    public static $_SKIP_EVENTS_IN_TESTS = false;
+
     /**
      * Constructor.
      */
@@ -87,6 +89,10 @@ class EventDispatcher
      */
     public function postEvent($eventName, $params, $pending = false, $plugins = null)
     {
+        if (self::$_SKIP_EVENTS_IN_TESTS) {
+            return;
+        }
+
         if ($pending) {
             $this->pendingEvents[] = array($eventName, $params);
         }
@@ -107,7 +113,7 @@ class EventDispatcher
 
             if (!isset($this->pluginHooks[$pluginName])) {
                 $plugin = $manager->getLoadedPlugin($pluginName);
-                $this->pluginHooks[$pluginName] = $plugin->getListHooksRegistered();
+                $this->pluginHooks[$pluginName] = $plugin->registerEvents();
             }
 
             $hooks = $this->pluginHooks[$pluginName];
@@ -176,14 +182,23 @@ class EventDispatcher
     public function postPendingEventsTo($plugin)
     {
         foreach ($this->pendingEvents as $eventInfo) {
-            list($eventName, $eventParams) = $eventInfo;
+            [$eventName, $eventParams] = $eventInfo;
             $this->postEvent($eventName, $eventParams, $pending = false, array($plugin));
         }
     }
 
+    /**
+     * @internal  For testing purpose only
+     */
+    public function clearCache()
+    {
+        $this->pluginHooks = [];
+    }
+
     private function getCallbackFunctionAndGroupNumber($hookInfo)
     {
-        if (is_array($hookInfo)
+        if (
+            is_array($hookInfo)
             && !empty($hookInfo['function'])
         ) {
             $pluginFunction = $hookInfo['function'];

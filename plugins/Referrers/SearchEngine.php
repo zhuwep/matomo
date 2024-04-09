@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,9 +10,12 @@ namespace Piwik\Plugins\Referrers;
 
 use Piwik\Cache;
 use Piwik\Common;
+use Piwik\Config;
 use Piwik\Option;
 use Piwik\Piwik;
+use Piwik\SettingsPiwik;
 use Piwik\Singleton;
+use Piwik\Url;
 use Piwik\UrlHelper;
 
 /**
@@ -50,42 +53,44 @@ class SearchEngine extends Singleton
     private function loadDefinitions()
     {
         if (empty($this->definitionList)) {
-            // Read first from the auto-updated list in database
-            $list = Option::get(self::OPTION_STORAGE_NAME);
+            $referrerDefinitionSyncOpt = Config::getInstance()->General['enable_referrer_definition_syncs'];
 
-            if ($list) {
-                $this->definitionList = Common::safe_unserialize(base64_decode($list));
+            if( $referrerDefinitionSyncOpt == 1) {
+                $this->loadRemoteDefinitions();
             } else {
-                // Fallback to reading the bundled list
-                $yml                  = file_get_contents(PIWIK_INCLUDE_PATH . self::DEFINITION_FILE);
-                $this->definitionList = $this->loadYmlData($yml);
-                Option::set(self::OPTION_STORAGE_NAME, base64_encode(serialize($this->definitionList)));
+                $this->loadLocalYmlData();
             }
         }
 
         Piwik::postEvent('Referrer.addSearchEngineUrls', array(&$this->definitionList));
 
-        $this->convertLegacyDefinitions();
-
         return $this->definitionList;
     }
 
     /**
-     * @deprecated remove in 3.0
+     * Loads definitions sourced from remote yaml with a local fallback
      */
-    protected function convertLegacyDefinitions()
+    private function loadRemoteDefinitions()
     {
-        foreach ($this->definitionList as $url => $definition) {
-            if (!array_key_exists('name', $definition) && isset($definition[0]) && isset($definition[1])) {
-                $this->definitionList[$url] = array(
-                    'name' => $definition[0],
-                    'params' => $definition[1],
-                    'backlink' => @$definition[2],
-                    'charsets' => @$definition[3]
-                );
-            }
-        }
+        // Read first from the auto-updated list in database
+        $list = Option::get(self::OPTION_STORAGE_NAME);
 
+        if ($list && SettingsPiwik::isInternetEnabled()) {
+            $this->definitionList = Common::safe_unserialize(base64_decode($list));
+        } else {
+            // Fallback to reading the bundled list
+            $this->loadLocalYmlData();
+            Option::set(self::OPTION_STORAGE_NAME, base64_encode(serialize($this->definitionList)));
+        }
+    }
+
+    /**
+     * Loads the definition data from the local definitions file
+     */
+    private function loadLocalYmlData()
+    {
+        $yml = file_get_contents(PIWIK_INCLUDE_PATH . self::DEFINITION_FILE);
+        $this->definitionList = $this->loadYmlData($yml);
     }
 
     /**
@@ -224,7 +229,9 @@ class SearchEngine extends Singleton
 
         $searchEngineName = $definitions['name'];
         $variableNames    = $definitions['params'];
-        $keywordsHiddenFor = !empty($definitions['hiddenkeyword']) ? $definitions['hiddenkeyword'] : array();
+        $keywordsHiddenFor = !empty($definitions['hiddenkeyword']) ? $definitions['hiddenkeyword'] : array(
+            '/^$/', '/'
+        );
 
         $key = null;
         if ($searchEngineName === 'Google Images') {
@@ -233,7 +240,8 @@ class SearchEngine extends Singleton
                 $query = str_replace('&', '&amp;', strstr($query, '?'));
             }
             $searchEngineName = 'Google Images';
-        } elseif ($searchEngineName === 'Google'
+        } elseif (
+            $searchEngineName === 'Google'
             && (strpos($query, '&as_') !== false || strpos($query, 'as_') === 0)
         ) {
             $keys = array();
@@ -282,11 +290,12 @@ class SearchEngine extends Singleton
                     }
                 } else {
                     // search for keywords now &vname=keyword
-                    $key = UrlHelper::getParameterFromQueryString($query, $variableName);
+                    $key = UrlHelper::getParameterFromQueryString($query, $variableName) ?? '';
                     $key = trim(urldecode($key));
 
                     // Special cases: empty keywords
-                    if (empty($key)
+                    if (
+                        empty($key)
                         && (
                             // empty keyword parameter
                             strpos($query, sprintf('&%s=', $variableName)) !== false
@@ -295,7 +304,8 @@ class SearchEngine extends Singleton
                     ) {
                         $key = false;
                     }
-                    if (!empty($key)
+                    if (
+                        !empty($key)
                         || $key === false
                     ) {
                         break;
@@ -309,10 +319,10 @@ class SearchEngine extends Singleton
 
             $pathWithQueryAndFragment = $referrerPath;
             if (!empty($query)) {
-                $pathWithQueryAndFragment .= '?'.$query;
+                $pathWithQueryAndFragment .= '?' . $query;
             }
             if (!empty($referrerParsed['fragment'])) {
-                $pathWithQueryAndFragment .= '#'.$referrerParsed['fragment'];
+                $pathWithQueryAndFragment .= '#' . $referrerParsed['fragment'];
             }
 
             foreach ($keywordsHiddenFor as $path) {
@@ -337,7 +347,7 @@ class SearchEngine extends Singleton
             if (!empty($definitions['charsets'])) {
                 $key = $this->convertCharset($key, $definitions['charsets']);
             }
-            $key = Common::mb_strtolower($key);
+            $key = mb_strtolower($key);
         }
 
         return array(
@@ -396,13 +406,9 @@ class SearchEngine extends Singleton
      */
     protected function convertCharset($string, $charsets)
     {
-        if (function_exists('iconv')
-            && !empty($charsets)
-        ) {
+        if (!empty($charsets)) {
             $charset = $charsets[0];
-            if (count($charsets) > 1
-                && function_exists('mb_detect_encoding')
-            ) {
+            if (count($charsets) > 1) {
                 $charset = mb_detect_encoding($string, $charsets);
                 if ($charset === false) {
                     $charset = $charsets[0];
@@ -485,7 +491,7 @@ class SearchEngine extends Singleton
     public function getBackLinkFromUrlAndKeyword($url, $keyword)
     {
         if ($keyword === API::LABEL_KEYWORD_NOT_DEFINED) {
-            return 'https://matomo.org/faq/general/#faq_144';
+            return Url::addCampaignParametersToMatomoLink('https://matomo.org/faq/general/faq_144');
         }
         $keyword = urlencode($keyword);
         $keyword = str_replace(urlencode('+'), urlencode(' '), $keyword);

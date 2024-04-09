@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,10 +10,7 @@ namespace Piwik\Plugins\Annotations;
 
 use Exception;
 use Piwik\Date;
-use Piwik\Period\Range;
-use Piwik\Period;
 use Piwik\Piwik;
-use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution as EvolutionViz;
 
 /**
  * @see plugins/Annotations/AnnotationList.php
@@ -189,7 +186,7 @@ class API extends \Piwik\Plugin\API
         $annotations = new AnnotationList($idSite);
 
         // if date/period are supplied, determine start/end date for search
-        list($startDate, $endDate) = self::getDateRangeForPeriod($date, $period, $lastN);
+        list($startDate, $endDate) = Annotations::getDateRangeForPeriod($date, $period, $lastN);
 
         return $annotations->search($startDate, $endDate);
     }
@@ -224,7 +221,7 @@ class API extends \Piwik\Plugin\API
         Piwik::checkUserHasViewAccess($idSite);
 
         // get start & end date for request. lastN is ignored if $period == 'range'
-        list($startDate, $endDate) = self::getDateRangeForPeriod($date, $period, $lastN);
+        list($startDate, $endDate) = Annotations::getDateRangeForPeriod($date, $period, $lastN);
         if ($period == 'range') {
             $period = 'day';
         }
@@ -251,11 +248,15 @@ class API extends \Piwik\Plugin\API
                 $result[$idSite][$strDate] = $annotations->count($idSite, $date, $nextDate);
 
                 // if only one annotation, return the one annotation's text w/ the counts
-                if ($getAnnotationText
+                if (
+                    $getAnnotationText
                     && $result[$idSite][$strDate]['count'] == 1
                 ) {
                     $annotationsForSite = $annotations->search(
-                        $date, Date::factory($nextDate->getTimestamp() - 1), $idSite);
+                        $date,
+                        Date::factory($nextDate->getTimestamp() - 1),
+                        $idSite
+                    );
                     $annotation = reset($annotationsForSite[$idSite]);
 
                     $result[$idSite][$strDate]['note'] = $annotation['note'];
@@ -302,48 +303,6 @@ class API extends \Piwik\Plugin\API
     }
 
     /**
-     * Returns start & end dates for the range described by a period and optional lastN
-     * argument.
-     *
-     * @param string|bool $date The start date of the period (or the date range of a range
-     *                           period).
-     * @param string $period The period type ('day', 'week', 'month', 'year' or 'range').
-     * @param bool|int $lastN Whether to include the last N periods in the range or not.
-     *                         Ignored if period == range.
-     *
-     * @return Date[]   array of Date objects or array(false, false)
-     * @ignore
-     */
-    public static function getDateRangeForPeriod($date, $period, $lastN = false)
-    {
-        if ($date === false) {
-            return array(false, false);
-        }
-
-        $isMultiplePeriod = Range::isMultiplePeriod($date, $period);
-
-        // if the range is just a normal period (or the period is a range in which case lastN is ignored)
-        if ($period == 'range') {
-            $oPeriod = new Range('day', $date);
-            $startDate = $oPeriod->getDateStart();
-            $endDate = $oPeriod->getDateEnd();
-        } else if ($lastN == false && !$isMultiplePeriod) {
-            $oPeriod = Period\Factory::build($period, Date::factory($date));
-            $startDate = $oPeriod->getDateStart();
-            $endDate = $oPeriod->getDateEnd();
-        } else { // if the range includes the last N periods or is a multiple period
-            if (!$isMultiplePeriod) {
-                list($date, $lastN) = EvolutionViz::getDateRangeAndLastN($period, $date, $lastN);
-            }
-            list($startDate, $endDate) = explode(',', $date);
-
-            $startDate = Date::factory($startDate);
-            $endDate = Date::factory($endDate);
-        }
-        return array($startDate, $endDate);
-    }
-
-    /**
      * Utility function, makes sure idSite string has only one site ID and throws if
      * otherwise.
      */
@@ -361,7 +320,8 @@ class API extends \Piwik\Plugin\API
      */
     private function checkDateIsValid($date, $canBeNull = false)
     {
-        if ($date === null
+        if (
+            $date === null
             && $canBeNull
         ) {
             return;

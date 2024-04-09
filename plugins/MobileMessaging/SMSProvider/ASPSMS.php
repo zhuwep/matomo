@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -121,7 +121,7 @@ class ASPSMS extends SMSProvider
                 $file = null,
                 $followDepth = 0,
                 $acceptLanguage = false,
-                $acceptInvalidSslCertificate = true,
+                $acceptInvalidSslCertificate = false,
                 $byteRange = false,
                 $getExtendedInfo = false,
                 $httpMethod = 'POST',

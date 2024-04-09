@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\API\Filter\DataComparisonFilter;
 use Piwik\DataTable;
 use Piwik\DataTable\DataTableInterface;
 use Piwik\DataTable\Simple;
-use Piwik\Metrics;
 use Piwik\Period;
 use Piwik\Segment;
 use Piwik\Segment\SegmentExpression;
@@ -46,12 +45,12 @@ class ComparisonRowGenerator
             $this->compareTable($compareMetadata, $tables, $compareTables, $compareTables);
         } else if ($tables instanceof DataTable\Map) {
             $childTablesArray = array_values($tables->getDataTables());
-            $compareTablesArray = isset($compareTables) ? array_values($compareTables->getDataTables()) : [];
+            $compareTablesArray = ($compareTables instanceof DataTable\Map) ? array_values($compareTables->getDataTables()) : [];
 
             $isDatePeriod = $tables->getKeyName() == 'date';
 
             foreach ($childTablesArray as $index => $childTable) {
-                $compareChildTable = isset($compareTablesArray[$index]) ? $compareTablesArray[$index] : null;
+                $compareChildTable = !empty($compareTablesArray[$index]) ? $compareTablesArray[$index] : null;
                 $this->compareTables($compareMetadata, $childTable, $compareChildTable);
             }
 
@@ -82,7 +81,7 @@ class ComparisonRowGenerator
                     $tables->addTable($newTable, $periodLabel);
 
                     // compare with the empty table
-                    $compareTable = $compareTablesArray[$i];
+                    $compareTable = !empty($compareTablesArray[$i]) ? $compareTablesArray[$i] : null;
                     $this->compareTables($compareMetadata, $newTable, $compareTable);
                 }
             }
@@ -125,7 +124,7 @@ class ComparisonRowGenerator
                     'totals' => $totals,
                 ]);
 
-                $allTotalsTables = $table->getMetadata('comparisonTotals');
+                $allTotalsTables = $table->getMetadata('comparisonTotals') ?: [];
                 $allTotalsTables[] = $comparisonTotalsEntry;
                 $table->setMetadata('comparisonTotals', $allTotalsTables);
             }
@@ -137,8 +136,10 @@ class ComparisonRowGenerator
         $comparisonDataTable = $row->getComparisons();
         if (empty($comparisonDataTable)) {
             $comparisonDataTable = new DataTable();
-            $comparisonDataTable->setMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME,
-                $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME));
+            $comparisonDataTable->setMetadata(
+                DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME,
+                $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME)
+            );
             $row->setComparisons($comparisonDataTable);
         }
 
@@ -147,7 +148,8 @@ class ComparisonRowGenerator
         $columns = [];
         if ($compareRow) {
             foreach ($compareRow as $name => $value) {
-                if (!is_numeric($value)
+                if (
+                    !is_numeric($value)
                     || $name == 'label'
                 ) {
                     continue;
@@ -157,7 +159,8 @@ class ComparisonRowGenerator
             }
         } else {
             foreach ($row as $name => $value) {
-                if (!is_numeric($value)
+                if (
+                    !is_numeric($value)
                     || $name == 'label'
                 ) {
                     continue;
@@ -188,7 +191,8 @@ class ComparisonRowGenerator
                 $newSegment = Segment::combine($newRow->getMetadata('compareSegment'), SegmentExpression::AND_DELIMITER, $newSegment);
             }
             $newRow->setMetadata('segment', $newSegment);
-        } else if ($this->segmentNameForReport
+        } else if (
+            $this->segmentNameForReport
             && $row->getMetadata('segmentValue') !== false
         ) {
             $segmentValue = $row->getMetadata('segmentValue');
@@ -199,16 +203,17 @@ class ComparisonRowGenerator
 
         // recurse on subtable if there
         $subtable = $row->getSubtable();
-        if ($subtable
-            && $compareRow
-        ) {
-            $this->compareTable($compareMetadata, $subtable, $rootTable, $compareRow->getSubtable());
+        $compareSubTable = $compareRow ? $compareRow->getSubtable() : null;
+
+        if ($subtable && $compareSubTable) {
+            $this->compareTable($compareMetadata, $subtable, $rootTable, $compareSubTable);
         }
     }
 
     private function addIndividualChildPrettifiedMetadata(array &$metadata, DataTable $parentTable = null)
     {
-        if ($parentTable
+        if (
+            $parentTable
             && $this->isRequestMultiplePeriod
         ) {
             /** @var Period $period */

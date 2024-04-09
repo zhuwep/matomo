@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,17 +11,18 @@ namespace Piwik\Plugins\CoreHome;
 use Exception;
 use Piwik\API\Request;
 use Piwik\Common;
+use Piwik\DataTable\Renderer\Json;
 use Piwik\Date;
 use Piwik\FrontController;
 use Piwik\Notification\Manager as NotificationManager;
 use Piwik\Piwik;
 use Piwik\Plugin\Report;
+use Piwik\Plugins\Marketplace\Marketplace;
+use Piwik\SettingsPiwik;
 use Piwik\Widget\Widget;
 use Piwik\Plugins\CoreHome\DataTableRowAction\MultiRowEvolution;
 use Piwik\Plugins\CoreHome\DataTableRowAction\RowEvolution;
-use Piwik\Plugins\Dashboard\DashboardManagerControl;
 use Piwik\Plugins\UsersManager\API;
-use Piwik\Site;
 use Piwik\Translation\Translator;
 use Piwik\UpdateCheck;
 use Piwik\Url;
@@ -42,7 +43,7 @@ class Controller extends \Piwik\Plugin\Controller
 
         parent::__construct();
     }
-    
+
     public function getDefaultAction()
     {
         return 'redirectToCoreHomeIndex';
@@ -91,15 +92,17 @@ class Controller extends \Piwik\Plugin\Controller
         $content = $widget->render();
 
         if ($config->getName() && Common::getRequestVar('showtitle', '', 'string') === '1') {
-            if (strpos($content, '<h2') !== false
+            if (
+                strpos($content, '<h2') !== false
                 || strpos($content, ' content-title=') !== false
-                || strpos($content, ' piwik-enriched-headline') !== false
+                || strpos($content, 'CoreHome.EnrichedHeadline') !== false
                 || strpos($content, '<h1') !== false ) {
                 // already includes title
                 return $content;
             }
 
-            if (strpos($content, 'piwik-content-block') === false
+            if (
+                strpos($content, '<!-- has-content-block -->') === false
                 && strpos($content, 'class="card"') === false
                 && strpos($content, "class='card'") === false
                 && strpos($content, 'class="card-content"') === false
@@ -114,14 +117,18 @@ class Controller extends \Piwik\Plugin\Controller
         return $content;
     }
 
-    function redirectToCoreHomeIndex()
+    public function redirectToCoreHomeIndex()
     {
-        $defaultReport = API::getInstance()->getUserPreference(Piwik::getCurrentUserLogin(), API::PREFERENCE_DEFAULT_REPORT);
+        $defaultReport = API::getInstance()->getUserPreference(
+            API::PREFERENCE_DEFAULT_REPORT,
+            Piwik::getCurrentUserLogin()
+        );
         $module = 'CoreHome';
         $action = 'index';
 
         // User preference: default report to load is the All Websites dashboard
-        if ($defaultReport == 'MultiSites'
+        if (
+            $defaultReport == 'MultiSites'
             && \Piwik\Plugin\Manager::getInstance()->isPluginActivated('MultiSites')
         ) {
             $module = 'MultiSites';
@@ -153,16 +160,26 @@ class Controller extends \Piwik\Plugin\Controller
 
     public function markNotificationAsRead()
     {
+        Piwik::checkUserHasSomeViewAccess();
+        $this->checkTokenInUrl();
+
         $notificationId = Common::getRequestVar('notificationId');
         NotificationManager::cancel($notificationId);
+
+        Json::sendHeaderJSON();
+        return json_encode(true);
     }
 
     protected function getDefaultIndexView()
     {
+        if (SettingsPiwik::isInternetEnabled() && Marketplace::isMarketplaceEnabled()) {
+            $this->securityPolicy->addPolicy('img-src', '*.matomo.org');
+            $this->securityPolicy->addPolicy('default-src', '*.matomo.org');
+        }
+
         $view = new View('@CoreHome/getDefaultIndexView');
         $this->setGeneralVariablesView($view);
         $view->showMenu = true;
-        $view->dashboardSettingsControl = new DashboardManagerControl();
         $view->content = '';
         return $view;
     }
@@ -170,7 +187,8 @@ class Controller extends \Piwik\Plugin\Controller
     protected function setDateTodayIfWebsiteCreatedToday()
     {
         $date = Common::getRequestVar('date', false);
-        if ($date == 'today'
+        if (
+            $date == 'today'
             || Common::getRequestVar('period', false) == 'range'
         ) {
             return;
@@ -182,7 +200,9 @@ class Controller extends \Piwik\Plugin\Controller
             $todayLocalTimezone        = Date::factory('now', $this->site->getTimezone())->toString('Y-m-d');
 
             if ($creationDateLocalTimezone == $todayLocalTimezone) {
-                Piwik::redirectToModule('CoreHome', 'index',
+                Piwik::redirectToModule(
+                    'CoreHome',
+                    'index',
                     array('date'   => 'today',
                           'idSite' => $this->idSite,
                           'period' => Common::getRequestVar('period'))
@@ -201,7 +221,7 @@ class Controller extends \Piwik\Plugin\Controller
     //  --------------------------------------------------------
     //  ROW EVOLUTION
     //  The following methods render the popover that shows the
-    //  evolution of a singe or multiple rows in a data table
+    //  evolution of a single or multiple rows in a data table
     //  --------------------------------------------------------
 
     /** Render the entire row evolution popover for a single row */
@@ -259,6 +279,8 @@ class Controller extends \Piwik\Plugin\Controller
         UpdateCheck::check($force = false, UpdateCheck::UI_CLICK_CHECK_INTERVAL);
 
         $view = new View('@CoreHome/checkForUpdates');
+        $view->isManualUpdateCheck = true;
+        $view->lastUpdateCheckFailed = UpdateCheck::hasLastCheckFailed();
         $this->setGeneralVariablesView($view);
         return $view->render();
     }
@@ -270,7 +292,8 @@ class Controller extends \Piwik\Plugin\Controller
     {
         $parameters = Request::getRequestArrayFromString($request = null);
         foreach ($parameters as $name => $param) {
-            if ($name == 'idSite'
+            if (
+                $name == 'idSite'
                 || $name == 'module'
                 || $name == 'action'
             ) {

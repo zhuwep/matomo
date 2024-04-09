@@ -1,13 +1,12 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
 
-use Piwik\Date;
 use Piwik\Tests\Framework\Fixture;
 
 /**
@@ -21,13 +20,13 @@ class VisitsTwoWebsitesWithAdditionalVisits extends Fixture
     public $idSite1 = 1;
     public $idSite2 = 2;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -78,7 +77,6 @@ class VisitsTwoWebsitesWithAdditionalVisits extends Fixture
         self::checkResponse($t->doTrackPageView('Hello'));
         $t->setUrl('http://example.org/Contact/ThankYou');
         self::checkResponse($t->doTrackPageView('Hello'));
-
     }
 
 

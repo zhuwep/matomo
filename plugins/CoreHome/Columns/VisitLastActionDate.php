@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,7 +19,7 @@ class VisitLastActionDate extends VisitDimension
     protected $columnName = 'visit_last_action_time';
     protected $type = self::TYPE_DATETIME;
     protected $segmentName = 'visitEndServerDate';
-    protected $nameSingular = 'VisitTime_ColumnVisitEndServerDate';
+    protected $nameSingular = 'VisitTime_ColumnVisitEndUTCDate';
     protected $sqlSegment = 'DATE(log_visit.visit_last_action_time)';
     protected $acceptValues = '2018-12-31, 2018-03-20, ...';
 

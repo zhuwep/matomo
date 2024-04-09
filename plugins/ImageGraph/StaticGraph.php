@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,8 +9,8 @@
 
 namespace Piwik\Plugins\ImageGraph;
 
-use CpChart\Chart\Data;
-use CpChart\Chart\Image;
+use CpChart\Data;
+use CpChart\Image;
 use Piwik\Container\StaticContainer;
 use Piwik\NumberFormatter;
 use Piwik\Piwik;
@@ -87,6 +87,23 @@ abstract class StaticGraph extends BaseFactory
     public static function getAvailableStaticGraphTypes()
     {
         return array_keys(self::$availableStaticGraphTypes);
+    }
+
+    public static function fixWhitespaceNonUnifont($value)
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        return strtr(
+            $value,
+            [
+                // thin space
+                "\xE2\x80\x89" => ' ',
+                // narrow non-break-space
+                "\xE2\x80\xAF" => "\xC2\xA0",
+            ]
+        );
     }
 
     /**
@@ -238,7 +255,9 @@ abstract class StaticGraph extends BaseFactory
 
         foreach ($this->ordinateSeries as $column => $data) {
             $this->pData->addPoints($data, $column);
-            $this->pData->setSerieDescription($column, $this->ordinateLabels[$column]);
+            if (isset($this->ordinateLabels[$column])) {
+                $this->pData->setSerieDescription($column, $this->ordinateLabels[$column]);
+            }
 
             if (isset($this->ordinateLogos[$column])) {
                 $ordinateLogo = $this->createResizedImageCopyIfNeeded($this->ordinateLogos[$column]);
@@ -246,9 +265,17 @@ abstract class StaticGraph extends BaseFactory
             }
         }
 
-        $this->pData->setAxisDisplay(0, AXIS_FORMAT_CUSTOM, '\\Piwik\\Plugins\\ImageGraph\\formatYAxis');
+        // Fix whitespace if not using unifont
+        $abscissaSeries = $this->abscissaSeries;
+        $formatMethodName = 'formatYAxis';
 
-        $this->pData->addPoints($this->abscissaSeries, self::ABSCISSA_SERIE_NAME);
+        if (false === strpos($this->font, API::UNICODE_FONT)) {
+            $abscissaSeries = array_map([$this, 'fixWhitespaceNonUnifont'], $abscissaSeries);
+            $formatMethodName = 'formatYAxisNonUnifont';
+        }
+
+        $this->pData->setAxisDisplay(0, AXIS_FORMAT_CUSTOM, '\\Piwik\\Plugins\\ImageGraph\\' . $formatMethodName);
+        $this->pData->addPoints($abscissaSeries, self::ABSCISSA_SERIE_NAME);
         $this->pData->setAbscissa(self::ABSCISSA_SERIE_NAME);
     }
 
@@ -312,7 +339,9 @@ abstract class StaticGraph extends BaseFactory
 
         // could not find a way to get pixel perfect width & height info using imageftbbox
         $textInfo = $this->pImage->drawText(
-            0, 0, $text,
+            0,
+            0,
+            $text,
             array(
                  'Alpha'    => 0,
                  'FontSize' => $fontSize,
@@ -333,7 +362,7 @@ abstract class StaticGraph extends BaseFactory
         $maxHeight = 0;
         foreach ($values as $data) {
             foreach ($data as $value) {
-                list($valueWidth, $valueHeight) = $this->getTextWidthHeight($value);
+                [$valueWidth, $valueHeight] = $this->getTextWidthHeight($value);
 
                 if ($valueWidth > $maxWidth) {
                     $maxWidth = $valueWidth;
@@ -374,7 +403,7 @@ abstract class StaticGraph extends BaseFactory
 }
 
 /**
- * Global format method
+ * Global format method - unifont
  *
  * required to format y axis values using CpChart internal format callbacks
  * @param $value
@@ -383,4 +412,18 @@ abstract class StaticGraph extends BaseFactory
 function formatYAxis($value)
 {
     return NumberFormatter::getInstance()->format($value);
+}
+
+/**
+ * Global format method - non-unifont
+ *
+ * required to format y axis values using CpChart internal format callbacks
+ * @param $value
+ * @return mixed
+ */
+function formatYAxisNonUnifont($value)
+{
+    return StaticGraph::fixWhitespaceNonUnifont(
+        NumberFormatter::getInstance()->format($value)
+    );
 }

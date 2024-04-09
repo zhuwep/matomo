@@ -1,12 +1,13 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\Diagnostics\Diagnostic;
 
+use Piwik\Container\StaticContainer;
 use Piwik\DbHelper;
 use Piwik\Filechecks;
 use Piwik\Translation\Translator;
@@ -86,7 +87,8 @@ class WriteAccessCheck implements Diagnostic
             $this->tmpPath . '/logs/',
             $this->tmpPath . '/sessions/',
             $this->tmpPath . '/tcpdf/',
-            $this->tmpPath . '/templates_c/',
+            StaticContainer::get('path.tmp.templates')
+        ,
         );
 
         if (! DbHelper::isInstalled()) {

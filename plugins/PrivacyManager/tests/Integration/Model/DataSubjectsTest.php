@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +10,6 @@ namespace Piwik\Plugins\PrivacyManager\tests\Integration\Model;
 
 use Piwik\Common;
 use Piwik\Container\StaticContainer;
-use Piwik\DataAccess\ArchiveTableCreator;
 use Piwik\Date;
 use Piwik\Db;
 use Piwik\Option;
@@ -25,6 +24,7 @@ use Piwik\Plugins\SitesManager\API as SitesManagerAPI;
 /**
  * Class DataSubjectsTest
  *
+ * @group DataSubjectsTest
  * @group Plugins
  */
 class DataSubjectsTest extends IntegrationTestCase
@@ -43,7 +43,7 @@ class DataSubjectsTest extends IntegrationTestCase
 
     private $originalTimezone;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -57,13 +57,106 @@ class DataSubjectsTest extends IntegrationTestCase
         $this->originalTrackingTime = $this->theFixture->trackingTime;
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->theFixture->uninstallLogTables();
         $this->theFixture->tearDownLocation();
         $this->removeArchiveInvalidationOptions();
         ini_set('date.timezone', $this->originalTimezone);
         $this->theFixture->trackingTime = $this->originalTrackingTime;
+    }
+
+    public function test_deleteDataSubjectsWithoutInvalidatingArchives_deleteVisitsWithoutIdsite()
+    {
+        $this->theFixture->setUpWebsites();
+        $this->theFixture->trackVisits($idSite = 1, 1);
+
+        $this->assertNotEmpty($this->getVisit(1, 1));
+        $this->assertNotEmpty($this->getLinkAction(1, 1));
+        $this->assertNotEmpty($this->getConversion(1, 1));
+        $this->assertNotEmpty($this->getOneVisit(1, 1, TestLogFoo::TABLE));
+
+        $this->assertNotEmpty($this->getVisit(1, 3));
+        $this->assertNotEmpty($this->getLinkAction(1, 3));
+        $this->assertNotEmpty($this->getConversion(1, 3));
+
+        $this->assertNotEmpty($this->getVisit(1, 2));
+        $this->assertNotEmpty($this->getLinkAction(1, 2));
+        $this->assertNotEmpty($this->getOneVisit(1, 2, TestLogFoo::TABLE));
+
+        $visits = array(array('idvisit' => 1),array('idvisit' => 3),array('idvisit' => 999));
+        $result = $this->dataSubjects->deleteDataSubjectsWithoutInvalidatingArchives($visits);
+
+        $this->assertEquals(array(
+            'log_conversion' => 2,
+            'log_conversion_item' => 0,
+            'log_link_visit_action' => 12,
+            'log_visit' => 2,
+            'log_foo_bar_baz' => 2,
+            'log_foo_bar' => 2,
+            'log_foo' => 2
+        ), $result);
+
+        $this->assertEmpty($this->getVisit(1, 1));
+        $this->assertEmpty($this->getLinkAction(1, 1));
+        $this->assertEmpty($this->getConversion(1, 1));
+        $this->assertEmpty($this->getOneVisit(1, 1, TestLogFoo::TABLE));
+
+        $this->assertEmpty($this->getVisit(1, 3));
+        $this->assertEmpty($this->getLinkAction(1, 3));
+        $this->assertEmpty($this->getConversion(1, 3));
+        $this->assertEmpty($this->getOneVisit(1, 3, TestLogFoo::TABLE));
+
+        // idvisit 2 still exists
+        $this->assertNotEmpty($this->getVisit(1, 2));
+        $this->assertNotEmpty($this->getLinkAction(1, 2));
+        $this->assertNotEmpty($this->getOneVisit(1, 2, TestLogFoo::TABLE));
+    }
+
+    public function test_deleteDataSubjectsWithoutInvalidatingArchives_deleteVisitWithAndWithoutIdSite()
+    {
+        $this->theFixture->setUpWebsites();
+        $this->theFixture->trackVisits($idSite = 1, 1);
+
+        $this->assertNotEmpty($this->getVisit(1, 1));
+        $this->assertNotEmpty($this->getLinkAction(1, 1));
+        $this->assertNotEmpty($this->getConversion(1, 1));
+        $this->assertNotEmpty($this->getOneVisit(1, 1, TestLogFoo::TABLE));
+
+        $this->assertNotEmpty($this->getVisit(1, 3));
+        $this->assertNotEmpty($this->getLinkAction(1, 3));
+        $this->assertNotEmpty($this->getConversion(1, 3));
+
+        $this->assertNotEmpty($this->getVisit(1, 2));
+        $this->assertNotEmpty($this->getLinkAction(1, 2));
+        $this->assertNotEmpty($this->getOneVisit(1, 2, TestLogFoo::TABLE));
+
+        $visits = array(array('idvisit' => 1),array('idvisit' => 3, 'idsite' => 1),array('idvisit' => 999),array('idvisit' => 999, 'idsite' => 999));
+        $result = $this->dataSubjects->deleteDataSubjectsWithoutInvalidatingArchives($visits);
+
+        $this->assertEquals(array(
+            'log_conversion' => 2,
+            'log_conversion_item' => 0,
+            'log_link_visit_action' => 12,
+            'log_visit' => 2,
+            'log_foo_bar_baz' => 2,
+            'log_foo_bar' => 2,
+            'log_foo' => 2
+        ), $result);
+
+        $this->assertEmpty($this->getVisit(1, 1));
+        $this->assertEmpty($this->getLinkAction(1, 1));
+        $this->assertEmpty($this->getConversion(1, 1));
+        $this->assertEmpty($this->getOneVisit(1, 1, TestLogFoo::TABLE));
+
+        $this->assertEmpty($this->getVisit(1, 3));
+        $this->assertEmpty($this->getLinkAction(1, 3));
+        $this->assertEmpty($this->getConversion(1, 3));
+
+        // idvisit 2 still exists
+        $this->assertNotEmpty($this->getVisit(1, 2));
+        $this->assertNotEmpty($this->getLinkAction(1, 2));
+        $this->assertNotEmpty($this->getOneVisit(1, 2, TestLogFoo::TABLE));
     }
 
     public function test_deleteExport_deleteOneVisit()
@@ -366,7 +459,7 @@ class DataSubjectsTest extends IntegrationTestCase
         $this->removeArchiveInvalidationOptions();
 
         $visitDate = Date::factory($this->theFixture->dateTime);
-        $key = 'report_to_invalidate_' . $idSite . '_' . $visitDate->toString('Y-m-d') . '_12345';
+        $key = '4444_report_to_invalidate_' . $idSite . '_' . $visitDate->toString('Y-m-d') . '_12345';
         Option::set($key, '1');
 
         $this->assertArchivesHaveBeenInvalidated($visitDate, $idSite);
@@ -402,14 +495,14 @@ class DataSubjectsTest extends IntegrationTestCase
     private function assertArchivesHaveNotBeenInvalidated(Date $visitDate, $idSite)
     {
         $key = 'report_to_invalidate_' . $idSite . '_' . $visitDate->toString('Y-m-d');
-        $value = Option::getLike($key . '%');
+        $value = Option::getLike('%' . $key . '%');
         $this->assertEmpty($value);
     }
 
     private function assertArchivesHaveBeenInvalidated(Date $visitDate, $idSite)
     {
         $key = 'report_to_invalidate_' . $idSite . '_' . $visitDate->toString('Y-m-d');
-        $value = Option::getLike($key . '%');
+        $value = Option::getLike('%' . $key . '%');
         $this->assertNotEmpty($value);
         $this->assertEquals('1', array_values($value)[0]);
     }
@@ -508,7 +601,7 @@ class DataSubjectsTest extends IntegrationTestCase
 
     private function removeArchiveInvalidationOptions()
     {
-        Option::deleteLike('report_to_invalidate_%');
+        Option::deleteLike('%report_to_invalidate_%');
     }
 
     private function setWebsiteTimezone($idSite, $timezone)

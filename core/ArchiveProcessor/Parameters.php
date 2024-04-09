@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -46,9 +46,19 @@ class Parameters
     private $onlyArchiveRequestedPlugin = false;
 
     /**
+     * @var string
+     */
+    private $archiveOnlyReport = null;
+
+    /**
      * @var bool
      */
-    private $isRootArchiveRequest = true;
+    private $isArchiveOnlyReportHandled;
+
+    /**
+     * @var string[]|null
+     */
+    private $foundRequestedReports;
 
     /**
      * Constructor.
@@ -60,6 +70,29 @@ class Parameters
         $this->site = $site;
         $this->period = $period;
         $this->segment = $segment;
+    }
+
+    /**
+     * If we want to archive only a single report, we can request that via this method.
+     * It is up to each plugin's archiver to respect the setting.
+     *
+     * @param string|string[] $archiveOnlyReport
+     * @api
+     */
+    public function setArchiveOnlyReport($archiveOnlyReport)
+    {
+        $this->archiveOnlyReport = $archiveOnlyReport;
+    }
+
+    /**
+     * Gets the report we want to archive specifically, or null if none was specified.
+     *
+     * @return string|null
+     * @api
+     */
+    public function getArchiveOnlyReport()
+    {
+        return $this->archiveOnlyReport;
     }
 
     /**
@@ -225,37 +258,69 @@ class Parameters
     {
         $temporary = 'definitive archive';
         Log::debug(
-            "%s archive, idSite = %d (%s), segment '%s', report = '%s', UTC datetime [%s -> %s]",
+            "%s archive, idSite = %d (%s), segment '%s', plugin = '%s', report = '%s', UTC datetime [%s -> %s]",
             $this->getPeriod()->getLabel(),
             $this->getSite()->getId(),
             $temporary,
             $this->getSegment()->getString(),
             $this->getRequestedPlugin(),
+            $this->getArchiveOnlyReport(),
             $this->getDateStart()->getDateStartUTC(),
             $this->getDateEnd()->getDateEndUTC()
         );
     }
 
-    /**
-     * Returns `true` if these parameters are part of an initial archiving request.
-     * Returns `false` if these parameters are for an archiving request that was initiated
-     * during archiving.
-     *
-     * @return bool
-     */
-    public function isRootArchiveRequest()
+    public function __toString()
     {
-        return $this->isRootArchiveRequest;
+        $requestedReports = $this->getArchiveOnlyReport();
+        if (is_array($requestedReports)) {
+            $requestedReports = implode(', ', $requestedReports);
+        }
+        return "[idSite = {$this->getSite()->getId()}, period = {$this->getPeriod()->getLabel()} {$this->getPeriod()->getRangeString()}, segment = {$this->getSegment()->getString()}, plugin = {$this->getRequestedPlugin()}, report = {$requestedReports}]";
     }
 
     /**
-     * Sets whether these parameters are part of the initial archiving request or if they are
-     * for a request that was initiated during archiving.
+     * Returns whether the setArchiveOnlyReport() was handled by an Archiver.
      *
-     * @param $isRootArchiveRequest
+     * @return bool
      */
-    public function setIsRootArchiveRequest($isRootArchiveRequest)
+    public function isPartialArchive()
     {
-        $this->isRootArchiveRequest = $isRootArchiveRequest;
+        if (!$this->getRequestedPlugin()) { // sanity check, partial archives are only for single reports
+            return false;
+        }
+
+        return $this->isArchiveOnlyReportHandled;
+    }
+
+    /**
+     * If a plugin's archiver handles the setArchiveOnlyReport() setting, it should call this method
+     * so it is known that the archive only contains the requested report. This should be called
+     * in an Archiver's __construct method.
+     *
+     * @param bool $isArchiveOnlyReportHandled
+     */
+    public function setIsPartialArchive($isArchiveOnlyReportHandled)
+    {
+        $this->isArchiveOnlyReportHandled = $isArchiveOnlyReportHandled;
+    }
+
+    public function getArchiveOnlyReportAsArray()
+    {
+        $requestedReport = $this->getArchiveOnlyReport();
+        if (empty($requestedReport)) {
+            return [];
+        }
+        return is_array($requestedReport) ? $requestedReport : [$requestedReport];
+    }
+
+    public function setFoundRequestedReports(array $foundRecords)
+    {
+        $this->foundRequestedReports = $foundRecords;
+    }
+
+    public function getFoundRequestedReports()
+    {
+        return $this->foundRequestedReports ?: [];
     }
 }

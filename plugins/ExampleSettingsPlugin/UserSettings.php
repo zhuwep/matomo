@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -76,5 +76,4 @@ class UserSettings extends \Piwik\Settings\Plugin\UserSettings
             $field->availableValues = array('red' => 'Red', 'blue' => 'Blue', 'green' => 'Green');
         });
     }
-
 }

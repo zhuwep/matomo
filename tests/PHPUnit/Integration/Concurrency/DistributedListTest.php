@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -33,7 +33,7 @@ class DistributedListTest extends IntegrationTestCase
      */
     private $distributedList;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -140,9 +140,11 @@ class DistributedListTest extends IntegrationTestCase
         $data = $data ?: self::$defaultOptionValues;
 
         $optionTable = Common::prefixTable('option');
-        Db::query("INSERT INTO `$optionTable` (option_name, option_value, autoload) VALUES (?, ?, ?)
+        Db::query(
+            "INSERT INTO `$optionTable` (option_name, option_value, autoload) VALUES (?, ?, ?)
                    ON DUPLICATE KEY UPDATE option_value = ?",
-            array(self::TEST_OPTION_NAME, serialize($data), 0, serialize($data)));
+            array(self::TEST_OPTION_NAME, serialize($data), 0, serialize($data))
+        );
     }
 
     private function getOptionValueForList()

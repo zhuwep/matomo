@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,11 +8,12 @@
  */
 namespace Piwik\Plugins\API;
 
-use Piwik\DeviceDetector\DeviceDetectorCache;
+use Piwik\Container\StaticContainer;
 use Piwik\Menu\MenuAdmin;
 use Piwik\Menu\MenuTop;
 use Piwik\Piwik;
 use DeviceDetector\Parser\OperatingSystem;
+use Piwik\Url;
 
 class Menu extends \Piwik\Plugin\Menu
 {
@@ -26,14 +27,16 @@ class Menu extends \Piwik\Plugin\Menu
 
     public function configureAdminMenu(MenuAdmin $menu)
     {
-        $menu->addPlatformItem('General_API',
+        $menu->addPlatformItem(
+            'General_API',
             $this->urlForAction('listAllAPI', array('segment' => false)),
             7,
             Piwik::translate('API_TopLinkTooltip')
         );
 
         if(Piwik::isUserIsAnonymous()) {
-            $menu->addPlatformItem('API_Glossary',
+            $menu->addPlatformItem(
+                'API_Glossary',
                 $this->urlForAction('glossary', array('segment' => false)),
                 50
             );
@@ -51,12 +54,11 @@ class Menu extends \Piwik\Plugin\Menu
         }
 
         $ua = new OperatingSystem($_SERVER['HTTP_USER_AGENT']);
-        $ua->setCache(new DeviceDetectorCache(86400));
+        $ua->setCache(StaticContainer::get('DeviceDetector\Cache\Cache'));
         $parsedOS = $ua->parse();
 
         if (!empty($parsedOS['short_name']) && in_array($parsedOS['short_name'], array(self::DD_SHORT_NAME_ANDROID, self::DD_SHORT_NAME_IOS))) {
-            $menu->addItem('Mobile_MatomoMobile', null, 'https://matomo.org/mobile/', 4);
+            $menu->addItem('Mobile_MatomoMobile', null, Url::addCampaignParametersToMatomoLink('https://matomo.org/mobile/'), 4);
         }
     }
-
 }

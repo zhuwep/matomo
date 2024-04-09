@@ -8,9 +8,9 @@
 
 {% block content %}
     <div class="overlay-sidebar-container">
-        <a id="overlayTitle" href="https://matomo.org/docs/page-overlay/" rel="noreferrer noopener" target="_blank">
+        <a id="overlayTitle" href="{{ 'https://matomo.org/docs/page-overlay/'|trackmatomolink }}" rel="noreferrer noopener" target="_blank">
             {{ 'Overlay_Overlay'|translate }}
-            <span class="icon-info2"></span>
+            <span class="icon-info"></span>
         </a>
 
         <div id="overlayDateRangeSelection">
@@ -23,6 +23,10 @@
                 <option value="month;today">{{ 'General_CurrentMonth'|translate }}</option>
                 <option value="year;today">{{ 'General_CurrentYear'|translate }}</option>
             </select>
+        </div>
+
+        <div id="overlayErrorNoSiteUrls" style="display:none;">
+            {{ 'Overlay_ErrorNoSiteUrls'|translate }}
         </div>
 
         <div id="overlayErrorNotLoading">
@@ -39,7 +43,7 @@
             </p>
 
             <p>
-                <a href="https://matomo.org/docs/page-overlay/#toc-page-overlay-troubleshooting" rel="noreferrer noopener" target="_blank">
+                <a href="{{ 'https://matomo.org/faq/reports/troubleshoot-page-overlay-issues/'|trackmatomolink }}" rel="noreferrer noopener" target="_blank">
                     {{ 'Overlay_ErrorNotLoadingLink'|translate }}
                 </a>
             </p>
@@ -63,12 +67,14 @@
     </div>
 
     <script type="text/javascript">
-        broadcast._isInit = true;
         $(function () {
             Piwik_Overlay.siteUrls = {{ siteUrls|json_encode|raw }};
 
             var iframeSrc = 'index.php?module=Overlay&action=startOverlaySession&idSite={{ idSite }}&period={{ period }}&date={{ rawDate }}&segment={{ segment }}';
             if (piwik.shouldPropagateTokenAuth) {
+                if (!piwik.broadcast.isWidgetizeRequestWithoutSession()) {
+                    iframeSrc += '&force_api_session=1';
+                }
                 iframeSrc += '&token_auth=' + piwik.token_auth;
             }
 

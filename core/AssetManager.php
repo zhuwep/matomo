@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,6 +16,7 @@ use Piwik\AssetManager\UIAssetCacheBuster;
 use Piwik\AssetManager\UIAssetFetcher\JScriptUIAssetFetcher;
 use Piwik\AssetManager\UIAssetFetcher\StaticUIAssetFetcher;
 use Piwik\AssetManager\UIAssetFetcher\StylesheetUIAssetFetcher;
+use Piwik\AssetManager\UIAssetFetcher\PluginUmdAssetFetcher;
 use Piwik\AssetManager\UIAssetFetcher;
 use Piwik\AssetManager\UIAssetMerger\JScriptUIAssetMerger;
 use Piwik\AssetManager\UIAssetMerger\StylesheetUIAssetMerger;
@@ -44,9 +45,11 @@ class AssetManager extends Singleton
 
     const CSS_IMPORT_DIRECTIVE = "<link rel=\"stylesheet\" type=\"text/css\" href=\"%s\" />\n";
     const JS_IMPORT_DIRECTIVE = "<script type=\"text/javascript\" src=\"%s\"></script>\n";
+    const JS_DEFER_IMPORT_DIRECTIVE = "<script type=\"text/javascript\" src=\"%s\" defer></script>\n";
     const GET_CSS_MODULE_ACTION = "index.php?module=Proxy&action=getCss";
     const GET_CORE_JS_MODULE_ACTION = "index.php?module=Proxy&action=getCoreJs";
     const GET_NON_CORE_JS_MODULE_ACTION = "index.php?module=Proxy&action=getNonCoreJs";
+    const GET_JS_UMD_MODULE_ACTION = "index.php?module=Proxy&action=getUmdJs&chunk=";
 
     /**
      * @var UIAssetCacheBuster
@@ -84,7 +87,7 @@ class AssetManager extends Singleton
         $assetManager = parent::getInstance();
 
         /**
-         * Triggered when creating an instance of the asset manager. Lets you overwite the
+         * Triggered when creating an instance of the asset manager. Lets you overwrite the
          * asset manager behavior.
          *
          * @param AssetManager &$assetManager
@@ -135,11 +138,12 @@ class AssetManager extends Singleton
     /**
      * Return JS file inclusion directive(s) using the markup <script>
      *
+     * @param bool $deferJS
      * @return string
      */
-    public function getJsInclusionDirective()
+    public function getJsInclusionDirective(bool $deferJS = false): string
     {
-        $result = "<script type=\"text/javascript\">\n" . Translate::getJavascriptTranslations() . "\n</script>";
+        $result = "<script type=\"text/javascript\">\n" . StaticContainer::get('Piwik\Translation\Translator')->getJavascriptTranslations() . "\n</script>";
 
         if ($this->isMergedAssetsDisabled()) {
             $this->getMergedCoreJSAsset()->delete();
@@ -147,10 +151,26 @@ class AssetManager extends Singleton
 
             $result .= $this->getIndividualCoreAndNonCoreJsIncludes();
         } else {
-            $result .= sprintf(self::JS_IMPORT_DIRECTIVE, self::GET_CORE_JS_MODULE_ACTION);
-            $result .= sprintf(self::JS_IMPORT_DIRECTIVE, self::GET_NON_CORE_JS_MODULE_ACTION);
+            $result .= sprintf($deferJS ? self::JS_DEFER_IMPORT_DIRECTIVE : self::JS_IMPORT_DIRECTIVE, self::GET_CORE_JS_MODULE_ACTION);
+            $result .= sprintf($deferJS ? self::JS_DEFER_IMPORT_DIRECTIVE : self::JS_IMPORT_DIRECTIVE, self::GET_NON_CORE_JS_MODULE_ACTION);
+
+            $result .= $this->getPluginUmdChunks();
         }
 
+        return $result;
+    }
+
+    protected function getPluginUmdChunks()
+    {
+        $fetcher = $this->getPluginUmdJScriptFetcher();
+
+        $chunks = $fetcher->getChunkFiles();
+
+        $result = '';
+        foreach ($chunks as $chunk) {
+            $src = self::GET_JS_UMD_MODULE_ACTION . urlencode($chunk->getChunkName());
+            $result .= sprintf(self::JS_DEFER_IMPORT_DIRECTIVE, $src);
+        }
         return $result;
     }
 
@@ -212,7 +232,22 @@ class AssetManager extends Singleton
     }
 
     /**
-     * @param boolean $core
+     * Return a chunk JS merged file absolute location.
+     * If there is none, the generation process will be triggered.
+     *
+     * @param string $chunk The name of the chunk. Will either be a plugin name or an integer.
+     * @return UIAsset
+     */
+    public function getMergedJavaScriptChunk($chunk)
+    {
+        $assetFetcher = $this->getPluginUmdJScriptFetcher($chunk);
+        $outputFile = $assetFetcher->getRequestedChunkOutputFile();
+
+        return $this->getMergedJavascript($assetFetcher, $this->getMergedUIAsset($outputFile));
+    }
+
+    /**
+     * @param boolean|"all" $core
      * @return string[]
      */
     public function getLoadedPlugins($core)
@@ -223,7 +258,7 @@ class AssetManager extends Singleton
             $pluginName = $plugin->getPluginName();
             $pluginIsCore = Manager::getInstance()->isPluginBundledWithCore($pluginName);
 
-            if (($pluginIsCore && $core) || (!$pluginIsCore && !$core)) {
+            if ($core === 'all' || ($pluginIsCore && $core) || (!$pluginIsCore && !$core)) {
                 $loadedPlugins[] = $pluginName;
             }
         }
@@ -245,10 +280,40 @@ class AssetManager extends Singleton
                 } else {
                     $assetsToRemove[] = $this->getMergedNonCoreJSAsset();
                 }
+
+                $assetFetcher = $this->getPluginUmdJScriptFetcher();
+                foreach ($assetFetcher->getChunkFiles() as $chunk) {
+                    $files = $chunk->getFiles();
+
+                    $foundInChunk = false;
+                    foreach ($files as $file) {
+                        if (strpos($file, "/$pluginName.umd.") !== false) {
+                            $foundInChunk = true;
+                        }
+                    }
+
+                    if ($foundInChunk) {
+                        $outputFile = $chunk->getOutputFile();
+                        $asset = $this->getMergedUIAsset($outputFile);
+                        if ($asset->exists()) {
+                            $assetsToRemove[] = $asset;
+                        }
+                        break;
+                    }
+                }
             }
         } else {
             $assetsToRemove[] = $this->getMergedCoreJSAsset();
             $assetsToRemove[] = $this->getMergedNonCoreJSAsset();
+
+            $assetFetcher = $this->getPluginUmdJScriptFetcher();
+            foreach ($assetFetcher->getChunkFiles() as $chunk) {
+                $outputFile = $chunk->getOutputFile();
+                $asset = $this->getMergedUIAsset($outputFile);
+                if ($asset->exists()) {
+                    $assetsToRemove[] = $asset;
+                }
+            }
         }
 
         $this->removeAssets($assetsToRemove);
@@ -285,11 +350,11 @@ class AssetManager extends Singleton
         if (Config::getInstance()->Development['disable_merged_assets'] == 1) {
             return true;
         }
-        
+
         if (isset($_GET['disable_merged_assets']) && $_GET['disable_merged_assets'] == 1) {
             return true;
         }
-        
+
         return false;
     }
 
@@ -312,18 +377,19 @@ class AssetManager extends Singleton
      *
      * @return string
      */
-    protected function getIndividualCoreAndNonCoreJsIncludes()
+    protected function getIndividualCoreAndNonCoreJsIncludes(): string
     {
         return
             $this->getIndividualJsIncludesFromAssetFetcher($this->getCoreJScriptFetcher()) .
-            $this->getIndividualJsIncludesFromAssetFetcher($this->getNonCoreJScriptFetcher());
+            $this->getIndividualJsIncludesFromAssetFetcher($this->getNonCoreJScriptFetcher()) .
+            $this->getIndividualJsIncludesFromAssetFetcher($this->getPluginUmdJScriptFetcher());
     }
 
     /**
      * @param UIAssetFetcher $assetFetcher
      * @return string
      */
-    protected function getIndividualJsIncludesFromAssetFetcher($assetFetcher)
+    protected function getIndividualJsIncludesFromAssetFetcher($assetFetcher): string
     {
         $jsIncludeString = '';
 
@@ -347,6 +413,11 @@ class AssetManager extends Singleton
         return new JScriptUIAssetFetcher($this->getLoadedPlugins(false), $this->theme);
     }
 
+    protected function getPluginUmdJScriptFetcher($chunk = null)
+    {
+        return new PluginUmdAssetFetcher($this->getLoadedPlugins('all'), $this->theme, $chunk);
+    }
+
     /**
      * @param string $pluginName
      * @return boolean
@@ -364,9 +435,12 @@ class AssetManager extends Singleton
         }
 
         $pluginManager = Manager::getInstance();
-        $plugin = $pluginManager->getLoadedPlugin($pluginName);
+        $plugin = null;
+        if ($pluginManager->isPluginLoaded($pluginName)) {
+            $plugin = $pluginManager->getLoadedPlugin($pluginName);
+        }
 
-        if ($plugin->isTheme()) {
+        if ($plugin && $plugin->isTheme()) {
             $theme = $pluginManager->getTheme($pluginName);
 
             $javaScriptFiles = $theme->getJavaScriptFiles();
@@ -437,12 +511,12 @@ class AssetManager extends Singleton
     {
         $mergedAsset = new InMemoryUIAsset();
         $fetcher = new StaticUIAssetFetcher($files, $priorityOrder = array(), $theme = null);
-        
+
         $cacheBuster = UIAssetCacheBuster::getInstance();
 
         $assetMerger = new JScriptUIAssetMerger($mergedAsset, $fetcher, $cacheBuster);
         $assetMerger->generateFile();
-        
+
         return $mergedAsset->getContent();
     }
 }

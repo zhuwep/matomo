@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -38,7 +38,8 @@ class Weekly extends Schedule
         }
 
         // Adds correct number of days
-        $rescheduledTime = mktime(date('H', $currentTime),
+        $rescheduledTime = mktime(
+            date('H', $currentTime),
             date('i', $currentTime),
             date('s', $currentTime),
             date('n', $currentTime),

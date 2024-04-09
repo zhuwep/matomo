@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,7 +15,6 @@ use Piwik\Tracker\TrackerConfig;
 
 class Requests
 {
-
     public function requiresAuthentication()
     {
         $requiresAuth = TrackerConfig::getConfigValue('bulk_requests_require_authentication');
@@ -80,6 +79,17 @@ class Requests
         }
 
         return array($requests, $tokenAuth);
+    }
+
+    public function shouldSendResponse($rawData): bool
+    {
+        $rawData = trim($rawData);
+        $rawData = Common::sanitizeLineBreaks($rawData);
+
+        // POST data can be array of string URLs or array of arrays w/ visit info
+        $jsonData = json_decode($rawData, $assoc = true);
+
+        return !!Common::getRequestVar('send_image', true, 'string', $jsonData);
     }
 
     public function initRequestsAndTokenAuth($rawData)

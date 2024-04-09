@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -31,11 +31,9 @@ class GetRegion extends Base
     {
         $view->config->show_exclude_low_population = false;
         $view->config->documentation = $this->documentation;
-        $view->config->addTranslation('label', $this->dimension->getName());
 
         $view->requestConfig->filter_limit = 5;
 
         $this->checkIfNoDataForGeoIpReport($view);
     }
-
 }

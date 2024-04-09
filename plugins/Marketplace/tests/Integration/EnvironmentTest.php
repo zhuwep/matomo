@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -28,7 +28,7 @@ class EnvironmentTest extends IntegrationTestCase
      */
     private $environment;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -45,7 +45,8 @@ class EnvironmentTest extends IntegrationTestCase
 
     public function test_getPhpVersion()
     {
-        $this->assertEquals(phpversion(), $this->environment->getPhpVersion());
+        $phpVersion = explode('-', phpversion()); // cater for pre-release versions like 8.3.0-dev
+        $this->assertTrue(version_compare($phpVersion[0], $this->environment->getPhpVersion(), '>='));
     }
 
     public function test_getPiwikVersion()
@@ -83,5 +84,4 @@ class EnvironmentTest extends IntegrationTestCase
     {
         $this->assertTrue($this->environment->doesPreferStable());
     }
-
 }

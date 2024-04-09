@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Common;
 use Piwik\Date;
 use Piwik\Mail\EmailStyles;
 use Piwik\Plugin\ThemeStyles;
-use Piwik\Plugins\API\API;
 use Piwik\Plugins\CoreAdminHome\CustomLogo;
 use Piwik\Scheduler\Schedule\Schedule;
 use Piwik\SettingsPiwik;
@@ -67,12 +66,11 @@ class HtmlReportEmailHeaderView extends View
         $emailStyles = EmailStyles::get();
 
         $view->currentPath = SettingsPiwik::getPiwikUrl();
-        $view->logoHeader = API::getInstance()->getHeaderLogoUrl();
 
         $view->themeStyles = $themeStyles;
         $view->emailStyles = $emailStyles;
 
-        $view->fontStyle = 'color:' . $themeStyles->colorText . ';font-family:' . $themeStyles->fontFamilyBase.';';
+        $view->fontStyle = 'color:' . $themeStyles->colorText . ';font-family:' . $themeStyles->fontFamilyBase . ';';
         $view->styleParagraphText = 'font-size:15px;line-height:24px;';
         $view->styleParagraph = $view->styleParagraphText . 'margin:0 0 16px;';
 

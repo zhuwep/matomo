@@ -5,6 +5,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -13,11 +14,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12</compareDate>
 					<comparePeriodPretty>Sunday, August 12, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -26,11 +28,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-09</compareDate>
 					<comparePeriodPretty>Thursday, August 9, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -39,7 +42,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13</compareDate>
 					<comparePeriodPretty>Monday, August 13, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -50,6 +53,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -58,11 +62,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13</compareDate>
 					<comparePeriodPretty>Monday, August 13, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -71,11 +76,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-10</compareDate>
 					<comparePeriodPretty>Friday, August 10, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -84,7 +90,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-14</compareDate>
 					<comparePeriodPretty>Tuesday, August 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -95,6 +101,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -103,11 +110,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-14</compareDate>
 					<comparePeriodPretty>Tuesday, August 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -116,11 +124,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-11</compareDate>
 					<comparePeriodPretty>Saturday, August 11, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -128,8 +137,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -153,7 +162,23 @@
 			<entry_bounce_count>1</entry_bounce_count>
 			<exit_nb_uniq_visitors>1</exit_nb_uniq_visitors>
 			<exit_nb_visits>1</exit_nb_visits>
+			<goals>
+				<row idgoal='1'>
+					<nb_conversions>1</nb_conversions>
+					<revenue>5</revenue>
+					<nb_conv_pages_before>1</nb_conv_pages_before>
+					<nb_conversions_attrib>1</nb_conversions_attrib>
+					<nb_conversions_page_rate>0.5</nb_conversions_page_rate>
+					<nb_conversions_page_uniq>1</nb_conversions_page_uniq>
+					<revenue_attrib>5</revenue_attrib>
+					<revenue_entry>5</revenue_entry>
+					<nb_conversions_entry_rate>1</nb_conversions_entry_rate>
+					<revenue_per_entry>5</revenue_per_entry>
+					<nb_conversions_entry>1</nb_conversions_entry>
+				</row>
+			</goals>
 			<avg_bandwidth>43</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>100%</bounce_rate>
 			<exit_rate>100%</exit_rate>
@@ -176,6 +201,7 @@
 					<min_bandwidth>43</min_bandwidth>
 					<sum_bandwidth>43</sum_bandwidth>
 					<avg_bandwidth>43</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>100%</bounce_rate>
 					<exit_rate>100%</exit_rate>
@@ -184,7 +210,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-15</compareDate>
 					<comparePeriodPretty>Wednesday, August 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fexample.org%252Findex.htm</segment>
 				</row>
@@ -205,6 +231,7 @@
 					<exit_nb_uniq_visitors>0</exit_nb_uniq_visitors>
 					<exit_nb_visits>0</exit_nb_visits>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -240,6 +267,8 @@
 					<exit_nb_visits_change_from>+100%</exit_nb_visits_change_from>
 					<avg_bandwidth_change>-100%</avg_bandwidth_change>
 					<avg_bandwidth_change_from>+100%</avg_bandwidth_change_from>
+					<avg_page_load_time_change>+0%</avg_page_load_time_change>
+					<avg_page_load_time_change_from>+0%</avg_page_load_time_change_from>
 					<avg_time_on_page_change>+0%</avg_time_on_page_change>
 					<avg_time_on_page_change_from>+0%</avg_time_on_page_change_from>
 					<bounce_rate_change>-100%</bounce_rate_change>
@@ -251,7 +280,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12</compareDate>
 					<comparePeriodPretty>Sunday, August 12, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fexample.org%252Findex.htm</segment>
 				</row>
@@ -272,6 +301,7 @@
 					<exit_nb_uniq_visitors>0</exit_nb_uniq_visitors>
 					<exit_nb_visits>0</exit_nb_visits>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -307,6 +337,8 @@
 					<exit_nb_visits_change_from>+100%</exit_nb_visits_change_from>
 					<avg_bandwidth_change>-100%</avg_bandwidth_change>
 					<avg_bandwidth_change_from>+100%</avg_bandwidth_change_from>
+					<avg_page_load_time_change>+0%</avg_page_load_time_change>
+					<avg_page_load_time_change_from>+0%</avg_page_load_time_change_from>
 					<avg_time_on_page_change>+0%</avg_time_on_page_change>
 					<avg_time_on_page_change_from>+0%</avg_time_on_page_change_from>
 					<bounce_rate_change>-100%</bounce_rate_change>
@@ -317,8 +349,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fexample.org%252Findex.htm</segment>
 				</row>
@@ -342,7 +374,23 @@
 			<entry_bounce_count>1</entry_bounce_count>
 			<exit_nb_uniq_visitors>1</exit_nb_uniq_visitors>
 			<exit_nb_visits>1</exit_nb_visits>
+			<goals>
+				<row idgoal='1'>
+					<nb_conversions>1</nb_conversions>
+					<revenue>5</revenue>
+					<nb_conv_pages_before>1</nb_conv_pages_before>
+					<nb_conversions_attrib>1</nb_conversions_attrib>
+					<nb_conversions_page_rate>0.5</nb_conversions_page_rate>
+					<nb_conversions_page_uniq>1</nb_conversions_page_uniq>
+					<revenue_attrib>5</revenue_attrib>
+					<revenue_entry>5</revenue_entry>
+					<nb_conversions_entry_rate>1</nb_conversions_entry_rate>
+					<revenue_per_entry>5</revenue_per_entry>
+					<nb_conversions_entry>1</nb_conversions_entry>
+				</row>
+			</goals>
 			<avg_bandwidth>43</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>100%</bounce_rate>
 			<exit_rate>100%</exit_rate>
@@ -365,6 +413,7 @@
 					<min_bandwidth>43</min_bandwidth>
 					<sum_bandwidth>43</sum_bandwidth>
 					<avg_bandwidth>43</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>100%</bounce_rate>
 					<exit_rate>100%</exit_rate>
@@ -373,7 +422,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-15</compareDate>
 					<comparePeriodPretty>Wednesday, August 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fforum.piwik.org%252Fregister.php%253F0%252Capprove%253D9a94a02145599</segment>
 				</row>
@@ -394,6 +443,7 @@
 					<exit_nb_uniq_visitors>0</exit_nb_uniq_visitors>
 					<exit_nb_visits>0</exit_nb_visits>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -429,6 +479,8 @@
 					<exit_nb_visits_change_from>+100%</exit_nb_visits_change_from>
 					<avg_bandwidth_change>-100%</avg_bandwidth_change>
 					<avg_bandwidth_change_from>+100%</avg_bandwidth_change_from>
+					<avg_page_load_time_change>+0%</avg_page_load_time_change>
+					<avg_page_load_time_change_from>+0%</avg_page_load_time_change_from>
 					<avg_time_on_page_change>+0%</avg_time_on_page_change>
 					<avg_time_on_page_change_from>+0%</avg_time_on_page_change_from>
 					<bounce_rate_change>-100%</bounce_rate_change>
@@ -440,7 +492,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12</compareDate>
 					<comparePeriodPretty>Sunday, August 12, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fforum.piwik.org%252Fregister.php%253F0%252Capprove%253D9a94a02145599</segment>
 				</row>
@@ -461,6 +513,7 @@
 					<exit_nb_uniq_visitors>0</exit_nb_uniq_visitors>
 					<exit_nb_visits>0</exit_nb_visits>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -496,6 +549,8 @@
 					<exit_nb_visits_change_from>+100%</exit_nb_visits_change_from>
 					<avg_bandwidth_change>-100%</avg_bandwidth_change>
 					<avg_bandwidth_change_from>+100%</avg_bandwidth_change_from>
+					<avg_page_load_time_change>+0%</avg_page_load_time_change>
+					<avg_page_load_time_change_from>+0%</avg_page_load_time_change_from>
 					<avg_time_on_page_change>+0%</avg_time_on_page_change>
 					<avg_time_on_page_change_from>+0%</avg_time_on_page_change_from>
 					<bounce_rate_change>-100%</bounce_rate_change>
@@ -506,8 +561,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 					<segment>pageUrl==http%253A%252F%252Fforum.piwik.org%252Fregister.php%253F0%252Capprove%253D9a94a02145599</segment>
 				</row>
@@ -520,6 +575,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -528,11 +584,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13</compareDate>
 					<comparePeriodPretty>Monday, August 13, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -540,8 +597,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -552,6 +609,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -560,11 +618,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-14</compareDate>
 					<comparePeriodPretty>Tuesday, August 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -572,8 +631,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -584,6 +643,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -592,11 +652,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-15</compareDate>
 					<comparePeriodPretty>Wednesday, August 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -604,8 +665,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -616,6 +677,7 @@
 			<comparisons>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -624,11 +686,12 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
 					<comparePeriodPretty>Thursday, August 16, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
 					<avg_bandwidth>0</avg_bandwidth>
+					<avg_page_load_time>0</avg_page_load_time>
 					<avg_time_on_page>0</avg_time_on_page>
 					<bounce_rate>0%</bounce_rate>
 					<exit_rate>0%</exit_rate>
@@ -636,8 +699,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13,2012-08-14</compareDate>
-					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 13 – 14, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 13 – 14, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>

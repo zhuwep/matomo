@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -61,6 +61,11 @@ class PluginsArchiver
      */
     private $shouldAggregateFromRawData;
 
+    /**
+     * @var ArchiveWriter
+     */
+    private $archiveWriter;
+
     public function __construct(Parameters $params, ArchiveWriter $archiveWriter = null)
     {
         $this->params = $params;
@@ -72,6 +77,7 @@ class PluginsArchiver
 
         $this->archiveProcessor = new ArchiveProcessor($this->params, $this->archiveWriter, $this->logAggregator);
 
+
         $shouldAggregateFromRawData = $this->params->isSingleSiteDayArchive();
 
         /**
@@ -81,11 +87,6 @@ class PluginsArchiver
          *
          * @param bool $shouldAggregateFromRawData  Set to true, to aggregate from raw data, or false to aggregate multiple reports.
          * @param Parameters $params
-         * @ignore
-         * @deprecated
-         *
-         * In Matomo 4.0 we should maybe remove this event, and instead maybe always archive from raw data when it is daily archive,
-         * no matter if single site or not. We cannot do this in Matomo 3.X as some custom plugin archivers may not be able to handle multiple sites.
          */
         Piwik::postEvent('ArchiveProcessor.shouldAggregateFromRawData', array(&$shouldAggregateFromRawData, $this->params));
 
@@ -126,8 +127,12 @@ class PluginsArchiver
      */
     public function callAggregateAllPlugins($visits, $visitsConverted, $forceArchivingWithoutVisits = false)
     {
-        Log::debug("PluginsArchiver::%s: Initializing archiving process for all plugins [visits = %s, visits converted = %s]",
-            __FUNCTION__, $visits, $visitsConverted);
+        Log::debug(
+            "PluginsArchiver::%s: Initializing archiving process for all plugins [visits = %s, visits converted = %s]",
+            __FUNCTION__,
+            $visits,
+            $visitsConverted
+        );
 
         /** @var Logger $performanceLogger */
         $performanceLogger = StaticContainer::get(Logger::class);
@@ -136,7 +141,20 @@ class PluginsArchiver
 
         $archivers = static::getPluginArchivers();
 
+        $archiveOnlyPlugin = $this->params->getRequestedPlugin();
+        $archiveOnlyReports = $this->params->getArchiveOnlyReport();
+
         foreach ($archivers as $pluginName => $archiverClass) {
+            // if we are archiving specific reports for a single plugin then we don't need or want to create
+            // Archiver instances, since they will set the archive to partial even if the requested reports aren't
+            // handled by the Archiver
+            if (
+                !empty($archiveOnlyReports)
+                && $archiveOnlyPlugin != $pluginName
+            ) {
+                continue;
+            }
+
             // We clean up below all tables created during this function call (and recursive calls)
             $latestUsedTableId = Manager::getInstance()->getMostRecentTableId();
 
@@ -154,19 +172,20 @@ class PluginsArchiver
             }
 
             if ($this->shouldProcessReportsForPlugin($pluginName)) {
-
                 $this->logAggregator->setQueryOriginHint($pluginName);
 
                 try {
                     self::$currentPluginBeingArchived = $pluginName;
 
+                    $period = $this->params->getPeriod()->getLabel();
+
                     $timer = new Timer();
                     if ($this->shouldAggregateFromRawData) {
-                        Log::debug("PluginsArchiver::%s: Archiving day reports for plugin '%s'.", __FUNCTION__, $pluginName);
+                        Log::debug("PluginsArchiver::%s: Archiving $period reports for plugin '%s' from raw data.", __FUNCTION__, $pluginName);
 
                         $archiver->callAggregateDayReport();
                     } else {
-                        Log::debug("PluginsArchiver::%s: Archiving period reports for plugin '%s'.", __FUNCTION__, $pluginName);
+                        Log::debug("PluginsArchiver::%s: Archiving $period reports for plugin '%s' using reports for smaller periods.", __FUNCTION__, $pluginName);
 
                         $archiver->callAggregateMultipleReports();
                     }
@@ -175,7 +194,8 @@ class PluginsArchiver
 
                     $performanceLogger->logMeasurement('plugin', $pluginName, $this->params, $timer);
 
-                    Log::debug("PluginsArchiver::%s: %s while archiving %s reports for plugin '%s' %s.",
+                    Log::debug(
+                        "PluginsArchiver::%s: %s while archiving %s reports for plugin '%s' %s.",
                         __FUNCTION__,
                         $timer->getMemoryLeak(),
                         $this->params->getPeriod()->getLabel(),
@@ -183,7 +203,7 @@ class PluginsArchiver
                         $this->params->getSegment() ? sprintf("(for segment = '%s')", $this->params->getSegment()->getString()) : ''
                     );
                 } catch (Exception $e) {
-                    throw new PluginsArchiverException($e->getMessage() . " - in plugin $pluginName", $e->getCode(), $e);
+                    throw new PluginsArchiverException($e->getMessage() . " - in plugin $pluginName.", $e->getCode(), $e);
                 } finally {
                     self::$currentPluginBeingArchived = null;
                 }
@@ -241,14 +261,19 @@ class PluginsArchiver
         return static::$archivers;
     }
 
-    private static function getPluginArchiverClass($pluginName)
+    private static function getPluginArchiverClass(string $pluginName): ?string
     {
         $klassName = 'Piwik\\Plugins\\' . $pluginName . '\\Archiver';
-        if (class_exists($klassName)
-            && is_subclass_of($klassName, 'Piwik\\Plugin\\Archiver')) {
+        if (
+            class_exists($klassName)
+            && is_subclass_of($klassName, 'Piwik\\Plugin\\Archiver')
+        ) {
             return $klassName;
         }
-        return false;
+        if (Archiver::doesPluginHaveRecordBuilders($pluginName)) {
+            return Archiver::class;
+        }
+        return null;
     }
 
     /**
@@ -266,16 +291,23 @@ class PluginsArchiver
             return false;
         }
 
-        if (Rules::shouldProcessReportsAllPlugins(
-            $this->params->getIdSites(),
-            $this->params->getSegment(),
-            $this->params->getPeriod()->getLabel())) {
+        if (
+            Rules::shouldProcessReportsAllPlugins(
+                [$this->params->getSite()->getId()],
+                $this->params->getSegment(),
+                $this->params->getPeriod()->getLabel()
+            )
+        ) {
             return true;
         }
 
-        if (!\Piwik\Plugin\Manager::getInstance()->isPluginLoaded($this->params->getRequestedPlugin())) {
-            return true;
+        if (
+            $this->params->getRequestedPlugin() &&
+            !\Piwik\Plugin\Manager::getInstance()->isPluginLoaded($this->params->getRequestedPlugin())
+        ) {
+            return false;
         }
+
         return false;
     }
 
@@ -313,7 +345,11 @@ class PluginsArchiver
      */
     private function makeNewArchiverObject($archiverClass, $pluginName)
     {
-        $archiver = new $archiverClass($this->archiveProcessor);
+        if ($archiverClass === Archiver::class) {
+            $archiver = new Archiver($this->archiveProcessor, $pluginName);
+        } else {
+            $archiver = new $archiverClass($this->archiveProcessor);
+        }
 
         /**
          * Triggered right after a new **plugin archiver instance** is created.

@@ -1,9 +1,12 @@
+.dataTableRowActions {
+  background: none !important;
+}
 
 table.dataTable .dataTableRowActions {
   position: absolute;
   display: none;
   overflow: hidden;
-  margin-top: -5px;
+  margin-top: -6px;
   background-color: inherit !important;
   z-index: 1000; /* Work around FF bug to make sure it displays over ellipsis */
 }
@@ -13,6 +16,12 @@ table.dataTable .dataTableRowActions a {
   float: left;
   padding: 6px 4px 6px 0;
   margin: 0;
+  width: auto!important;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
 
   .rowActionIcon {
     font-size: 19px;

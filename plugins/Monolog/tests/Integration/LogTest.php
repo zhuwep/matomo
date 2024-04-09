@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\Monolog\tests\Integration;
 use Exception;
 use Piwik\Application\Environment;
 use Piwik\Common;
-use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Db;
 use Piwik\Log;
@@ -28,23 +27,26 @@ class LogTest extends IntegrationTestCase
     const STRING_MESSAGE_FORMAT = '[%tag%] %message%';
     const STRING_MESSAGE_FORMAT_SPRINTF = "[%s] [%s] %s";
 
-    public static $expectedExceptionOutput = '[Monolog] [%s] LogTest.php(112): dummy error message
-  dummy backtrace';
+    public static $expectedExceptionOutput = '[Monolog] [<PID>] LogTest.php(%d): dummy error message
+  dummy backtrace [Query: , CLI mode: 1]';
 
-    public static $expectedErrorOutput = '[Monolog] [%s] dummyerrorfile.php(145): Unknown error (102) - dummy error string
-  dummy backtrace';
+    public static $expectedErrorOutput = '[Monolog] [<PID>] dummyerrorfile.php(%d): dummy error message
+  dummy backtrace [Query: , CLI mode: 1]';
 
-    public function setUp()
+    public static $expectedErrorOutputWithQuery = '[Monolog] [<PID>] dummyerrorfile.php(%d): dummy error message
+  dummy backtrace [Query: ?a=b&d=f, CLI mode: 1]';
+
+    public function setUp(): void
     {
         parent::setUp();
 
         Log::unsetInstance();
 
         @unlink(self::getLogFileLocation());
-        Log::$debugBacktraceForTests = "dummy backtrace";
+        Log::$debugBacktraceForTests = "dummy error message\ndummy backtrace";
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         Log::unsetInstance();
 
@@ -99,7 +101,22 @@ class LogTest extends IntegrationTestCase
         $error = new \ErrorException("dummy error string", 0, 102, "dummyerrorfile.php", 145);
         Log::error($error);
 
-        $this->checkBackend($backend, sprintf(self::$expectedErrorOutput, getmypid()), $formatMessage = false, $tag = 'Monolog');
+        $this->checkBackend($backend, str_replace('<PID>', getmypid(), self::$expectedErrorOutput), $formatMessage = false, $tag = 'Monolog');
+    }
+
+    /**
+     * @dataProvider getBackendsToTest
+     */
+    public function testLoggingContextWorks($backend)
+    {
+        $this->recreateLogSingleton($backend);
+
+        $_SERVER['QUERY_STRING'] = 'a=b&d=f';
+
+        $error = new \ErrorException("dummy error string", 0, 102, "dummyerrorfile.php", 145);
+        Log::error($error);
+
+        $this->checkBackend($backend, str_replace('<PID>', getmypid(), self::$expectedErrorOutputWithQuery), $formatMessage = false, $tag = 'Monolog');
     }
 
     /**
@@ -112,7 +129,7 @@ class LogTest extends IntegrationTestCase
         $exception = new Exception("dummy error message");
         Log::error($exception);
 
-        $this->checkBackend($backend, sprintf(self::$expectedExceptionOutput, getmypid()), $formatMessage = false, $tag = 'Monolog');
+        $this->checkBackend($backend, str_replace('<PID>', getmypid(), self::$expectedExceptionOutput), $formatMessage = false, $tag = 'Monolog');
     }
 
     /**
@@ -146,7 +163,7 @@ class LogTest extends IntegrationTestCase
     {
         $this->recreateLogSingleton($backend);
 
-        LoggerWrapper::doLog(" \n   ".self::TESTMESSAGE."\n\n\n   \n");
+        LoggerWrapper::doLog(" \n   " . self::TESTMESSAGE . "\n\n\n   \n");
 
         $this->checkBackend($backend, self::TESTMESSAGE, $formatMessage = true, 'Monolog');
     }
@@ -203,7 +220,7 @@ class LogTest extends IntegrationTestCase
 
             $expectedMessage = str_replace("\n ", "\n[Monolog] [" . getmypid() . "]", $expectedMessage);
 
-            $this->assertEquals($expectedMessage . "\n", $fileContents);
+            $this->assertStringMatchesFormat($expectedMessage . "\n", $fileContents);
         } else if ($backend == 'database') {
             $queryLog = Db::isQueryLogEnabled();
             Db::enableQueryLog(false);
@@ -213,7 +230,7 @@ class LogTest extends IntegrationTestCase
 
             $message = Db::fetchOne("SELECT message FROM " . Common::prefixTable('logger_message') . " LIMIT 1");
             $message = $this->removePathsFromBacktrace($message);
-            $this->assertEquals($expectedMessage, $message);
+            $this->assertStringMatchesFormat($expectedMessage, $message);
 
             $tagInDb = Db::fetchOne("SELECT tag FROM " . Common::prefixTable('logger_message') . " LIMIT 1");
             if ($tag === false) {
@@ -259,12 +276,12 @@ class LogTest extends IntegrationTestCase
             'ini.log.string_message_format' => self::STRING_MESSAGE_FORMAT,
             'ini.log.string_message_format_trace' => self::STRING_MESSAGE_FORMAT,
             'ini.log.logger_file_path' => self::getLogFileLocation(),
-            'Psr\Log\LoggerInterface' => \DI\get('Monolog\Logger'),
+            Log\LoggerInterface::class => \Piwik\DI::get(Log\Logger::class),
             'Tests.log.allowAllHandlers' => true,
         ));
         $newEnv->init();
 
-        $newMonologLogger = $newEnv->getContainer()->make('Psr\Log\LoggerInterface');
+        $newMonologLogger = $newEnv->getContainer()->make(Log\LoggerInterface::class);
         $oldLogger = new Log($newMonologLogger);
         Log::setSingletonInstance($oldLogger);
     }

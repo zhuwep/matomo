@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,10 +12,10 @@ use Piwik\Columns\DimensionMetricFactory;
 use Piwik\Columns\Discriminator;
 use Piwik\Columns\Join;
 use Piwik\Columns\MetricsList;
-use Piwik\Piwik;
 use Piwik\Plugin\Dimension\VisitDimension;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\Request;
+use Piwik\Tracker\TableLogAction;
 use Piwik\Tracker\Visitor;
 
 class ExitPageUrl extends VisitDimension
@@ -27,7 +27,8 @@ class ExitPageUrl extends VisitDimension
     protected $nameSingular = 'Actions_ColumnExitPageURL';
     protected $namePlural = 'Actions_ColumnExitPageURLs';
     protected $category = 'General_Actions';
-    protected $sqlFilter = '\\Piwik\\Tracker\\TableLogAction::getIdActionFromSegment';
+    protected $suggestedValuesApi = 'Actions.getExitPageUrls';
+    protected $sqlFilter = [TableLogAction::class, 'getOptimizedIdActionSqlMatch'];
 
     public function configureMetrics(MetricsList $metricsList, DimensionMetricFactory $dimensionMetricFactory)
     {

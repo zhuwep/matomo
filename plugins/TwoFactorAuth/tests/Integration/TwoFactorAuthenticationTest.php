@@ -8,8 +8,8 @@
 
 namespace Piwik\Plugins\TwoFactorAuth\tests\Integration;
 
-use Piwik\Common;
 use Piwik\Container\StaticContainer;
+use Piwik\Option;
 use Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao;
 use Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator;
 use Piwik\Plugins\TwoFactorAuth\SystemSettings;
@@ -39,7 +39,7 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
      */
     private $twoFa;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -55,7 +55,7 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
 
     public function test_generateSecret()
     {
-        $this->assertSame(16, Common::mb_strlen($this->twoFa->generateSecret()));
+        $this->assertSame(16, mb_strlen($this->twoFa->generateSecret()));
     }
 
     public function test_isUserRequiredToHaveTwoFactorEnabled_notByDefault()
@@ -73,15 +73,15 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
     {
         $this->dao->createRecoveryCodesForLogin('mylogin');
 
-        $this->assertFalse($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin'));
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin'));
         $this->twoFa->saveSecret('mylogin', '123456');
 
-        $this->assertTrue($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin'));
-        $this->assertFalse($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin2'));
+        $this->assertTrue(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin'));
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin2'));
 
         $this->twoFa->disable2FAforUser('mylogin');
 
-        $this->assertFalse($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin'));
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin'));
     }
 
     public function test_disable2FAforUser_removesAllRecoveryCodes()
@@ -92,27 +92,25 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
         $this->assertEquals([], $this->dao->getAllRecoveryCodesForLogin('mylogin'));
     }
 
-    /**
-     * @expectedExceptionMessage Anonymous cannot use
-     * @expectedException \Exception
-     */
     public function test_saveSecret_neverWorksForAnonymous()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Anonymous cannot use');
+
         $this->twoFa->saveSecret('anonymous', '123456');
     }
 
-    /**
-     * @expectedExceptionMessage no recovery codes have been created
-     * @expectedException \Exception
-     */
     public function test_saveSecret_notWorksWhenNoRecoveryCodesCreated()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('no recovery codes have been created');
+
         $this->twoFa->saveSecret('not', '123456');
     }
 
     public function test_isUserUsingTwoFactorAuthentication_neverWorksForAnonymous()
     {
-        $this->assertFalse($this->twoFa->isUserUsingTwoFactorAuthentication('anonymous'));
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('anonymous'));
     }
 
     public function test_validateAuthCodeDuringSetup()
@@ -157,6 +155,32 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
         $this->assertFalse($this->twoFa->validateAuthCode('mylogin1', 0));
     }
 
+    public function test_validateAuthCode_userIsUsingTwoFa_sameCodeCannotBeUsedTwice()
+    {
+        $secret1 = '654321';
+        $secret2 = '654321';
+        $this->dao->createRecoveryCodesForLogin('mylogin1');
+        $this->dao->createRecoveryCodesForLogin('mylogin2');
+        $this->twoFa->saveSecret('mylogin1', $secret1);
+        $this->twoFa->saveSecret('mylogin2', $secret2);
+
+        $authCode1 = $this->generateValidAuthCode($secret1);
+        $authCode2 = $this->generateValidAuthCode($secret2);
+
+        $options = Option::getLike(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
+        $this->assertEquals(array(), $options); // no token used yet
+
+        $this->assertTrue($this->twoFa->validateAuthCode('mylogin2', $authCode2));
+        $this->assertFalse($this->twoFa->validateAuthCode('mylogin2', $authCode2));
+
+        // can be used by different user though
+        $this->assertTrue($this->twoFa->validateAuthCode('mylogin1', $authCode1));
+        $this->assertFalse($this->twoFa->validateAuthCode('mylogin1', $authCode1));
+
+        $options = Option::getLike(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
+        $this->assertCount(2, $options);
+    }
+
     public function test_validateAuthCode_userIsUsingTwoFa_authenticatesThroughRecoveryCode()
     {
         $this->dao->createRecoveryCodesForLogin('mylogin1');
@@ -182,6 +206,26 @@ class TwoFactorAuthenticationTest extends IntegrationTestCase
             // no code can be used twice
             $this->assertFalse($this->twoFa->validateAuthCode('mylogin1', $code));
         }
+    }
+
+    public function test_cleanupTwoFaCodesUsedRecently()
+    {
+        $this->twoFa->cleanupTwoFaCodesUsedRecently();
+
+        Option::set(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . 'test1', time());
+        Option::set(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . 'test2', time() - 100);
+
+        // those two should be deleted because they were used more than 10min ago
+        Option::set(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . 'test3', time() - 1000);
+        Option::set(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . 'test4', time() - 5000);
+
+        $options = Option::getLike(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
+        $this->assertCount(4, $options);
+
+        $this->twoFa->cleanupTwoFaCodesUsedRecently();
+
+        $options = Option::getLike(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
+        $this->assertEquals(['twofa_codes_used_test1', 'twofa_codes_used_test2'], array_keys($options));
     }
 
     private function generateValidAuthCode($secret)

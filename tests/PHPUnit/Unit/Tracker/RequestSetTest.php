@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
 
 namespace Piwik\Tests\Unit\Tracker;
 
+use Piwik\Tests\Framework\TestCase\UnitTestCase;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\RequestSet;
 
@@ -15,7 +16,7 @@ use Piwik\Tracker\RequestSet;
  * @group RequestSetTest
  * @group Tracker
  */
-class RequestSetTest extends \PHPUnit_Framework_TestCase
+class RequestSetTest extends UnitTestCase
 {
     /**
      * @var TestRequestSet
@@ -23,12 +24,12 @@ class RequestSetTest extends \PHPUnit_Framework_TestCase
     private $requestSet;
     private $time;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         $this->requestSet = $this->createRequestSet();
-        $this->time = time();
+        $this->time = 1693386000;
     }
 
     private function createRequestSet()
@@ -209,7 +210,7 @@ class RequestSetTest extends \PHPUnit_Framework_TestCase
     public function test_intertnalFakeEnvironment_shouldActuallyReturnAValue()
     {
         $myEnv = $this->getFakeEnvironment();
-        $this->assertInternalType('array', $myEnv);
+        self::assertIsArray($myEnv);
         $this->assertNotEmpty($myEnv);
     }
 
@@ -224,7 +225,7 @@ class RequestSetTest extends \PHPUnit_Framework_TestCase
     {
         $serverBackup = $_SERVER;
         $cookieBackup = $_COOKIE;
-        
+
         $this->requestSet->setEnvironment($this->getFakeEnvironment());
         $this->requestSet->restoreEnvironment();
 
@@ -360,43 +361,6 @@ class RequestSetTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(empty($_SERVER['HTTP_REFERER']));
     }
 
-    public function test_getRedirectUrl_ShouldReturnEmptyString_IfNoUrlSet()
-    {
-        $this->assertEquals('', $this->requestSet->getRedirectUrl());
-    }
-
-    public function test_getRedirectUrl_ShouldReturnTrue_IfAUrlSetIsSetViaGET()
-    {
-        $_GET['redirecturl'] = 'whatsoever';
-        $this->assertEquals('whatsoever', $this->requestSet->getRedirectUrl());
-        unset($_GET['redirecturl']);
-    }
-
-    public function test_getRedirectUrl_ShouldReturnTrue_IfAUrlSetIsSetViaPOST()
-    {
-        $_POST['redirecturl'] = 'whatsoeverPOST';
-        $this->assertEquals('whatsoeverPOST', $this->requestSet->getRedirectUrl());
-        unset($_POST['redirecturl']);
-    }
-
-    public function test_hasRedirectUrl_ShouldReturnFalse_IfNoUrlSet()
-    {
-        $this->assertFalse($this->requestSet->hasRedirectUrl());
-    }
-
-    public function test_hasRedirectUrl_ShouldReturnTrue_IfAUrlSetIsSetViaGET()
-    {
-        $_GET['redirecturl'] = 'whatsoever';
-        $this->assertTrue($this->requestSet->hasRedirectUrl());
-        unset($_GET['redirecturl']);
-    }
-
-    public function test_hasRedirectUrl_ShouldReturnTrue_IfAUrlSetIsSetViaPOST()
-    {
-        $_POST['redirecturl'] = 'whatsoever';
-        $this->assertTrue($this->requestSet->hasRedirectUrl());
-        unset($_POST['redirecturl']);
-    }
 
     /**
      * @param int $numRequests
@@ -427,16 +391,6 @@ class RequestSetTest extends \PHPUnit_Framework_TestCase
 
 class TestRequestSet extends RequestSet
 {
-    public function getRedirectUrl()
-    {
-        return parent::getRedirectUrl();
-    }
-
-    public function hasRedirectUrl()
-    {
-        return parent::hasRedirectUrl();
-    }
-
     public function getAllSiteIdsWithinRequest()
     {
         return parent::getAllSiteIdsWithinRequest();

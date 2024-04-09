@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Site selector screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 describe("IntranetMeasurable", function () {
@@ -18,10 +18,15 @@ describe("IntranetMeasurable", function () {
         testEnvironment.save();
     });
 
+    after(async function () {
+        // ensure the newly created site is removed afterwards, so other tests reusing the fixture won't change results
+        await testEnvironment.callApi('SitesManager.deleteSite', { idSite: 64 });
+    });
+
     it("should show intranet selection", async function () {
         await page.goto(url);
         await (await page.jQuery('.SitesManager .addSite:first')).click();
-        await page.waitFor(500);
+        await page.waitForTimeout(500);
 
         const elem = await page.$('.modal.open');
         expect(await elem.screenshot()).to.matchImage('add_new_dialog');
@@ -30,7 +35,7 @@ describe("IntranetMeasurable", function () {
     it("should load intranet specific fields", async function () {
         await (await page.jQuery('.modal.open .btn:contains(Intranet)')).click();
         await page.waitForNetworkIdle();
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         await page.evaluate(function () {
             $('.form-help:contains(UTC time is)').hide();
@@ -43,6 +48,7 @@ describe("IntranetMeasurable", function () {
     it("should load intranet specific fields", async function () {
         await page.type('.editingSite [placeholder="Name"]', 'My intranet');
         await page.type('.editingSite [name="urls"]', 'https://www.example.com');
+        await page.waitForTimeout(250);
         await page.click('.editingSiteFooter input.btn');
         await page.waitForNetworkIdle();
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,14 +9,8 @@
 
 namespace Piwik\Archive;
 
-use Piwik\API\Request;
-use Piwik\Cache;
-use Piwik\Cache\Transient;
-use Piwik\CacheId;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
-use Piwik\Period\Week;
-use Piwik\Piwik;
 use Piwik\Segment;
 use Piwik\Site;
 
@@ -120,7 +114,7 @@ class DataTableFactory
      */
     public static function getSiteIdFromMetadata(DataTable $table)
     {
-        $site = $table->getMetadata('site');
+        $site = $table->getMetadata(self::TABLE_METADATA_SITE_INDEX);
         if (empty($site)) {
             return null;
         } else {
@@ -175,14 +169,15 @@ class DataTableFactory
      *                             labels.
      * @return DataTable|DataTable\Map
      */
-    public function make($index, $resultIndices)
+    public function make($index, $resultIndices, $keyMetadata = null)
     {
-        $keyMetadata = $this->getDefaultMetadata();
+        $keyMetadata = $keyMetadata ?: $this->getDefaultMetadata();
 
         if (empty($resultIndices)) {
             // for numeric data, if there's no index (and thus only 1 site & period in the query),
             // we want to display every queried metric name
-            if (empty($index)
+            if (
+                empty($index)
                 && $this->isNumericDataType()
             ) {
                 $index = $this->defaultRow;
@@ -397,12 +392,17 @@ class DataTableFactory
      */
     private function setSubtables($dataTable, $blobRow, $treeLevel = 0)
     {
-        if ($this->maxSubtableDepth
+        if (
+            $this->maxSubtableDepth
             && $treeLevel >= $this->maxSubtableDepth
         ) {
             // unset the subtables so DataTableManager doesn't throw
             foreach ($dataTable->getRowsWithoutSummaryRow() as $row) {
                 $row->removeSubtable();
+            }
+            $summaryRow = $dataTable->getRowFromId(DataTable::ID_SUMMARY_ROW);
+            if ($summaryRow) {
+                $summaryRow->removeSubtable();
             }
 
             return;
@@ -410,7 +410,7 @@ class DataTableFactory
 
         $dataName = reset($this->dataNames);
 
-        foreach ($dataTable->getRowsWithoutSummaryRow() as $row) {
+        foreach ($dataTable->getRows() as $row) {
             $sid = $row->getIdSubDataTable();
             if ($sid === null) {
                 continue;
@@ -423,6 +423,7 @@ class DataTableFactory
                 $subtable->setMetadata(self::TABLE_METADATA_SITE_INDEX, $dataTable->getMetadata(self::TABLE_METADATA_SITE_INDEX));
                 $subtable->setMetadata(self::TABLE_METADATA_SEGMENT_INDEX, $dataTable->getMetadata(self::TABLE_METADATA_SEGMENT_INDEX));
                 $subtable->setMetadata(self::TABLE_METADATA_SEGMENT_PRETTY_INDEX, $dataTable->getMetadata(self::TABLE_METADATA_SEGMENT_PRETTY_INDEX));
+                $subtable->setMetadata(DataTable::ARCHIVED_DATE_METADATA_NAME, $dataTable->getMetadata(DataTable::ARCHIVED_DATE_METADATA_NAME));
 
                 $this->setSubtables($subtable, $blobRow, $treeLevel + 1);
 
@@ -447,6 +448,16 @@ class DataTableFactory
             DataTableFactory::TABLE_METADATA_SEGMENT_INDEX => $this->segment->getString(),
             DataTableFactory::TABLE_METADATA_SEGMENT_PRETTY_INDEX => $this->segment->getString(),
         );
+    }
+
+    public function getTableMetadataFor($idSite, $period)
+    {
+        return [
+            DataTableFactory::TABLE_METADATA_SITE_INDEX => new Site($idSite),
+            DataTableFactory::TABLE_METADATA_PERIOD_INDEX => $period,
+            DataTableFactory::TABLE_METADATA_SEGMENT_INDEX => $this->segment->getString(),
+            DataTableFactory::TABLE_METADATA_SEGMENT_PRETTY_INDEX => $this->segment->getString(),
+        ];
     }
 
     /**
@@ -491,7 +502,8 @@ class DataTableFactory
             // ensure that the PHP renderer outputs 0 when only one column is queried.
             // w/o this code, an empty array would be created, and other parts of Piwik
             // would break.
-            if (count($this->dataNames) == 1
+            if (
+                count($this->dataNames) == 1
                 && $this->isNumericDataType()
             ) {
                 $name = reset($this->dataNames);
@@ -539,13 +551,11 @@ class DataTableFactory
                 if (!empty($row)) {
                     $tables[$range]->addRow(new Row(array(
                         Row::COLUMNS  => $row,
-                        Row::METADATA => $rowMeta)
-                    ));
+                        Row::METADATA => $rowMeta)));
                 } elseif ($isNumeric) {
                     $tables[$range]->addRow(new Row(array(
                         Row::COLUMNS  => $this->defaultRow,
-                        Row::METADATA => $rowMeta)
-                    ));
+                        Row::METADATA => $rowMeta)));
                 }
             }
         }
@@ -565,16 +575,21 @@ class DataTableFactory
         $this->setPrettySegmentMetadata($table);
 
         foreach ($index as $idsite => $row) {
+
+            $meta = array();
+            if (isset($row[DataCollection::METADATA_CONTAINER_ROW_KEY])) {
+                $meta = $row[DataCollection::METADATA_CONTAINER_ROW_KEY];
+            }
+            $meta['idsite'] = $idsite;
+
             if (!empty($row)) {
                 $table->addRow(new Row(array(
                     Row::COLUMNS  => $row,
-                    Row::METADATA => array('idsite' => $idsite))
-                ));
+                    Row::METADATA => $meta)));
             } elseif ($isNumeric) {
                 $table->addRow(new Row(array(
                     Row::COLUMNS  => $this->defaultRow,
-                    Row::METADATA => array('idsite' => $idsite))
-                ));
+                    Row::METADATA => $meta)));
             }
         }
 

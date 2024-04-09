@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -23,14 +23,14 @@ class ThreeGoalsOnePageview extends Fixture
     public $idGoal2 = 2;
     public $idGoal3 = 3;
 
-    public function setUp()
+    public function setUp(): void
     {
         Fixture::createSuperUser();
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -43,15 +43,27 @@ class ThreeGoalsOnePageview extends Fixture
 
         if (!self::goalExists($idSite = 1, $idGoal = 1)) {
             API::getInstance()->addGoal(
-                $this->idSite, 'Goal 1 - Thank you', 'title', 'Thank you', 'contains', $caseSensitive = false,
-                $revenue = 10, $allowMultipleConversions = 1
+                $this->idSite,
+                'Goal 1 - Thank you',
+                'title',
+                'Thank you',
+                'contains',
+                $caseSensitive = false,
+                $revenue = 10,
+                $allowMultipleConversions = 1
             );
         }
 
         if (!self::goalExists($idSite = 1, $idGoal = 2)) {
             API::getInstance()->addGoal(
-                $this->idSite, 'Goal 2 - Hello', 'url', 'hellow', 'contains', $caseSensitive = false,
-                $revenue = 10, $allowMultipleConversions = 0
+                $this->idSite,
+                'Goal 2 - Hello',
+                'url',
+                'hellow',
+                'contains',
+                $caseSensitive = false,
+                $revenue = 10,
+                $allowMultipleConversions = 0
             );
         }
 
@@ -65,7 +77,8 @@ class ThreeGoalsOnePageview extends Fixture
         $t = self::getTracker($this->idSite, $this->dateTime, $defaultInit = true);
 
         // Record 1st page view
-        $t->setUrl('http://example.org/index.htm');
+        $t->setUrl('http://example.org/index.htm?ignore_referrer=1');
+        $t->setUrlReferrer('http://www.example.org/page/'); // this should be ignored due to the `ignore_referrer` parameter in page url
         self::checkResponse($t->doTrackPageView('0'));
 
         $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(0.3)->getDatetime());

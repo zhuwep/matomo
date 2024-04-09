@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -49,7 +49,7 @@ class SiteAccessFilter
 
     public function getJoins($accessTable)
     {
-        $result = "RIGHT JOIN ". Common::prefixTable('site') . " s ON s.idsite = $accessTable.idsite AND a.login = ?";
+        $result = "RIGHT JOIN " . Common::prefixTable('site') . " s ON s.idsite = $accessTable.idsite AND a.login = ?";
         $bind = [$this->userLogin];
 
         return [$result, $bind];

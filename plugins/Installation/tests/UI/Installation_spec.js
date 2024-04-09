@@ -12,12 +12,13 @@ var fs = require('fs'),
 describe("Installation", function () {
     this.timeout(0);
 
-    this.fixture = null;
+    this.fixture = "Piwik\\Tests\\Fixtures\\EmptySite";
 
     before(function () {
         testEnvironment.testUseMockAuth = 0;
         testEnvironment.configFileLocal = path.join(PIWIK_INCLUDE_PATH, "/tmp/test.config.ini.php");
         testEnvironment.dontUseTestConfig = true;
+        testEnvironment.ignoreClearAllViewDataTableParameters = 1;
         testEnvironment.tablesPrefix = 'piwik_';
         testEnvironment.save();
 
@@ -35,14 +36,14 @@ describe("Installation", function () {
     });
 
     it("should display an error message when trying to access a resource w/o a config.ini.php file", async function() {
-        await page.goto("?module=CoreHome&action=index&ignoreClearAllViewDataTableParameters=1");
+        await page.goto("?module=CoreHome&action=index");
 
         await page.evaluate(function () {
-            // ensure screenshots are reporting travis config file for comparison
+            // ensure screenshots are reporting same config file for comparison
             // no jQuery existing on these error pages...
             document.body.innerHTML = document.body.innerHTML.replace(
                 /{\/.*\/test\.config\.ini\.php}/,
-                '{/home/travis/build/piwik/piwik/tests/lib/screenshot-testing/../../../tmp/test.config.ini.php}'
+                '{/home/matomo/config/test.config.ini.php}'
             );
         });
 
@@ -50,7 +51,7 @@ describe("Installation", function () {
     });
 
     it("should start the installation process when the index is visited w/o a config.ini.php file", async function() {
-        await page.goto("?ignoreClearAllViewDataTableParameters=1");
+        await page.goto("");
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('start');
     });
@@ -88,7 +89,7 @@ describe("Installation", function () {
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('db_setup_fail');
     });
-return; // next test times out
+
     it("should display the tables created page when next is clicked on the db setup page w/ correct info entered in the form", async function() {
         const dbInfo = testEnvironment.readDbInfoFromConfig();
         const username = dbInfo.username;

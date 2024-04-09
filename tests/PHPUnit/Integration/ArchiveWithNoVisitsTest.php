@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,7 @@ use Piwik\Tests\Framework\Fixture;
 use Piwik\Plugins\VisitsSummary\API as VisitsSummaryAPI;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
-class ArchiveWithNoVisitsTest_MockArchiver extends Archiver
+class ArchiveWithNoVisitsTestMockArchiver extends Archiver
 {
     public static $methodsCalled = array();
 
@@ -40,31 +40,31 @@ class ArchiveWithNoVisitsTest_MockArchiver extends Archiver
 
 class ArchiveWithNoVisitsTest extends IntegrationTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         Fixture::createWebsite('2011-01-01');
 
-        ArchiveWithNoVisitsTest_MockArchiver::$methodsCalled = array();
+        ArchiveWithNoVisitsTestMockArchiver::$methodsCalled = array();
     }
 
     public function tests_ArchivingNotTriggeredWhenNoVisits()
     {
-        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTest_MockArchiver';
+        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTestMockArchiver';
 
         // initiate archiving w/o adding the event and make sure no methods are called
         VisitsSummaryAPI::getInstance()->get($idSite = 1, 'week', '2012-01-01');
 
-        $this->assertEmpty(ArchiveWithNoVisitsTest_MockArchiver::$methodsCalled);
+        $this->assertEmpty(ArchiveWithNoVisitsTestMockArchiver::$methodsCalled);
     }
 
-    public function test_getIdSitesToArchiveWhenNoVisits_CanBeUsedToTriggerArchiving_EvenIfSiteHasNoVisits()
+    public function test_getIdSitesToArchiveWhenNoVisits_DoesNotTriggerArchiving_IfSiteHasNoVisits()
     {
         // add our mock archiver instance
         // TODO: should use a dummy plugin that is activated for this test explicitly, but that can be tricky, especially in the future
 
-        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTest_MockArchiver';
+        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTestMockArchiver';
 
         // mark our only site as should archive when no visits
         $eventDispatcher = $this->getEventDispatcher();
@@ -87,29 +87,20 @@ class ArchiveWithNoVisitsTest extends IntegrationTestCase
             'aggregateDayReport',
             'aggregateMultipleReports',
         );
-        $this->assertEquals($expectedMethodCalls, ArchiveWithNoVisitsTest_MockArchiver::$methodsCalled);
+        $this->assertEquals($expectedMethodCalls, ArchiveWithNoVisitsTestMockArchiver::$methodsCalled);
     }
 
-    public function test_PluginArchiver_CanBeUsedToTriggerArchiving_EvenIfSiteHasNoVisits()
+    public function test_PluginArchiver_DoesNotTriggerArchiving_EvenIfSiteHasNoVisits()
     {
-        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTest_MockArchiver';
+        PluginsArchiver::$archivers['VisitsSummary'] = 'Piwik\Tests\Integration\ArchiveWithNoVisitsTestMockArchiver';
 
-        ArchiveWithNoVisitsTest_MockArchiver::$runWithoutVisits = true;
+        ArchiveWithNoVisitsTestMockArchiver::$runWithoutVisits = true;
 
         // initiate archiving and make sure methods are called
         VisitsSummaryAPI::getInstance()->get($idSite = 1, 'week', '2012-01-01');
 
-        $expectedMethodCalls = array(
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateDayReport',
-            'aggregateMultipleReports',
-        );
-        $this->assertEquals($expectedMethodCalls, ArchiveWithNoVisitsTest_MockArchiver::$methodsCalled);
+        $expectedMethodCalls = array();
+        $this->assertEquals($expectedMethodCalls, ArchiveWithNoVisitsTestMockArchiver::$methodsCalled);
     }
 
     /**

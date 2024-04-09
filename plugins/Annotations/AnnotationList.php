@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -250,7 +250,8 @@ class AnnotationList
             foreach ($this->annotations[$idSite] as $idNote => $annotation) {
                 if ($startDate !== false) {
                     $annotationDate = Date::factory($annotation['date']);
-                    if ($annotationDate->getTimestamp() < $startDate->getTimestamp()
+                    if (
+                        $annotationDate->getTimestamp() < $startDate->getTimestamp()
                         || $annotationDate->getTimestamp() > $endDate->getTimestamp()
                     ) {
                         continue;

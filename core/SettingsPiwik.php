@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,6 +10,7 @@ namespace Piwik;
 
 use Exception;
 use Piwik\Cache as PiwikCache;
+use Piwik\Config\GeneralConfig;
 use Piwik\Container\StaticContainer;
 
 /**
@@ -18,20 +19,20 @@ use Piwik\Container\StaticContainer;
  */
 class SettingsPiwik
 {
-    const OPTION_PIWIK_URL = 'piwikUrl';
+    public const OPTION_PIWIK_URL = 'piwikUrl';
 
     /**
      * Get salt from [General] section. Should ONLY be used as a seed to create hashes
      *
      * NOTE: Keep this salt secret! Never output anywhere or share it etc.
      *
-     * @return string
+     * @return string|null
      */
-    public static function getSalt()
+    public static function getSalt(): ?string
     {
         static $salt = null;
         if (is_null($salt)) {
-            $salt = @Config::getInstance()->General['salt'];
+            $salt = Config::getInstance()->General['salt'] ?? '';
         }
         return $salt;
     }
@@ -41,7 +42,7 @@ class SettingsPiwik
      *
      * @return bool  True if checks enabled; false otherwise
      */
-    public static function isUserCredentialsSanityCheckEnabled()
+    public static function isUserCredentialsSanityCheckEnabled(): bool
     {
         return Config::getInstance()->General['disable_checks_usernames_attributes'] == 0;
     }
@@ -51,7 +52,7 @@ class SettingsPiwik
      *
      * @return bool  True if show to superusers only; false otherwise
      */
-    public static function isShowUpdateNotificationToSuperUsersOnlyEnabled()
+    public static function isShowUpdateNotificationToSuperUsersOnlyEnabled(): bool
     {
         return Config::getInstance()->General['show_update_notification_to_superusers_only'] == 1;
     }
@@ -61,7 +62,7 @@ class SettingsPiwik
      *
      * @return array The list of stored segments that apply to all sites.
      */
-    public static function getKnownSegmentsToArchive()
+    public static function getKnownSegmentsToArchive(): array
     {
         $cacheId = 'KnownSegmentsToArchive';
         $cache   = PiwikCache::getTransientCache();
@@ -114,7 +115,7 @@ class SettingsPiwik
      * @param int $idSite The ID of the site to get stored segments for.
      * @return string[] The list of stored segments that apply to the requested site.
      */
-    public static function getKnownSegmentsToArchiveForSite($idSite)
+    public static function getKnownSegmentsToArchiveForSite($idSite): array
     {
         $cacheId = 'KnownSegmentsToArchiveForSite' . $idSite;
         $cache   = PiwikCache::getTransientCache();
@@ -163,17 +164,19 @@ class SettingsPiwik
      *
      * @return int
      */
-    public static function getWebsitesCountToDisplay()
+    public static function getWebsitesCountToDisplay(): int
     {
-        $count = max(Config::getInstance()->General['site_selector_max_sites'],
-            Config::getInstance()->General['autocomplete_min_sites']);
+        $count = max(
+            Config::getInstance()->General['site_selector_max_sites'],
+            Config::getInstance()->General['autocomplete_min_sites']
+        );
         return (int)$count;
     }
 
     /**
      * Returns the URL to this Piwik instance, eg. **http://demo.piwik.org/** or **http://example.org/piwik/**.
      *
-     * @return string
+     * @return string|false return false if no value is configured and we are in PHP CLI mode
      * @api
      */
     public static function getPiwikUrl()
@@ -181,7 +184,8 @@ class SettingsPiwik
         $url = Option::get(self::OPTION_PIWIK_URL);
 
         $isPiwikCoreDispatching = defined('PIWIK_ENABLE_DISPATCH') && PIWIK_ENABLE_DISPATCH;
-        if (Common::isPhpCliMode()
+        if (
+            Common::isPhpCliMode()
             // in case core:archive command is triggered (often with localhost domain)
             || SettingsServer::isArchivePhpTriggered()
             // When someone else than core is dispatching this request then we return the URL as it is read only
@@ -195,13 +199,15 @@ class SettingsPiwik
         // when script is called from /misc/cron/archive.php, Piwik URL is /index.php
         $currentUrl = str_replace("/misc/cron", "", $currentUrl);
 
-        if (empty($url)
+        if (
+            empty($url)
             // if URL changes, always update the cache
-            || $currentUrl != $url
+            || $currentUrl !== $url
         ) {
             $host = Url::getHostFromUrl($currentUrl);
 
-            if (strlen($currentUrl) >= strlen('http://a/')
+            if (
+                strlen($currentUrl) >= strlen('http://a/')
                 && Url::isValidHost($host)
                 && !Url::isLocalHost($host)) {
                 self::overwritePiwikUrl($currentUrl);
@@ -216,20 +222,9 @@ class SettingsPiwik
     }
 
     /**
-     * @see SettingsPiwik::isPiwikInstalled
      * @return bool
      */
-    public static function isMatomoInstalled()
-    {
-        return self::isPiwikInstalled();
-    }
-
-    /**
-     * Return true if Piwik is installed (installation is done).
-     * @deprecated since Matomo 3.8.0, please use {@link isMatomoInstalled()} instead.
-     * @return bool
-     */
-    public static function isPiwikInstalled()
+    public static function isMatomoInstalled(): bool
     {
         $config = Config::getInstance()->getLocalPath();
         $exists = file_exists($config);
@@ -259,10 +254,10 @@ class SettingsPiwik
     /**
      * Check if outgoing internet connections are enabled
      * This is often disable in an intranet environment
-     * 
+     *
      * @return bool
      */
-    public static function isInternetEnabled()
+    public static function isInternetEnabled(): bool
     {
         return (bool) Config::getInstance()->General['enable_internet_features'];
     }
@@ -273,13 +268,13 @@ class SettingsPiwik
      * update of core and plugins.
      * @return bool
      */
-    public static function isAutoUpdateEnabled()
+    public static function isAutoUpdateEnabled(): bool
     {
         $enableAutoUpdate = (bool) Config::getInstance()->General['enable_auto_update'];
         if(self::isInternetEnabled() === true && $enableAutoUpdate === true){
             return true;
         }
-        
+
         return false;
     }
 
@@ -291,7 +286,7 @@ class SettingsPiwik
      *
      * @return bool
      */
-    public static function isAutoUpdatePossible()
+    public static function isAutoUpdatePossible(): bool
     {
         return !self::isMultiServerEnvironment() && self::isAutoUpdateEnabled();
     }
@@ -302,7 +297,7 @@ class SettingsPiwik
      * on one server.
      * @return bool
      */
-    public static function isMultiServerEnvironment()
+    public static function isMultiServerEnvironment(): bool
     {
         $is = Config::getInstance()->General['multi_server_environment'];
 
@@ -315,7 +310,7 @@ class SettingsPiwik
      * @return bool
      * @api
      */
-    public static function isSegmentationEnabled()
+    public static function isSegmentationEnabled(): bool
     {
         return !Piwik::isUserIsAnonymous()
         || Config::getInstance()->General['anonymous_user_enable_use_segments_API'];
@@ -331,7 +326,7 @@ class SettingsPiwik
      * @return bool
      * @api
      */
-    public static function isUniqueVisitorsEnabled($periodLabel)
+    public static function isUniqueVisitorsEnabled(string $periodLabel): bool
     {
         $generalSettings = Config::getInstance()->General;
 
@@ -339,7 +334,8 @@ class SettingsPiwik
         $result = !empty($generalSettings[$settingName]) && $generalSettings[$settingName] == 1;
 
         // check enable_processing_unique_visitors_year_and_range for backwards compatibility
-        if (($periodLabel == 'year' || $periodLabel == 'range')
+        if (
+            ($periodLabel === 'year' || $periodLabel === 'range')
             && isset($generalSettings['enable_processing_unique_visitors_year_and_range'])
         ) {
             $result |= $generalSettings['enable_processing_unique_visitors_year_and_range'] == 1;
@@ -350,10 +346,13 @@ class SettingsPiwik
 
     /**
      * If Piwik uses per-domain config file, make sure CustomLogo is unique
-     * @param $path
-     * @return mixed
+     * @param string $path
+     * @return string
+     * @throws \Piwik\Exception\DI\DependencyException
+     * @throws \Piwik\Exception\DI\NotFoundException
+     * @throws Exception
      */
-    public static function rewriteMiscUserPathWithInstanceId($path)
+    public static function rewriteMiscUserPathWithInstanceId(string $path): string
     {
         $tmp = StaticContainer::get('path.misc.user');
         $path = self::rewritePathAppendPiwikInstanceId($path, $tmp);
@@ -367,24 +366,25 @@ class SettingsPiwik
      * or if the Piwik server is "offline",
      * this will return false..
      *
-     * @param $piwikServerUrl
+     * @param string $piwikServerUrl
      * @param bool $acceptInvalidSSLCertificates
+     * @return void
      * @throws Exception
-     * @return bool
      */
-    public static function checkPiwikServerWorking($piwikServerUrl, $acceptInvalidSSLCertificates = false)
+    public static function checkPiwikServerWorking(string $piwikServerUrl, bool $acceptInvalidSSLCertificates = false): void
     {
         // Now testing if the webserver is running
         try {
-            $fetched = Http::sendHttpRequestBy('curl',
-                                                $piwikServerUrl,
-                                                $timeout = 45,
-                                                $userAgent = null,
-                                                $destinationPath = null,
-                                                $file = null,
-                                                $followDepth = 0,
-                                                $acceptLanguage = false,
-                                                $acceptInvalidSSLCertificates
+            $fetched = Http::sendHttpRequestBy(
+                'curl',
+                $piwikServerUrl,
+                $timeout = 45,
+                $userAgent = null,
+                $destinationPath = null,
+                $file = null,
+                $followDepth = 0,
+                $acceptLanguage = false,
+                $acceptInvalidSSLCertificates
             );
         } catch (Exception $e) {
             $fetched = "ERROR fetching: " . $e->getMessage();
@@ -418,12 +418,15 @@ class SettingsPiwik
      *
      * @return bool
      */
-    public static function isGitDeployment()
+    public static function isGitDeployment(): bool
     {
         return file_exists(PIWIK_INCLUDE_PATH . '/.git/HEAD');
     }
 
-    public static function getCurrentGitBranch()
+    /**
+     * @return string
+     */
+    public static function getCurrentGitBranch(): string
     {
         $file = PIWIK_INCLUDE_PATH . '/.git/HEAD';
         if (!file_exists($file)) {
@@ -443,13 +446,12 @@ class SettingsPiwik
     }
 
     /**
-     * @param $pathToRewrite
-     * @param $leadingPathToAppendHostnameTo
-     * @param $hostname
-     * @return mixed
-     * @throws \Exception
+     * @param string $pathToRewrite
+     * @param string $leadingPathToAppendHostnameTo
+     * @return string
+     * @throws Exception
      */
-    protected static function rewritePathAppendPiwikInstanceId($pathToRewrite, $leadingPathToAppendHostnameTo)
+    protected static function rewritePathAppendPiwikInstanceId(string $pathToRewrite, string $leadingPathToAppendHostnameTo): string
     {
         $instanceId = self::getPiwikInstanceId();
         if (empty($instanceId)) {
@@ -468,14 +470,13 @@ class SettingsPiwik
     }
 
     /**
-     * @throws \Exception
-     * @return string or False if not set
+     * @throws Exception
+     * @return string|false return string or false if not set
      */
     public static function getPiwikInstanceId()
     {
-        // until Piwik is installed, we use hostname as instance_id
-        if (!self::isPiwikInstalled()
-            && Common::isPhpCliMode()) {
+        // until Matomo is installed, we use hostname as instance_id
+        if (!self::isMatomoInstalled() && Common::isPhpCliMode()) {
             // enterprise:install use case
             return Config::getHostname();
         }
@@ -485,19 +486,19 @@ class SettingsPiwik
             return false;
         }
 
-        $instanceId = @Config::getInstance()->General['instance_id'];
+        $instanceId = GeneralConfig::getConfigValue('instance_id');
         if (!empty($instanceId)) {
-            return $instanceId;
+            return preg_replace('/[^\w\.-]/', '', $instanceId);
         }
 
-        // do not rewrite the path as Piwik uses the standard config.ini.php file
+        // do not rewrite the path as Matomo uses the standard config.ini.php file
         return false;
     }
 
     /**
-     * @param $currentUrl
+     * @param string $currentUrl
      */
-    public static function overwritePiwikUrl($currentUrl)
+    public static function overwritePiwikUrl(string $currentUrl): void
     {
         Option::set(self::OPTION_PIWIK_URL, $currentUrl, $autoLoad = true);
     }
@@ -505,9 +506,9 @@ class SettingsPiwik
     /**
      * @return bool
      */
-    public static function isHttpsForced()
+    public static function isHttpsForced(): bool
     {
-        if (!SettingsPiwik::isPiwikInstalled()) {
+        if (!self::isMatomoInstalled()) {
             // Only enable this feature after Piwik is already installed
             return false;
         }
@@ -519,7 +520,7 @@ class SettingsPiwik
      *
      * @return bool
      */
-    public static function isSameFingerprintAcrossWebsites()
+    public static function isSameFingerprintAcrossWebsites(): bool
     {
         return (bool)Config::getInstance()->Tracker['enable_fingerprinting_across_websites'];
     }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@ namespace Piwik\Tests\Framework\Mock;
 
 use Piwik\Access;
 use Piwik\Auth;
-use Piwik\Container\StaticContainer;
 use Piwik\NoAccessException;
 use Piwik\Piwik;
 use Piwik\Plugins\SitesManager\API;
@@ -153,7 +152,7 @@ class FakeAccess extends Access
             }
         }
 
-        throw new NoAccessException("checkUserHasCapability " . $capability ." Fake exception // string not to be tested");
+        throw new NoAccessException("checkUserHasCapability " . $capability . " Fake exception // string not to be tested");
     }
 
     //means at least view access
@@ -166,7 +165,7 @@ class FakeAccess extends Access
         $websitesAccess = array_merge(self::$idSitesView, self::$idSitesWrite, self::$idSitesAdmin);
 
         if (!is_array($idSites)) {
-            if ($idSites == 'all') {
+            if ($idSites === 'all') {
                 $idSites = API::getInstance()->getAllSitesId();
             } else {
                 $idSites = explode(',', $idSites);

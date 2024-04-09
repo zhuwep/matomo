@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,11 +17,6 @@ class DropColumn extends Sql
     {
         $sql = sprintf("ALTER TABLE `%s` DROP COLUMN `%s`", $table, $columnName);
 
-        if (!empty($placeColumnAfter)) {
-            $sql .= sprintf(' AFTER `%s`', $placeColumnAfter);
-        }
-
         parent::__construct($sql, static::ERROR_CODE_COLUMN_NOT_EXISTS);
     }
-
 }

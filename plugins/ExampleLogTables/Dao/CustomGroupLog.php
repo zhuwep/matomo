@@ -55,12 +55,15 @@ class CustomGroupLog
         $bind = array_values($columns);
         $placeholder = Common::getSqlStringFieldsArray($columns);
 
-        $sql = sprintf('INSERT INTO %s (`%s`) VALUES(%s)',
-            $this->tablePrefixed, implode('`,`', array_keys($columns)), $placeholder);
+        $sql = sprintf(
+            'INSERT INTO %s (`%s`) VALUES(%s)',
+            $this->tablePrefixed,
+            implode('`,`', array_keys($columns)),
+            $placeholder
+        );
 
         $db = $this->getDb();
 
         $db->query($sql, $bind);
     }
 }
-

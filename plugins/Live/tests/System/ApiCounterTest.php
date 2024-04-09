@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\Live\tests\System;
 
 use Piwik\Date;
-use Piwik\Db;
 use Piwik\Plugins\Goals\API as GoalsApi;
 use Piwik\Plugins\Live\API;
 use Piwik\Tests\Framework\Fixture;
@@ -35,14 +34,14 @@ class ApiCounterTest extends SystemTestCase
     private $api;
     private $idSite = 1;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         self::$testNow = strtotime('2018-02-03 04:45:40');
 
         parent::setUpBeforeClass();
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -51,12 +50,11 @@ class ApiCounterTest extends SystemTestCase
         $this->createSite();
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage checkUserHasViewAccess Fake exception
-     */
     public function test_GetCounters_ShouldFail_IfUserHasNoPermission()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('checkUserHasViewAccess Fake exception');
+
         $this->setAnonymous();
         $this->api->getCounters($this->idSite, 5);
     }
@@ -77,9 +75,22 @@ class ApiCounterTest extends SystemTestCase
 
         $counters = $this->api->getCounters($this->idSite, 20);
         $this->assertEquals($this->buildCounter(24, 60, 20, 40), $counters);
+    }
 
-        $counters = $this->api->getCounters($this->idSite, 0);
-        $this->assertEquals($this->buildCounter(0, 0, 0, 0), $counters);
+    /**
+     * @dataProvider getInvalidLastMinutesValues
+     */
+    public function testGetCounterShouldThrowExceptionIfLastMinutesInvalid($lastMinutes)
+    {
+        self::expectException(\InvalidArgumentException::class);
+        $this->api->getCounters($this->idSite, $lastMinutes);
+    }
+
+    public function getInvalidLastMinutesValues()
+    {
+        return [
+            [-5], [0], [3000]
+        ];
     }
 
     public function test_GetCounters_ShouldHideAllColumnsIfRequested()
@@ -124,7 +135,7 @@ class ApiCounterTest extends SystemTestCase
 
         for ($i = 0; $i != 20; ++$i) {
             $t->setForceNewVisit();
-            $t->setVisitorId( substr(md5($i * 1000), 0, $t::LENGTH_VISITOR_ID));
+            $t->setVisitorId(substr(md5($i * 1000), 0, $t::LENGTH_VISITOR_ID));
 
             $factor = 10;
             if ($i > 15) {

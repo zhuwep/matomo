@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,6 +19,11 @@ class RangeCheck extends BaseFilter
 {
     public static $minimumValue = 0.00;
     public static $maximumValue = 100.0;
+
+    /**
+     * @var string
+     */
+    private $columnToFilter;
 
     /**
      * @param DataTable $table
@@ -51,9 +56,9 @@ class RangeCheck extends BaseFilter
             if ($value === false) {
                 $value = $row->getMetadata($this->columnToFilter);
                 if ($value !== false) {
-                    if ($value < (float) self::$minimumValue) {
+                    if ((float) $value < (float) self::$minimumValue) {
                         $row->setMetadata($this->columnToFilter, self::$minimumValue);
-                    } elseif ($value > (float) self::$maximumValue) {
+                    } elseif ((float) $value > (float) self::$maximumValue) {
                         $row->setMetadata($this->columnToFilter, self::$maximumValue);
                     }
                 }
@@ -61,9 +66,9 @@ class RangeCheck extends BaseFilter
             }
 
             if ($value !== false) {
-                if ($value < (float) self::$minimumValue) {
+                if ((float) $value < (float) self::$minimumValue) {
                     $row->setColumn($this->columnToFilter, self::$minimumValue);
-                } elseif ($value > (float) self::$maximumValue) {
+                } elseif ((float) $value > (float) self::$maximumValue) {
                     $row->setColumn($this->columnToFilter, self::$maximumValue);
                 }
             }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -26,6 +26,20 @@ class DbHelper
     public static function getTablesInstalled($forceReload = true)
     {
         return Schema::getInstance()->getTablesInstalled($forceReload);
+    }
+
+    /**
+     * Returns `true` if a table in the database, `false` if otherwise.
+     *
+     * @param string $tableName The name of the table to check for. Must be prefixed.
+     *                          Avoid using user input, as the variable will be used in a query unescaped.
+     * @return bool
+     * @throws \Exception
+     */
+    public static function tableExists($tableName)
+    {
+        $tableName = str_replace(['%', '_', "'"], ['\%', '\_', '_'], $tableName);
+        return Db::get()->query(sprintf("SHOW TABLES LIKE '%s'", $tableName))->rowCount() > 0;
     }
 
     /**
@@ -104,9 +118,13 @@ class DbHelper
     /**
      * Returns which Matomo version was used to install this Matomo for the first time.
      */
-    public static function getInstallVersion()
+    public static function getInstallVersion(): string
     {
-        return Schema::getInstance()->getInstallVersion();
+        return Schema::getInstance()->getInstallVersion() ?? '0';
+        // need string as usage is usually
+        // version_compare(DbHelper::getInstallVersion(),'4.0.0-b1', '<') or similar
+        // and PHP 8.1 throws a deprecation warning otherwise
+        // @see https://github.com/matomo-org/matomo/pull/17989#issuecomment-921298360
     }
 
     public static function wasMatomoInstalledBeforeVersion($version)
@@ -136,15 +154,6 @@ class DbHelper
         }
     }
 
-    /**
-     * Check database connection character set is utf8.
-     *
-     * @return bool  True if it is (or doesn't matter); false otherwise
-     */
-    public static function isDatabaseConnectionUTF8()
-    {
-        return Db::get()->isConnectionUTF8();
-    }
 
     /**
      * Checks the database server version against the required minimum
@@ -175,6 +184,70 @@ class DbHelper
     public static function createDatabase($dbName = null)
     {
         Schema::getInstance()->createDatabase($dbName);
+    }
+
+    /**
+     * Returns if the given table has an index with the given name
+     *
+     * @param string $table
+     * @param string $indexName
+     *
+     * @return bool
+     * @throws Exception
+     */
+    public static function tableHasIndex($table, $indexName)
+    {
+        $result = Db::get()->fetchOne('SHOW INDEX FROM ' . $table . ' WHERE Key_name = ?', [$indexName]);
+        return !empty($result);
+    }
+
+    /**
+     * Returns the default database charset to use
+     *
+     * Returns utf8mb4 if supported, with fallback to utf8
+     *
+     * @return string
+     * @throws Tracker\Db\DbException
+     */
+    public static function getDefaultCharset()
+    {
+        $result = Db::get()->fetchRow("SHOW CHARACTER SET LIKE 'utf8mb4'");
+
+        if (empty($result)) {
+            return 'utf8'; // charset not available
+        }
+
+        $result = Db::get()->fetchRow("SHOW VARIABLES LIKE 'character_set_database'");
+
+        if (!empty($result) && $result['Value'] === 'utf8mb4') {
+            return 'utf8mb4'; // database has utf8mb4 charset, so assume it can be used
+        }
+
+        $result = Db::get()->fetchRow("SHOW VARIABLES LIKE 'innodb_file_per_table'");
+
+        if (empty($result) || $result['Value'] !== 'ON') {
+            return 'utf8'; // innodb_file_per_table is required for utf8mb4
+        }
+
+        return 'utf8mb4';
+    }
+
+    /**
+     * Returns sql queries to convert all installed tables to utf8mb4
+     *
+     * @return array
+     */
+    public static function getUtf8mb4ConversionQueries()
+    {
+        $allTables = DbHelper::getTablesInstalled();
+
+        $queries   = [];
+
+        foreach ($allTables as $table) {
+            $queries[] = "ALTER TABLE `$table` CONVERT TO CHARACTER SET utf8mb4;";
+        }
+
+        return $queries;
     }
 
     /**
@@ -213,6 +286,101 @@ class DbHelper
     }
 
     /**
+     * Adds a MAX_EXECUTION_TIME hint into a SELECT query if $limit is bigger than 1
+     *
+     * @param string $sql  query to add hint to
+     * @param int $limit  time limit in seconds
+     * @return string
+     */
+    public static function addMaxExecutionTimeHintToQuery($sql, $limit)
+    {
+        if ($limit <= 0) {
+            return $sql;
+        }
+
+        $sql = trim($sql);
+        $pos = stripos($sql, 'SELECT');
+        $isMaxExecutionTimeoutAlreadyPresent = (stripos($sql, 'MAX_EXECUTION_TIME(') !== false);
+        if ($pos !== false && !$isMaxExecutionTimeoutAlreadyPresent) {
+
+            $timeInMs = $limit * 1000;
+            $timeInMs = (int) $timeInMs;
+            $maxExecutionTimeHint = ' /*+ MAX_EXECUTION_TIME(' . $timeInMs . ') */ ';
+
+            $sql = substr_replace($sql, 'SELECT ' . $maxExecutionTimeHint, $pos, strlen('SELECT'));
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Add an origin hint to the query to identify the main parameters and segment for debugging
+     *
+     * @param string        $sql        SQL query string
+     * @param string        $origin     Origin string to describe the source of the query
+     * @param Date|null     $dateStart  Start date used in the query, optional
+     * @param Date|null     $dateEnd    End date used in the query, optional
+     * @param array|null    $sites      Sites list used in the query, optional
+     * @param Segment|null  $segment    Segment, the segment hash will be added if this is set
+     *
+     * @return string   Modified SQL query string with hint added
+     */
+    public static function addOriginHintToQuery(
+        string $sql,
+        string $origin,
+        ?Date $dateStart = null,
+        ?Date $dateEnd = null,
+        ?array $sites = null,
+        ?Segment $segment = null
+    ): string {
+        $select = 'SELECT';
+        if ($origin && 0 === strpos(trim($sql), $select)) {
+            $sql = trim($sql);
+            $sql = 'SELECT /* ' . $origin . ' */' . substr($sql, strlen($select));
+        }
+
+        if ($dateStart !== null && $dateEnd !== null && 0 === strpos(trim($sql), $select)) {
+            $sql = trim($sql);
+            $sql = 'SELECT /* ' . $dateStart->toString() . ',' . $dateEnd->toString() . ' */' . substr($sql, strlen($select));
+        }
+
+        if ($sites && is_array($sites) && 0 === strpos(trim($sql), $select)) {
+            $sql = trim($sql);
+            $sql = 'SELECT /* ' . 'sites ' . implode(',', array_map('intval', $sites)) . ' */' . substr($sql, strlen($select));
+        }
+
+        if ($segment && !$segment->isEmpty() && 0 === strpos(trim($sql), $select)) {
+            $sql = trim($sql);
+            $sql = 'SELECT /* ' . 'segmenthash ' . $segment->getHash() . ' */' . substr($sql, strlen($select));
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Add an optimizer hint to the query to set the first table used by the MySQL join execution plan
+     *
+     * https://dev.mysql.com/doc/refman/8.0/en/optimizer-hints.html#optimizer-hints-join-order
+     *
+     * @param string $sql       SQL query string
+     * @param string $prefix    Table prefix to be used as the first table in the plan
+     *
+     * @return string           Modified query string with hint added
+     */
+    public static function addJoinPrefixHintToQuery(string $sql, string $prefix): string
+    {
+        if (strpos(trim($sql), '/*+ JOIN_PREFIX(') === false) {
+            $select = 'SELECT';
+            if (0 === strpos(trim($sql), $select)) {
+                $sql = trim($sql);
+                $sql = 'SELECT /*+ JOIN_PREFIX(' . $prefix . ') */' . substr($sql, strlen($select));
+            }
+        }
+
+        return $sql;
+    }
+
+    /**
      * Returns true if the string is a valid database name for MySQL. MySQL allows + in the database names.
      * Database names that start with a-Z or 0-9 and contain a-Z, 0-9, underscore(_), dash(-), plus(+), and dot(.) will be accepted.
      * File names beginning with anything but a-Z or 0-9 will be rejected (including .htaccess for example).
@@ -225,5 +393,4 @@ class DbHelper
     {
         return (0 !== preg_match('/(^[a-zA-Z0-9]+([a-zA-Z0-9\_\.\-\+]*))$/D', $dbname));
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,9 +10,7 @@
 namespace Piwik\Plugins\CoreVisualizations\Visualizations\HtmlTable;
 
 use Piwik\DataTable;
-use Piwik\Metrics;
 use Piwik\Plugins\CoreVisualizations\Visualizations\HtmlTable;
-use Piwik\View;
 
 /**
  * DataTable Visualization that derives from HtmlTable and sets show_extra_columns to true.
@@ -33,7 +31,7 @@ class AllColumns extends HtmlTable
     public function beforeGenericFiltersAreAppliedToLoadedDataTable()
     {
         $this->config->datatable_css_class = 'dataTableVizAllColumns';
-        
+
         $this->dataTable->filter('AddColumnsProcessedMetrics');
 
         $properties = $this->config;
@@ -52,7 +50,8 @@ class AllColumns extends HtmlTable
             }
 
             $columnsToDisplay = array_merge(
-                $columnsToDisplay, array('nb_actions', 'nb_actions_per_visit', 'avg_time_on_site', 'bounce_rate')
+                $columnsToDisplay,
+                array('nb_actions', 'nb_actions_per_visit', 'avg_time_on_site', 'bounce_rate')
             );
 
             // only display conversion rate for the plugins that do not provide "per goal" metrics

@@ -13,8 +13,8 @@ describe("Marketplace", function () {
     this.fixture = "Piwik\\Plugins\\Marketplace\\tests\\Fixtures\\SimpleFixtureTrackFewVisits";
 
     var urlBase = '?module=Marketplace&action=overview';
-    var paidPluginsUrl = urlBase + '&show=premium';
-    var themesUrl = urlBase + '&show=themes';
+    var paidPluginsUrl = urlBase + '#?pluginType=premium';
+    var themesUrl = urlBase + '#?pluginType=themes';
     var pluginsUrl = urlBase;
 
     var noLicense = 'noLicense';
@@ -24,11 +24,12 @@ describe("Marketplace", function () {
 
     async function loadPluginDetailPage(pluginName, isFreePlugin)
     {
+        await page.goto('about:blank');
         await page.goto(isFreePlugin ? pluginsUrl : paidPluginsUrl);
-        const elem = await page.waitForSelector('.card-title [piwik-plugin-name="' + pluginName + '"]');
+        const elem = await page.waitForSelector('.card-content [matomo-plugin-name*="' + pluginName + '"]');
         await elem.click();
         await page.waitForNetworkIdle();
-        await page.waitFor('.ui-dialog .pluginDetails');
+        await page.waitForSelector('.ui-dialog .pluginDetails');
     }
 
     async function captureSelector(screenshotName, selector)
@@ -97,6 +98,7 @@ describe("Marketplace", function () {
 
         testEnvironment.consumer = consumer;
         testEnvironment.mockMarketplaceApiService = 1;
+        testEnvironment.forceEnablePluginUpdateChecks = 1;
         testEnvironment.save();
     }
 
@@ -115,6 +117,7 @@ describe("Marketplace", function () {
         it(mode + ' for a user without license key should be able to open paid plugins', async function() {
             setEnvironment(mode, noLicense);
 
+            await page.goto('about:blank');
             await page.goto(paidPluginsUrl);
 
             await captureMarketplace('paid_plugins_no_license_' + mode);
@@ -123,6 +126,7 @@ describe("Marketplace", function () {
         it(mode + ' for a user with license key should be able to open paid plugins', async function() {
             setEnvironment(mode, validLicense);
 
+            await page.goto('about:blank');
             await page.goto(paidPluginsUrl);
 
             await captureMarketplace('paid_plugins_with_license_' + mode);
@@ -132,6 +136,7 @@ describe("Marketplace", function () {
             setEnvironment(mode, exceededLicense);
             assumePaidPluginsActivated();
 
+            await page.goto('about:blank');
             await page.goto(paidPluginsUrl);
 
             await captureMarketplace('paid_plugins_with_exceeded_license_' + mode);
@@ -140,6 +145,7 @@ describe("Marketplace", function () {
         it('should show themes page', async function() {
             setEnvironment(mode, validLicense);
 
+            await page.goto('about:blank');
             await page.goto(themesUrl);
 
             await captureMarketplace('themes_with_valid_license_' + mode);
@@ -200,12 +206,14 @@ describe("Marketplace", function () {
     it('should show an error message when invalid license key entered', async function() {
         setEnvironment(mode, noLicense);
 
+        await page.goto('about:blank');
         await page.goto(pluginsUrl);
         await page.type('#license_key', 'invalid');
+        await page.waitForTimeout(200);
         await page.click('.marketplace-paid-intro'); // click outside so change event is triggered
         await page.click('#submit_license_key input');
         await page.waitForNetworkIdle();
-        await page.waitFor(200);
+        await page.waitForTimeout(200);
 
         await captureWithNotification(mode + '_invalid_license_key_entered');
     });
@@ -213,6 +221,7 @@ describe("Marketplace", function () {
     it('should show a confirmation before removing a license key', async function() {
         setEnvironment(mode, validLicense);
 
+        await page.goto('about:blank');
         await page.goto(pluginsUrl);
         await page.click('#remove_license_key input');
 
@@ -231,8 +240,10 @@ describe("Marketplace", function () {
     it('should show a success message when valid license key entered', async function() {
         setEnvironment(mode, noLicense);
 
+        await page.goto('about:blank');
         await page.goto(pluginsUrl);
         await page.type('#license_key', 'valid');
+        await page.waitForTimeout(200);
 
         setEnvironment(mode, validLicense);
         await page.click('#submit_license_key input');
@@ -245,6 +256,7 @@ describe("Marketplace", function () {
         testEnvironment.overrideConfig('General', 'enable_plugins_admin', '0');
         testEnvironment.save();
 
+        await page.goto('about:blank');
         await page.goto(pluginsUrl);
 
         await captureMarketplace( mode + '_enable_plugins_admin');
@@ -255,6 +267,7 @@ describe("Marketplace", function () {
         testEnvironment.overrideConfig('General', 'enable_plugins_admin', '0');
         testEnvironment.save();
 
+        await page.goto('about:blank');
         await page.goto(pluginsUrl);
 
         await captureMarketplace(mode + '_enable_plugins_admin_with_multiserver_enabled');

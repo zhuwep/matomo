@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,7 +12,6 @@ use Piwik\Category\Category;
 use Piwik\Category\Subcategory;
 use Piwik\Container\StaticContainer;
 use Piwik\Plugin\Categories;
-use Piwik\Settings\Storage;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -27,7 +26,7 @@ class CategoriesTest extends IntegrationTestCase
      */
     private $categories;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -39,7 +38,7 @@ class CategoriesTest extends IntegrationTestCase
         $this->categories = new Categories(StaticContainer::get('Piwik\Plugin\Manager'));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($_GET['idSite']);

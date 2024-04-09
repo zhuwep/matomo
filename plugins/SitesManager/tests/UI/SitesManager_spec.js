@@ -13,11 +13,14 @@ describe("SitesManager", function () {
 
     var url = "?module=SitesManager&action=index&idSite=1&period=day&date=yesterday&showaddsite=false";
 
-    async function assertScreenshotEquals(screenshotName, test)
+    async function assertScreenshotEquals(screenshotName, test, selectorToWaitFor = ".enrichedHeadline:contains(Manage Measurables)")
     {
         await test();
         await page.waitForNetworkIdle();
-        pageWrap = await page.$('#content');
+        const pageWrap = await page.$('#content');
+        await page.waitForFunction((s) => {
+          return !!$(s).length;
+        }, {}, selectorToWaitFor);
         expect(await pageWrap.screenshot()).to.matchImage(screenshotName);
     }
 
@@ -34,7 +37,8 @@ describe("SitesManager", function () {
     async function searchForText(textToAppendToSearchField)
     {
         await (await page.jQuery('.SitesManager .search:first input')).type(textToAppendToSearchField);
-        await (await page.jQuery('.SitesManager .search:first img')).click();
+        await page.waitForTimeout(100);
+        await (await page.jQuery('.SitesManager .search:first .search_ico')).click();
     }
 
     it("should load correctly and show page 0", async function() {
@@ -82,6 +86,15 @@ describe("SitesManager", function () {
     it("should load the global settings page", async function() {
         await assertScreenshotEquals("global_settings", async function () {
             await page.goto('?module=SitesManager&action=globalSettings&idSite=1&period=day&date=yesterday&showaddsite=false');
+            await page.evaluate(function () {
+                $('.form-help:contains(UTC time is)').hide();
+            });
+        }, "h2:contains(Global websites settings)");
+    });
+
+    it("should be able to open and edit a site directly based on url parameter", async function() {
+        await assertScreenshotEquals("site_edit_url", async function () {
+            await page.goto(url + '#/editsiteid=23');
             await page.evaluate(function () {
                 $('.form-help:contains(UTC time is)').hide();
             });

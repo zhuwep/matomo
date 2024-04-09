@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,7 @@ class PiwikOption extends Option
 {
     private $forcedOptionValue = false;
 
-    function __construct($forcedOptionValue)
+    public function __construct($forcedOptionValue)
     {
         $this->forcedOptionValue = $forcedOptionValue;
     }

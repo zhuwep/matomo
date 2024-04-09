@@ -1,12 +1,17 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
 function widgetsHelper() {
 }
+
+// a Promise for the first call to getAvailableWidgets. this should not be aborted,
+// so any code that aborts all ajax requests should make sure this promise is resolved
+// first.
+widgetsHelper.firstGetAvailableWidgetsCall = null;
 
 /**
  * Returns the available widgets fetched via AJAX (if not already done)
@@ -42,6 +47,9 @@ widgetsHelper.getAvailableWidgets = function (callback) {
 
         $.each(categorized, function (category, widgets) {
             $.each(widgets, function (subcategory, subwidgets) {
+                if (!subwidgets.length) {
+                  return;
+                }
 
                 var categoryToUse = category;
                 if (subwidgets.length >= 3 && subcategory !== '-') {
@@ -61,41 +69,50 @@ widgetsHelper.getAvailableWidgets = function (callback) {
         return moved;
     }
 
-    if (!widgetsHelper.availableWidgets) {
+    var promise = new Promise(function (resolve, reject) {
+      if (!widgetsHelper.availableWidgets) {
         var ajaxRequest = new ajaxHelper();
         ajaxRequest._mixinDefaultGetParams = function (params) {
-            return params;
+          return params;
         };
         ajaxRequest.addParams({
-            module: 'API',
-            method: 'API.getWidgetMetadata',
-            filter_limit: '-1',
-            format: 'JSON',
-            deep: '1',
-            idSite:  piwik.idSite || broadcast.getValueFromUrl('idSite')
+          module: 'API',
+          method: 'API.getWidgetMetadata',
+          filter_limit: '-1',
+          format: 'JSON',
+          deep: '1',
+          idSite:  piwik.idSite || broadcast.getValueFromUrl('idSite')
         }, 'get');
         ajaxRequest.setCallback(
-            function (data) {
-                widgetsHelper.availableWidgets = mergeCategoriesAndSubCategories(data);
+          function (data) {
+            widgetsHelper.availableWidgets = mergeCategoriesAndSubCategories(data);
 
-                if (callback) {
-                    callback(widgetsHelper.availableWidgets);
-                }
-            }
+            resolve();
+          }
         );
         ajaxRequest.setErrorCallback(function (deferred, status) {
-            if (status == 'abort' || !deferred || deferred.status < 400 || deferred.status >= 600) {
-                return;
-            }
-            $('#loadingError').show();
+          if (status == 'abort' || !deferred || deferred.status < 400 || deferred.status >= 600) {
+            return;
+          }
+          $('#loadingError').show();
+          reject();
         });
         ajaxRequest.send();
         return;
+      }
+
+      resolve();
+    });
+
+    if (!widgetsHelper.firstGetAvailableWidgetsCall) {
+      widgetsHelper.firstGetAvailableWidgetsCall = promise;
     }
 
-    if (callback) {
+    promise.then(function () {
+      if (callback) {
         callback(widgetsHelper.availableWidgets);
-    }
+      }
+    });
 };
 
 /**
@@ -297,14 +314,16 @@ widgetsHelper.loadWidgetAjax = function (widgetUniqueId, widgetParameters, onWid
                 if ($('.' + settings.categorylistClass + ' .' + settings.choosenClass, widgetPreview).length) {
                     var position = $('.' + settings.categorylistClass + ' .' + settings.choosenClass, widgetPreview).position().top -
                         $('.' + settings.categorylistClass, widgetPreview).position().top +
-                        $('.dashboard-manager .addWidget').outerHeight();
+                        ($('.dashboard-manager .addWidget').outerHeight() || 0);
 
                     if (!$('#content.admin').length) {
                         position += 5; // + padding defined in dashboard view
                     }
 
-                    $('.' + settings.widgetlistClass, widgetPreview).css('top', position);
-                    $('.' + settings.widgetlistClass, widgetPreview).css('marginBottom', position);
+                    $('.' + settings.widgetlistClass, widgetPreview).css({
+                        top: position,
+                        marginBottom: position
+                    });
                 }
 
                 return $('.' + settings.widgetlistClass, widgetPreview);
@@ -416,7 +435,7 @@ widgetsHelper.loadWidgetAjax = function (widgetUniqueId, widgetParameters, onWid
                         var widgetElement = $(document.getElementById(widgetUniqueId));
                         // document.getElementById needed for widgets with uniqueid like widgetOpens+Contact+Form
                         $('.widgetContent', widgetElement).html($(response));
-                        piwikHelper.compileAngularComponents($('.widgetContent', widgetElement), { forceNewScope: true });
+                        piwikHelper.compileVueEntryComponents($('.widgetContent', widgetElement));
                         $('.widgetContent', widgetElement).trigger('widget:create');
                         settings.onPreviewLoaded(widgetUniqueId, widgetElement);
                         $('.' + settings.widgetpreviewClass + ' .widgetTop', widgetPreview).on('click', function () {

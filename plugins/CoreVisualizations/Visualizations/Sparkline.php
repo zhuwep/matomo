@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\Period;
 use Piwik\Plugin\ViewDataTable;
-use Piwik\Site;
 
 /**
  * Reads the requested DataTable from the API and prepare data for the Sparkline view.
@@ -38,9 +37,7 @@ class Sparkline extends ViewDataTable
         $period = Common::getRequestVar('period');
         $date = Common::getRequestVar('date');
 
-        if ($period == 'range'
-            || $this->isComparing()
-        ) {
+        if ($period == 'range') {
             $periodObj = Period\Factory::build($period, $date);
             $_GET['period'] = 'day';
             $_GET['date'] = $periodObj->getRangeString();
@@ -132,9 +129,9 @@ class Sparkline extends ViewDataTable
             if (false !== $onlyRow) {
                 if (!empty($columnToPlot)) {
                     $value = $onlyRow->getColumn($columnToPlot);
-                } // if not specified, we load by default the first column found
-                // eg. case of getLastDistinctCountriesGraph
-                else {
+                } else {
+                    // if not specified, we load by default the first column found
+                    // eg. case of getLastDistinctCountriesGraph
                     $columns = $onlyRow->getColumns();
                     $value = current($columns);
                 }
@@ -171,7 +168,7 @@ class Sparkline extends ViewDataTable
         } elseif ($this->dataTable instanceof DataTable) {
             $values = $this->dataTable->getColumn($columnToPlot);
         } else {
-            $values = false;
+            $values = [];
         }
 
         return $values;

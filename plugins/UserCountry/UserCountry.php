@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,18 +8,10 @@
  */
 namespace Piwik\Plugins\UserCountry;
 
-use Piwik\ArchiveProcessor;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Intl\Data\Provider\RegionDataProvider;
-use Piwik\Plugins\UserCountry\LocationProvider\GeoIp;
-use Piwik\Plugins\UserCountry\LocationProvider;
-use Piwik\Url;
-
-/**
- * @see plugins/UserCountry/GeoIPAutoUpdater.php
- */
-require_once PIWIK_INCLUDE_PATH . '/plugins/UserCountry/GeoIPAutoUpdater.php';
+use Piwik\Plugins\GeoIp2\LocationProvider\GeoIp2;
 
 /**
  *
@@ -27,17 +19,34 @@ require_once PIWIK_INCLUDE_PATH . '/plugins/UserCountry/GeoIPAutoUpdater.php';
 class UserCountry extends \Piwik\Plugin
 {
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
         return array(
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'AssetManager.getStylesheetFiles'        => 'getStylesheetFiles',
             'AssetManager.getJavaScriptFiles'        => 'getJsFiles',
-            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Tracker.setTrackerCacheGeneral'         => 'setTrackerCacheGeneral',
             'Insights.addReportToOverview'           => 'addReportToInsightsOverview',
         );
+    }
+
+    public function getClientSideTranslationKeys(&$translations)
+    {
+        $translations[] = 'General_InfoFor';
+        $translations[] = 'General_NotInstalled';
+        $translations[] = 'General_Installed';
+        $translations[] = 'General_Broken';
+        $translations[] = 'UserCountry_CurrentLocationIntro';
+        $translations[] = 'General_Refresh';
+        $translations[] = 'UserCountry_CannotLocalizeLocalIP';
+        $translations[] = 'UserCountry_NoProviders';
+        $translations[] = 'General_Disabled';
+        $translations[] = 'UserCountry_GeolocationPageDesc';
+        $translations[] = 'UserCountry_LocationProvider';
+        $translations[] = 'UserCountry_Geolocation';
+        $translations[] = 'UserCountry_DistinctCountries';
     }
 
     public function addReportToInsightsOverview(&$reports)
@@ -57,10 +66,6 @@ class UserCountry extends \Piwik\Plugin
 
     public function getJsFiles(&$jsFiles)
     {
-        $jsFiles[] = "plugins/UserCountry/angularjs/location-provider-selection/location-provider-selection.controller.js";
-        $jsFiles[] = "plugins/UserCountry/angularjs/location-provider-selection/location-provider-selection.directive.js";
-        $jsFiles[] = "plugins/UserCountry/angularjs/location-provider-updater/location-provider-updater.controller.js";
-        $jsFiles[] = "plugins/UserCountry/angularjs/location-provider-updater/location-provider-updater.directive.js";
     }
 
     /**
@@ -93,23 +98,13 @@ class UserCountry extends \Piwik\Plugin
     public function isGeoIPWorking()
     {
         $provider = LocationProvider::getCurrentProvider();
-        return $provider instanceof GeoIp
+        return $provider instanceof GeoIp2
         && $provider->isAvailable() === true
         && $provider->isWorking() === true;
-    }
-
-    public function getClientSideTranslationKeys(&$translationKeys)
-    {
-        $translationKeys[] = "UserCountry_FatalErrorDuringDownload";
-        $translationKeys[] = "UserCountry_SetupAutomaticUpdatesOfGeoIP";
-        $translationKeys[] = "General_Done";
-        $translationKeys[] = "General_Save";
-        $translationKeys[] = "General_Continue";
     }
 
     public static function isGeoLocationAdminEnabled()
     {
         return (bool) Config::getInstance()->General['enable_geolocation_admin'];
     }
-
 }

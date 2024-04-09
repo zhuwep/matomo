@@ -1,22 +1,23 @@
 <?php
 
-use Interop\Container\ContainerInterface;
+use Piwik\Config\GeneralConfig;
 use Piwik\Plugins\Marketplace\Api\Service;
 use Piwik\Plugins\Marketplace\LicenseKey;
+use Piwik\Container\Container;
 
 return array(
-    'MarketplaceEndpoint' => function (ContainerInterface $c) {
-        $domain = 'http://plugins.matomo.org';
-        $updater = $c->get('Piwik\Plugins\CoreUpdater\Updater');
+    'MarketplaceEndpoint' => function (Container $c) {
 
-        if ($updater->isUpdatingOverHttps()) {
-            $domain = str_replace('http://', 'https://', $domain);
+        $domain = 'plugins.matomo.org';
+
+        if (GeneralConfig::getConfigValue('force_matomo_http_request') == 1) {
+            return 'http://' . $domain;
         }
 
-        return $domain;
+        return 'https://' . $domain;
     },
-    'Piwik\Plugins\Marketplace\Api\Service' => function (ContainerInterface $c) {
-        /** @var \Piwik\Plugins\Marketplace\Api\Service $previous */
+    'Piwik\Plugins\Marketplace\Api\Service' => function (Container $c) {
+        /** @var Service $previous */
 
         $domain = $c->get('MarketplaceEndpoint');
 
@@ -28,5 +29,5 @@ return array(
         $service->authenticate($accessToken);
 
         return $service;
-    }
+    },
 );

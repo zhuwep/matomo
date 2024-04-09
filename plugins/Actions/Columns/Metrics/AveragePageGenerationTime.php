@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,6 +13,7 @@ use Piwik\Metrics;
 use Piwik\Metrics\Formatter;
 use Piwik\Piwik;
 use Piwik\Plugin\ProcessedMetric;
+use Piwik\Columns\Dimension;
 
 /**
  * The average amount of time it takes to generate a page. Calculated as
@@ -21,6 +22,11 @@ use Piwik\Plugin\ProcessedMetric;
  *
  * The above metrics are calculated during archiving. This metric is calculated before
  * serving a report.
+ *
+ * Avg. page generation time has been deprecated in favor of new metrics in Page Performance plugin
+ * It won't be available for newly tracked data, but is still there to show the available data for the past
+ *
+ * @deprecated
  */
 class AveragePageGenerationTime extends ProcessedMetric
 {
@@ -54,7 +60,8 @@ class AveragePageGenerationTime extends ProcessedMetric
 
     public function format($value, Formatter $formatter)
     {
-        if ($formatter instanceof Formatter\Html
+        if (
+            $formatter instanceof Formatter\Html
             && !$value
         ) {
             return '-';
@@ -67,7 +74,8 @@ class AveragePageGenerationTime extends ProcessedMetric
     {
         $hasTimeGeneration = array_sum($this->getMetricValues($table, 'sum_time_generation')) > 0;
 
-        if (!$hasTimeGeneration
+        if (
+            !$hasTimeGeneration
             && $table->getRowsCount() != 0
             && !$this->hasAverageTimeGeneration($table)
         ) {
@@ -103,5 +111,10 @@ class AveragePageGenerationTime extends ProcessedMetric
     private function hasAverageTimeGeneration(DataTable $table)
     {
         return $table->getFirstRow()->getColumn('avg_time_generation') !== false;
+    }
+
+    public function getSemanticType(): ?string
+    {
+        return Dimension::TYPE_DURATION_S;
     }
 }

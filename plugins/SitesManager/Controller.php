@@ -1,25 +1,27 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\SitesManager;
 
 use Exception;
-use Piwik\API\Request;
 use Piwik\API\ResponseBuilder;
 use Piwik\Common;
-use Piwik\Exception\UnexpectedWebsiteFoundException;
+use Piwik\DataTable\Renderer\Json;
 use Piwik\Piwik;
 use Piwik\Plugin\Manager;
+use Piwik\Plugins\SitesManager\SiteContentDetection\Matomo;
+use Piwik\Plugins\SitesManager\SiteContentDetection\SiteContentDetectionAbstract;
+use Piwik\Plugins\SitesManager\SiteContentDetection\WordPress;
+use Piwik\SiteContentDetector;
 use Piwik\Session;
-use Piwik\Settings\Measurable\MeasurableSettings;
 use Piwik\SettingsPiwik;
-use Piwik\Site;
-use Piwik\Tracker\TrackerCodeGenerator;
 use Piwik\Url;
 use Piwik\View;
 
@@ -28,6 +30,16 @@ use Piwik\View;
  */
 class Controller extends \Piwik\Plugin\ControllerAdmin
 {
+    /** @var SiteContentDetector */
+    private $siteContentDetector;
+
+    public function __construct(SiteContentDetector $siteContentDetector)
+    {
+        $this->siteContentDetector = $siteContentDetector;
+
+        parent::__construct();
+    }
+
     /**
      * Main view showing listing of websites and settings
      */
@@ -38,7 +50,7 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
         return $this->renderTemplate('index');
     }
-    
+
     public function globalSettings()
     {
         Piwik::checkUserHasSuperUserAccess();
@@ -52,9 +64,8 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
         $response = new ResponseBuilder(Common::getRequestVar('format'));
 
-        $globalSettings = array();
+        $globalSettings = [];
         $globalSettings['keepURLFragmentsGlobal'] = API::getInstance()->getKeepURLFragmentsGlobal();
-        $globalSettings['siteSpecificUserAgentExcludeEnabled'] = API::getInstance()->isSiteSpecificUserAgentExcludeEnabled();
         $globalSettings['defaultCurrency'] = API::getInstance()->getDefaultCurrency();
         $globalSettings['searchKeywordParametersGlobal'] = API::getInstance()->getSearchKeywordParametersGlobal();
         $globalSettings['searchCategoryParametersGlobal'] = API::getInstance()->getSearchCategoryParametersGlobal();
@@ -62,6 +73,7 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
         $globalSettings['excludedIpsGlobal'] = API::getInstance()->getExcludedIpsGlobal();
         $globalSettings['excludedQueryParametersGlobal'] = API::getInstance()->getExcludedQueryParametersGlobal();
         $globalSettings['excludedUserAgentsGlobal'] = API::getInstance()->getExcludedUserAgentsGlobal();
+        $globalSettings['excludedReferrersGlobal'] = API::getInstance()->getExcludedReferrersGlobal();
 
         return $response->getResponse($globalSettings);
     }
@@ -79,10 +91,10 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
             $excludedIps = Common::getRequestVar('excludedIps', false);
             $excludedQueryParameters = Common::getRequestVar('excludedQueryParameters', false);
             $excludedUserAgents = Common::getRequestVar('excludedUserAgents', false);
+            $excludedReferrers = Common::getRequestVar('excludedReferrers', false);
             $currency = Common::getRequestVar('currency', false);
             $searchKeywordParameters = Common::getRequestVar('searchKeywordParameters', $default = "");
             $searchCategoryParameters = Common::getRequestVar('searchCategoryParameters', $default = "");
-            $enableSiteUserAgentExclude = Common::getRequestVar('enableSiteUserAgentExclude', $default = 0);
             $keepURLFragments = Common::getRequestVar('keepURLFragments', $default = 0);
 
             $api = API::getInstance();
@@ -91,8 +103,8 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
             $api->setGlobalExcludedQueryParameters($excludedQueryParameters);
             $api->setGlobalExcludedIps($excludedIps);
             $api->setGlobalExcludedUserAgents($excludedUserAgents);
+            $api->setGlobalExcludedReferrers($excludedReferrers);
             $api->setGlobalSearchParameters($searchKeywordParameters, $searchCategoryParameters);
-            $api->setSiteSpecificUserAgentExcludeEnabled($enableSiteUserAgentExclude == 1);
             $api->setKeepURLFragmentsGlobal($keepURLFragments);
 
             $toReturn = $response->getResponse();
@@ -101,18 +113,6 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
         }
 
         return $toReturn;
-    }
-
-    /**
-     *  User will download a file called PiwikTracker.php that is the content of the actual script
-     */
-    function downloadPiwikTracker()
-    {
-        $path = PIWIK_INCLUDE_PATH . '/libs/PiwikTracker/';
-        $filename = 'PiwikTracker.php';
-        Common::sendHeader('Content-type: text/php');
-        Common::sendHeader('Content-Disposition: attachment; filename="' . $filename . '"');
-        return file_get_contents($path . $filename);
     }
 
     public function ignoreNoDataMessage()
@@ -129,57 +129,293 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
     public function siteWithoutData()
     {
-        $javascriptGenerator = new TrackerCodeGenerator();
-        $javascriptGenerator->forceMatomoEndpoint();
-        $piwikUrl = Url::getCurrentUrlWithoutFileName();
+        $this->checkSitePermission();
 
-        if (!$this->site && Piwik::hasUserSuperUserAccess()) {
-            throw new UnexpectedWebsiteFoundException('Invalid site ' . $this->idSite);
-        } elseif (!$this->site) {
-            // redirect to login form
-            Piwik::checkUserHasViewAccess($this->idSite);
+        return $this->renderTemplateAs('siteWithoutData', [
+            'inviteUserLink' => $this->getInviteUserLink(),
+            'hideWhatIsNew'  => true,
+        ], $viewType = 'basic');
+    }
+
+    public function getTrackingMethodsForSite()
+    {
+        $this->checkSitePermission();
+
+        $this->siteContentDetector->detectContent([], $this->idSite);
+
+        $trackingMethods = [];
+        $instructionUrls = [];
+        $othersInstructions = [];
+
+        foreach ($this->siteContentDetector->getSiteContentDetectionsByType() as $detections) {
+            foreach ($detections as $obj) {
+                $tabContent            = $obj->renderInstructionsTab($this->siteContentDetector);
+                $othersInstruction     = $obj->renderOthersInstruction($this->siteContentDetector);
+                $instructionUrl        = $obj->getInstructionUrl();
+                $isRecommended         = $obj->isRecommended($this->siteContentDetector);
+                $recommendationDetails = $obj->getRecommendationDetails($this->siteContentDetector);
+
+                /**
+                 * Event that can be used to manipulate the content of a certain tab on the no data page
+                 *
+                 * @param string $tabContent  Content of the tab
+                 * @param SiteContentDetector $detector  Instance of SiteContentDetector, holding current detection results
+                 */
+                Piwik::postEvent('Template.siteWithoutDataTab.' . $obj::getId() . '.content', [&$tabContent, $this->siteContentDetector]);
+                /**
+                 * Event that can be used to manipulate the content of a record on the others tab on the no data page
+                 *
+                 * @param string $othersInstruction  Content of the record
+                 * @param SiteContentDetector $detector  Instance of SiteContentDetector, holding current detection results
+                 */
+                Piwik::postEvent('Template.siteWithoutDataTab.' . $obj::getId() . '.others', [&$othersInstruction, $this->siteContentDetector]);
+
+                if (!empty($tabContent)) {
+                    $trackingMethods[] = [
+                        'id'                   => $obj::getId(),
+                        'name'                 => $obj::getName(),
+                        'type'                 => $obj::getContentType(),
+                        'content'              => $tabContent,
+                        'icon'                 => $obj::getIcon(),
+                        'priority'             => $obj::getPriority(),
+                        'wasDetected'          => $this->siteContentDetector->wasDetected($obj::getId()),
+                        'isRecommended'        => $isRecommended,
+                        'recommendationTitle'  => $recommendationDetails['title'],
+                        'recommendationText'   => $recommendationDetails['text'],
+                        'recommendationButton' => $recommendationDetails['button'],
+                    ];
+                }
+
+                if (!empty($othersInstruction)) {
+                    $othersInstructions[] = [
+                        'id'                => $obj::getId(),
+                        'name'              => $obj::getName(),
+                        'type'              => $obj::getContentType(),
+                        'othersInstruction' => $othersInstruction,
+                    ];
+                }
+
+                if (!empty($instructionUrl)) {
+                    $instructionUrls[] = [
+                        'id'             => $obj::getId(),
+                        'name'           => $obj::getName(),
+                        'type'           => $obj::getContentType(),
+                        'instructionUrl' => $obj::getInstructionUrl(),
+                    ];
+                }
+            }
         }
 
-        $jsTag = Request::processRequest('SitesManager.getJavascriptTag', array('idSite' => $this->idSite, 'piwikUrl' => $piwikUrl));
+        usort($trackingMethods, function ($a, $b) {
+            if ($a['isRecommended'] === $b['isRecommended']) {
+                return $a['priority'] === $b['priority'] ? 0 : ($a['priority'] < $b['priority'] ? -1 : 1);
+            }
 
-        // Strip off open and close <script> tag and comments so that JS will be displayed in ALL mail clients
-        $rawJsTag = TrackerCodeGenerator::stripTags($jsTag);
+            return $a['isRecommended'] ? -1 : 1;
+        });
 
-        $showMatomoLinks = true;
+        usort($othersInstructions, function ($a, $b) {
+            return strnatcmp($a['name'], $b['name']);
+        });
+
+        usort($instructionUrls, function ($a, $b) {
+            return strnatcmp($a['name'], $b['name']);
+        });
+
+        // add integration and others tab
+        $trackingMethods[] = [
+            'id'                   => 'Integrations',
+            'name'                 => Piwik::translate('SitesManager_Integrations'),
+            'type'                 => SiteContentDetectionAbstract::TYPE_OTHER,
+            'content'              => $this->renderIntegrationsTab($instructionUrls),
+            'icon'                 => './plugins/SitesManager/images/integrations.svg',
+            'priority'             => 10000,
+            'wasDetected'          => false,
+            'isRecommended'        => false,
+            'recommendationTitle'  => '',
+            'recommendationText'   => '',
+            'recommendationButton' => '',
+        ];
+        $trackingMethods[] = [
+            'id'                   => 'Other',
+            'name'                 => Piwik::translate('SitesManager_SiteWithoutDataOtherWays'),
+            'type'                 => SiteContentDetectionAbstract::TYPE_OTHER,
+            'content'              => $this->renderOthersTab($othersInstructions),
+            'icon'                 => './plugins/SitesManager/images/others.svg',
+            'priority'             => 10001,
+            'wasDetected'          => false,
+            'isRecommended'        => false,
+            'recommendationTitle'  => '',
+            'recommendationText'   => '',
+            'recommendationButton' => '',
+        ];
+
+        $recommendedMethod = null;
+        $matomoIndex = null;
+
+        foreach ($trackingMethods as $index => $tab) {
+            // Note: We recommend the first method that is recommended (after sorting by priority)
+            if (true === $tab['isRecommended']) {
+                $recommendedMethod = $tab;
+                unset($trackingMethods[$index]);
+                break;
+            }
+
+            if ($tab['id'] === Matomo::getId()) {
+                $matomoIndex = $index;
+            }
+        }
+
+        // fall back to javascript code recommendation if nothing was detected
+        if (null === $recommendedMethod && null !== $matomoIndex) {
+            $recommendedMethod = $trackingMethods[$matomoIndex];
+            unset($trackingMethods[$matomoIndex]);
+        }
+
+        Json::sendHeaderJSON();
+        echo json_encode([
+            'trackingMethods' => $trackingMethods,
+            'recommendedMethod' => $recommendedMethod
+        ]);
+        exit;
+    }
+
+    private function getGoogleAnalyticsImporterInstruction()
+    {
+        $googleAnalyticsImporterInstruction = [];
+
+        if (!Manager::getInstance()->isPluginLoaded('GoogleAnalyticsImporter')) {
+            $googleAnalyticsImporterInstruction = [
+                'id'                => 'GoogleAnalyticsImporter',
+                'name'              => Piwik::translate('CoreAdminHome_ImportFromGoogleAnalytics'),
+                'type'              => SiteContentDetectionAbstract::TYPE_OTHER,
+                'othersInstruction' => Piwik::translate(
+                    'CoreAdminHome_ImportFromGoogleAnalyticsDescription',
+                    ['<a href="' . Url::addCampaignParametersToMatomoLink('https://plugins.matomo.org/GoogleAnalyticsImporter') . '" rel="noopener noreferrer" target="_blank">', '</a>']
+                ),
+            ];
+        }
+
         /**
          * @ignore
          */
-        Piwik::postEvent('SitesManager.showMatomoLinksInTrackingCodeEmail', array(&$showMatomoLinks));
+        Piwik::postEvent('SitesManager.siteWithoutData.customizeImporterMessage', [&$googleAnalyticsImporterInstruction]);
 
-        $trackerCodeGenerator = new TrackerCodeGenerator();
-        $trackingUrl = trim(SettingsPiwik::getPiwikUrl(), '/') . '/' . $trackerCodeGenerator->getPhpTrackerEndpoint();
+        return $googleAnalyticsImporterInstruction;
+    }
 
-        $emailContent = $this->renderTemplateAs('@SitesManager/_trackingCodeEmail', array(
-            'jsTag' => $rawJsTag,
-            'showMatomoLinks' => $showMatomoLinks,
-            'trackingUrl' => $trackingUrl,
-            'idSite' => $this->idSite
-        ), $viewType = 'basic');
+    private function renderIntegrationsTab($instructionUrls): string
+    {
+        $view = new View('@SitesManager/_integrationsTab');
+        $view->instruction = $this->getCmsInstruction();
+        $view->instructionUrls = $instructionUrls;
+        $view->trackers = $this->siteContentDetector->getDetectsByType(SiteContentDetectionAbstract::TYPE_TRACKER);
+        $view->idSite = $this->idSite;
+        $view->matomoUrl = Url::getCurrentUrlWithoutFileName();
+        return $view->render();
+    }
 
-        $googleAnalyticsImporterMessage = '';
-        if (Manager::getInstance()->isPluginLoaded('GoogleAnalyticsImporter')) {
-            $googleAnalyticsImporterMessage = '<h3>' . Piwik::translate('CoreAdminHome_ImportFromGoogleAnalytics') . '</h3>'
-                . '<p>' . Piwik::translate('CoreAdminHome_ImportFromGoogleAnalyticsDescription', ['<a href="https://plugins.matomo.org/GoogleAnalyticsImporter" rel="noopener noreferrer" target="_blank">', '</a>']) . '</p>'
-                . '<p></p>';
+    private function renderOthersTab($othersInstructions): string
+    {
+        array_unshift(
+            $othersInstructions,
+            [
+                'id'                => 'ImageTracking',
+                'name'              => Piwik::translate('CoreAdminHome_ImageTracking'),
+                'type'              => SiteContentDetectionAbstract::TYPE_OTHER,
+                'othersInstruction' => Piwik::translate(
+                    'SitesManager_ImageTrackingDescription',
+                    ['<a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/docs/tracking-api/reference/') . '" rel="noreferrer noopener" target="_blank">', '</a>']
+                ),
+            ],
+            [
+                'id'                => 'LogAnalytics',
+                'name'              => Piwik::translate('SitesManager_LogAnalytics'),
+                'type'              => SiteContentDetectionAbstract::TYPE_OTHER,
+                'othersInstruction' => Piwik::translate(
+                    'SitesManager_LogAnalyticsDescription',
+                    ['<a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/log-analytics/') . '" rel="noreferrer noopener" target="_blank">', '</a>']
+                ),
+            ],
+            [
+                'id'                => 'MobileAppsAndSDKs',
+                'name'              => Piwik::translate('SitesManager_MobileAppsAndSDKs'),
+                'type'              => SiteContentDetectionAbstract::TYPE_OTHER,
+                'othersInstruction' => Piwik::translate(
+                    'SitesManager_MobileAppsAndSDKsDescription',
+                    ['<a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/integrate/#programming-language-platforms-and-frameworks') . '" rel="noreferrer noopener" target="_blank">', '</a>']
+                ),
+            ],
+            [
+                'id'                => 'HttpTrackingApi',
+                'name'              => Piwik::translate('CoreAdminHome_HttpTrackingApi'),
+                'type'              => SiteContentDetectionAbstract::TYPE_OTHER,
+                'othersInstruction' => Piwik::translate(
+                    'CoreAdminHome_HttpTrackingApiDescription',
+                    ['<a href="' . Url::addCampaignParametersToMatomoLink('https://developer.matomo.org/api-reference/tracking-api') . '" rel="noreferrer noopener" target="_blank">', '</a>']
+                ),
+            ]
+        );
 
-            /**
-             * @ignore
-             */
-            Piwik::postEvent('SitesManager.siteWithoutData.customizeImporterMessage', [&$googleAnalyticsImporterMessage]);
+        $googleAnalyticsImporterInstruction = $this->getGoogleAnalyticsImporterInstruction();
+
+        if (!empty($googleAnalyticsImporterInstruction)) {
+            $othersInstructions[] = $googleAnalyticsImporterInstruction;
         }
 
-        return $this->renderTemplateAs('siteWithoutData', array(
-            'siteName'      => $this->site->getName(),
-            'idSite'        => $this->idSite,
-            'jsTag'         => $jsTag,
-            'piwikUrl'      => $piwikUrl,
-            'emailBody'     => $emailContent,
-            'googleAnalyticsImporterMessage' => $googleAnalyticsImporterMessage,
-        ), $viewType = 'basic');
+        $view = new View('@SitesManager/_othersTab');
+        $view->othersInstructions = $othersInstructions;
+        $view->idSite = $this->idSite;
+        $view->matomoUrl = Url::getCurrentUrlWithoutFileName();
+        return $view->render();
+    }
+
+    private function getCmsInstruction()
+    {
+        $detectedCMSes = $this->siteContentDetector->getDetectsByType(SiteContentDetectionAbstract::TYPE_CMS);
+
+        if (
+            empty($detectedCMSes)
+            || $this->siteContentDetector->wasDetected(WordPress::getId())) {
+            return '';
+        }
+
+        $detectedCms = null;
+
+        foreach ($detectedCMSes as $detected) {
+            $detectedCms = $this->siteContentDetector->getSiteContentDetectionById($detected);
+
+            if (null !== $detectedCms && !empty($detectedCms::getInstructionUrl())) {
+                break;
+            }
+        }
+
+        if (null === $detectedCms || empty($detectedCms::getInstructionUrl())) {
+            return '';
+        }
+
+        return Piwik::translate(
+            'SitesManager_SiteWithoutDataDetectedSite',
+            [
+                $detectedCms::getName(),
+                '<a target="_blank" rel="noreferrer noopener" href="' . $detectedCms::getInstructionUrl() . '">',
+                '</a>'
+            ]
+        );
+    }
+
+    private function getInviteUserLink()
+    {
+        $request = \Piwik\Request::fromRequest();
+        $idSite = $request->getIntegerParameter('idSite', 0);
+        if (!$idSite || !Piwik::isUserHasAdminAccess($idSite)) {
+            return Url::addCampaignParametersToMatomoLink('https://matomo.org/faq/general/manage-users/#imanadmin-creating-users');
+        }
+
+        return SettingsPiwik::getPiwikUrl() . 'index.php?' . Url::getQueryStringFromParameters([
+                'idSite' => $idSite,
+                'module' => 'UsersManager',
+                'action' => 'index',
+            ]);
     }
 }

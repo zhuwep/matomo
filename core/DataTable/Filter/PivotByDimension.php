@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -150,14 +150,26 @@ class PivotByDimension extends BaseFilter
      * @param bool $isFetchingBySegmentEnabled Whether to allow fetching by segment.
      * @throws Exception if pivoting the report by a dimension is unsupported.
      */
-    public function __construct($table, $report, $pivotByDimension, $pivotColumn, $pivotByColumnLimit = false,
-                                $isFetchingBySegmentEnabled = true)
-    {
+    public function __construct(
+        $table,
+        $report,
+        $pivotByDimension,
+        $pivotColumn,
+        $pivotByColumnLimit = false,
+        $isFetchingBySegmentEnabled = true
+    ) {
         parent::__construct($table);
 
-        Log::debug("PivotByDimension::%s: creating with [report = %s, pivotByDimension = %s, pivotColumn = %s, "
-            . "pivotByColumnLimit = %s, isFetchingBySegmentEnabled = %s]", __FUNCTION__, $report, $pivotByDimension,
-            $pivotColumn, $pivotByColumnLimit, $isFetchingBySegmentEnabled);
+        Log::debug(
+            "PivotByDimension::%s: creating with [report = %s, pivotByDimension = %s, pivotColumn = %s, "
+            . "pivotByColumnLimit = %s, isFetchingBySegmentEnabled = %s]",
+            __FUNCTION__,
+            $report,
+            $pivotByDimension,
+            $pivotColumn,
+            $pivotByColumnLimit,
+            $isFetchingBySegmentEnabled
+        );
 
         $this->pivotByColumnLimit = $pivotByColumnLimit ?: self::getDefaultColumnLimit();
         $this->isFetchingBySegmentEnabled = $isFetchingBySegmentEnabled;
@@ -349,6 +361,10 @@ class PivotByDimension extends BaseFilter
             }
         }
 
+        if (empty($report)) {
+            throw new \Exception("This report does not support pivot.");
+        }
+
         $this->thisReport = $report;
 
         $this->subtableDimension = $this->thisReport->getSubtableDimension();
@@ -401,14 +417,15 @@ class PivotByDimension extends BaseFilter
     }
 
     /**
-     * @param $columnRow
+     * @param Row $columnRow
      * @param $pivotColumn
      * @return false|mixed
      */
     private function getColumnValue(Row $columnRow, $pivotColumn)
     {
         $value = $columnRow->getColumn($pivotColumn);
-        if (empty($value)
+        if (
+            empty($value)
             && !empty($this->metricIndexValue)
         ) {
             $value = $columnRow->getColumn($this->metricIndexValue);
@@ -472,7 +489,8 @@ class PivotByDimension extends BaseFilter
         });
 
         // limit columns if necessary (adding aggregate Others column at end)
-        if ($this->pivotByColumnLimit > 0
+        if (
+            $this->pivotByColumnLimit > 0
             && count($columnSet) > $this->pivotByColumnLimit
         ) {
             $columnSet = array_slice($columnSet, 0, $this->pivotByColumnLimit - 1, $preserveKeys = true);
@@ -480,7 +498,9 @@ class PivotByDimension extends BaseFilter
         }
 
         // remove column sums from array so it can be used as a default row
-        $columnSet = array_map(function () { return false; }, $columnSet);
+        $columnSet = array_map(function () {
+            return false;
+        }, $columnSet);
 
         // make sure label column is first
         $columnSet = array('label' => false) + $columnSet;
@@ -503,7 +523,8 @@ class PivotByDimension extends BaseFilter
 
         $currentIndex = 1;
         foreach ($defaultRow as $columnName => $ignore) {
-            if ($columnName === $othersRowLabel
+            if (
+                $columnName === $othersRowLabel
                 || $columnName === 'label'
             ) {
                 $result[] = $columnName;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,6 +13,7 @@ use lessc;
 use Piwik\AssetManager\UIAsset;
 use Piwik\AssetManager\UIAssetMerger;
 use Piwik\Common;
+use Piwik\Container\StaticContainer;
 use Piwik\Exception\StylesheetLessCompileException;
 use Piwik\Piwik;
 use Piwik\Plugin\Manager;
@@ -46,6 +47,9 @@ class StylesheetUIAssetMerger extends UIAssetMerger
         try {
             $compiled = $this->lessCompiler->compile($concatenatedAssets);
         } catch(\Exception $e) {
+            // save the concated less files so we can debug the issue
+            $this->saveConcatenatedAssets($concatenatedAssets);
+
             throw new StylesheetLessCompileException($e->getMessage());
         }
 
@@ -61,10 +65,10 @@ class StylesheetUIAssetMerger extends UIAssetMerger
 
         return $compiled;
     }
-    
+
     private function getCssStatementForReplacement($path)
     {
-        return '.nonExistingSelectorOnlyForReplacementOfCssFiles { display:"' . $path . '"; }';
+        return ".nonExistingSelectorOnlyForReplacementOfCssFiles {\n  display: \"" . $path . "\";\n}";
     }
 
     protected function concatenateAssets()
@@ -102,7 +106,7 @@ class StylesheetUIAssetMerger extends UIAssetMerger
 
         $this->mergedContent = $concatenatedContent;
     }
-    
+
     /**
      * @return lessc
      * @throws Exception
@@ -250,11 +254,20 @@ class StylesheetUIAssetMerger extends UIAssetMerger
     {
         $rootDirectory = realpath($uiAsset->getBaseDirectory());
 
-        if ($rootDirectory != PATH_SEPARATOR
+        if (
+            $rootDirectory != PATH_SEPARATOR
             && substr($rootDirectory, -strlen(PATH_SEPARATOR)) !== PATH_SEPARATOR) {
             $rootDirectory .= PATH_SEPARATOR;
         }
         $rootDirectoryLen = strlen($rootDirectory);
         return $rootDirectoryLen;
+    }
+
+    private function saveConcatenatedAssets($concatenatedAssets)
+    {
+        $file = StaticContainer::get('path.tmp') . '/assets/uimergedassets.concat.less';
+        if (is_writable(dirname($file))) {
+            file_put_contents($file, $concatenatedAssets);
+        }
     }
 }

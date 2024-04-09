@@ -1,8 +1,8 @@
 
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -39,8 +39,9 @@ function DataTable(element) {
 
 DataTable._footerIconHandlers = {};
 
-DataTable.initNewDataTables = function () {
-    $('div.dataTable').each(function () {
+DataTable.initNewDataTables = function (reportId) {
+    var selector = typeof reportId === 'string' ? '[data-report='+JSON.stringify(reportId)+']' : 'div.dataTable';
+    $(selector).each(function () {
         if (!$(this).attr('id')) {
             var tableType = $(this).attr('data-table-type') || 'DataTable',
                 klass = require('piwik/UI')[tableType] || require(tableType);
@@ -109,11 +110,25 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
         this.loadedSubDataTable = {};
         this.isEmpty = $('.pk-emptyDataTable', domElem).length > 0;
-        this.bindEventsAndApplyStyle(domElem);
-        this._init(domElem);
-        this.initialized = true;
+        window.Vue.nextTick().then(() => {
+          this.bindEventsAndApplyStyle(domElem);
+          this._init(domElem);
+          this.enableStickHead(domElem);
+          this.initialized = true;
+        });
     },
 
+    enableStickHead: function (domElem) {
+      // Bind to the resize event of the window object
+      $(window).on('resize', function () {
+        var tableScrollerWidth = $(domElem).find('.dataTableScroller').width();
+        var tableWidth = $(domElem).find('table').width();
+        if (tableScrollerWidth < tableWidth) {
+          $('.dataTableScroller').css('overflow-x', 'scroll');
+        }
+        // Invoke the resize event immediately
+      }).resize();
+    },
     //function triggered when user click on column sort
     onClickSort: function (domElem) {
         var self = this;
@@ -237,7 +252,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             delete self.param.filter_offset;
             delete self.param.filter_limit;
         }
-	    
+
         delete self.param.showtitle;
 
         var container = $('#' + self.workingDivId + ' .piwik-graph');
@@ -330,7 +345,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             piwikHelper.lazyScrollTo(content[0], 400);
         }
 
-        piwikHelper.compileAngularComponents(content);
+        piwikHelper.compileVueEntryComponents(content);
 
         return content;
     },
@@ -363,7 +378,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         self.handleSearchBox(domElem);
         self.handleColumnDocumentation(domElem);
         self.handleRowActions(domElem);
-		self.handleCellTooltips(domElem);
+        self.handleCellTooltips(domElem);
         self.handleRelatedReports(domElem);
         self.handleTriggeredEvents(domElem);
         self.handleColumnHighlighting(domElem);
@@ -402,53 +417,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             return parseInt(totalWidth, 10);
         }
 
-        function setMaxTableWidthIfNeeded (domElem, maxTableWidth)
-        {
-            var $domElem = $(domElem);
-            var dataTableInCard = $domElem.parents('.card').first();
-            var parentDataTable = $domElem.parent('.dataTable');
-
-            dataTableInCard.width('');
-            $domElem.width('');
-            parentDataTable.width('');
-
-            var $table = $('table.dataTable', domElem);
-            if ($table.closest('.reportsByDimensionView').length) {
-                var requiredTableWidth = $table.width() - 40; // 40 is padding on card content
-                if (domElem.width() > requiredTableWidth) {
-                    domElem.css('max-width', requiredTableWidth + 'px');
-                }
-            }
-
-            var tableWidth = getTableWidth(domElem);
-
-            if (tableWidth <= maxTableWidth) {
-                return;
-            }
-
-            if (self.isWidgetized() || self.isDashboard()) {
-                return;
-            }
-
-            if (dataTableInCard && dataTableInCard.length) {
-                // makes sure card has the same width
-                dataTableInCard.width(maxTableWidth);
-            } else {
-                $domElem.width(maxTableWidth);
-            }
-
-            if (parentDataTable && parentDataTable.length) {
-                // makes sure dataTableWrapper and DataTable has same size => makes sure maxLabelWidth does not get
-                // applied in getLabelWidth() since they will have the same size.
-
-                if (dataTableInCard.length) {
-                    dataTableInCard.width(maxTableWidth);
-                } else {
-                    parentDataTable.width(maxTableWidth);
-                }
-            }
-        }
-
         function getLabelWidth(domElem, tableWidth, minLabelWidth, maxLabelWidth)
         {
             var labelWidth = minLabelWidth;
@@ -479,8 +447,17 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             ) {
                 labelWidth = maxLabelWidth; // prevent for instance table in Actions-Pages is not too wide
             }
-
-            return parseInt(labelWidth / $('tr:nth-child(1) td.label', domElem).length, 10);
+            var allColumns = $('tr:nth-child(1) td.label', domElem).length;
+            var firstTableColumn = $('table:first tbody>tr:first td.label', domElem).length;
+            var amount = allColumns;
+            if (allColumns > 2 * firstTableColumn) {
+                amount = 2 * firstTableColumn;
+            }
+            var newWidth = parseInt(labelWidth / amount, 10)
+            if (newWidth == 0) {
+                newWidth = maxLabelWidth; // fallback to the maximum width if zero
+            }
+            return newWidth;
         }
 
         function getLabelColumnMinWidth(domElem)
@@ -531,27 +508,31 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             var paddingLeft  = elem.css('paddingLeft');
             paddingLeft      = paddingLeft ? Math.round(parseFloat(paddingLeft)) : 0;
             var paddingRight = elem.css('paddingRight');
-            paddingRight     = paddingRight ? Math.round(parseFloat(paddingLeft)) : 0;
+            paddingRight     = paddingRight ? Math.round(parseFloat(paddingRight)) : 0;
 
-            labelWidth = labelWidth - paddingLeft - paddingRight;
+            if (elem.find('.prefix-numeral').length) {
+                labelWidth -= Math.round(parseFloat(elem.find('.prefix-numeral').outerWidth()));
+            }
 
-            return labelWidth;
+            return labelWidth - paddingLeft - paddingRight;
         }
 
-        setMaxTableWidthIfNeeded(domElem, 1200);
-
-        var isTableVisualization = this.jsViewDataTable
-            && typeof this.jsViewDataTable === 'string'
-            && typeof this.jsViewDataTable.indexOf === 'function'
-            && this.jsViewDataTable.indexOf('table') !== -1;
+        var isTableVisualization = this.param.viewDataTable
+            && typeof this.param.viewDataTable === 'string'
+            && typeof this.param.viewDataTable.indexOf === 'function'
+            && this.param.viewDataTable.indexOf('table') !== -1;
         if (isTableVisualization) {
             // we do this only for html tables
 
             var tableWidth = getTableWidth(domElem);
             var labelColumnMinWidth = getLabelColumnMinWidth(domElem);
             var labelColumnMaxWidth = getLabelColumnMaxWidth(domElem);
-            var labelColumnWidth    = getLabelWidth(domElem, tableWidth, 125, 440);
-
+            var labelColumnWidth    = getLabelWidth(
+              domElem,
+              tableWidth,
+              self.props.min_label_width || 125,
+              self.props.max_label_width || 440
+            );
             if (labelColumnMinWidth > labelColumnWidth) {
                 labelColumnWidth = labelColumnMinWidth;
             }
@@ -559,15 +540,45 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 labelColumnWidth = labelColumnMaxWidth;
             }
 
+            // special handling if the loaded datatable is a subtable
+            if ($(domElem).closest('.subDataTableContainer').length) {
+                var parentTable = $(domElem).closest('table.dataTable');
+                var tableColumns = $('table:eq(0)>thead th', domElem).length;
+                var parentTableColumns = $('>thead th', parentTable).length;
+                var labelColumn = $('>tbody td.label:eq(0)', parentTable);
+                var labelWidthParentTable = labelColumn.outerWidth();
+
+                // if the subtable has the same column count as the main table, we rearrange all tables
+                if (parentTableColumns === tableColumns) {
+                    labelColumnWidth = Math.min(labelColumnWidth, labelWidthParentTable);
+
+                    // rearrange base table labels, so the tables are displayed aligned
+                    $('>tbody>tr:not(.subDataTableContainer)>td.label', parentTable).each(function() {
+                        $(this).css({
+                            width: removePaddingFromWidth($(this), labelColumnWidth) + 'px'
+                        });
+                    });
+
+                    // rearrange all subtables having the same column count
+                    $('>tbody>tr.subDataTableContainer', parentTable).each(function() {
+                        if ($('table:eq(0)>thead th', this).length === parentTableColumns) {
+                            $(this).css({
+                                width: removePaddingFromWidth($(this), labelColumnWidth) + 'px'
+                            });
+                        }
+                    });
+                }
+            }
+
             if (labelColumnWidth) {
                 $('td.label', domElem).each(function() {
-                    $(this).width(removePaddingFromWidth($(this), labelColumnWidth));
+                    $(this).css({
+                        width: removePaddingFromWidth($(this), labelColumnWidth) + 'px'
+                    });
                 });
             }
 
             $('td span.label', domElem).each(function () { self.tooltip($(this)); });
-
-            self.overflowContentIfNeeded(domElem);
         }
 
         if (!self.windowResizeTableAttached) {
@@ -575,7 +586,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
             // on resize of the window we re-calculate everything.
             var timeout = null;
+            var windowWidth = 0;
             var resizeDataTable = function() {
+
+                if (windowWidth === $(window).width()) {
+                    return; // only resize a data table if the width changes
+                }
 
                 if (timeout) {
                     clearTimeout(timeout);
@@ -590,6 +606,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                             $('td.label', domElem).width('');
                         }
                         self.setFixWidthToMakeEllipsisWork(domElem);
+                        windowWidth = $(window).width();
                     } else {
                         $(window).off('resize', resizeDataTable);
                     }
@@ -602,51 +619,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
             $(window).on('resize', resizeDataTable);
             self._resizeDataTable = resizeDataTable;
-        }
-    },
-
-    overflowContentIfNeeded: function (domElem, showScrollbarIfMoreThanThisPxOverlap) {
-
-        var $domNodeToSetOverflow;
-
-        if (this.isDashboard()) {
-            $domNodeToSetOverflow = domElem.parents('.widgetContent').first();
-        } else if (this.isWidgetized()) {
-            $domNodeToSetOverflow = domElem.parents('.widget').first();
-        } else {
-            var inReportPage = domElem.parents('.theWidgetContent').first();
-            var displayedAsCard = inReportPage.find('> .card > .card-content');
-            if (displayedAsCard.length) {
-                $domNodeToSetOverflow = displayedAsCard.first();
-            } else {
-                $domNodeToSetOverflow = inReportPage;
-            }
-        }
-
-        if (!$domNodeToSetOverflow || !$domNodeToSetOverflow.length) {
-            return;
-        }
-
-        // show scrollbars for a report if table does not fit into widget/report page. This happens especially
-        // with AllTableColumn visualization
-        var tableWidth = domElem.width();
-        var dataTableWidth = domElem.find('table.dataTable').width();
-        var widthToCheckElementIsActuallyThere = 10;
-
-        // in dataTables there is a marginLeft -20px and marginRight -20px applied and jquery seems to not consider
-        // this. This results in the actual table always being 40px wider than the domElem. We add another 11px
-        // just in case some calculations are not 100% right
-        var normalOverlapBecauseTableIsFullWidth = showScrollbarIfMoreThanThisPxOverlap || 51;
-        if (tableWidth > widthToCheckElementIsActuallyThere && dataTableWidth > widthToCheckElementIsActuallyThere
-            && (dataTableWidth - tableWidth) > normalOverlapBecauseTableIsFullWidth) {
-            // when after adjusting the columns the widget/report is sitll wider than the actual dataTable, we need
-            // to make it scrollable otherwise reports overlap each other
-
-            $domNodeToSetOverflow.css('overflow-y', 'scroll');
-
-        } else if ($domNodeToSetOverflow.css('overflow-y') === 'scroll') {
-            // undo the overflow as apparently not needed anymore?
-            $domNodeToSetOverflow.css('overflow-y', 'auto');
         }
     },
 
@@ -668,8 +640,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
         var self = this;
         if (typeof self.parentId != "undefined" && self.parentId != '') {
-            // no limit selector for subtables
-            $('.limitSelection', domElem).remove();
             return;
         }
 
@@ -767,7 +737,23 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 return;
             }
 
+            var piwikPeriods = window.CoreHome.Periods;
+            var formatDate = window.CoreHome.format;
+            if (self.param['dateUsedInGraph']) {
+                // this parameter is passed along when switching between periods. So we perfer using
+                // it, to avoid a change in the end date shown in the graph
+                var currentPeriod = piwikPeriods.parse('range', self.param['dateUsedInGraph']);
+            } else {
+                var currentPeriod = piwikPeriods.parse(self.param['period'], self.param['date']);
+            }
+            var endDateOfPeriod = currentPeriod.getDateRange()[1];
+            endDateOfPeriod = formatDate(endDateOfPeriod);
+
+            var newPeriod = piwikPeriods.get(period);
+            $('.periodName', domElem).html(newPeriod.getDisplayText());
+
             self.param['period'] = period;
+            self.param['date'] = endDateOfPeriod;
             self.reloadAjaxDataTable();
         });
     },
@@ -835,7 +821,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
         $.each(patternsToReplace, function (index, pattern) {
             if (0 === currentPattern.indexOf(pattern.to)) {
-                currentPattern = pattern.from + currentPattern.substr(2);
+                currentPattern = pattern.from + currentPattern.slice(2);
             }
         });
 
@@ -877,7 +863,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             $searchAction.find('.icon-search').off('click', searchForPattern);
 
             $searchInput.val('');
-            
+
             if (currentPattern) {
                 // we search for this pattern so if there was a search term before, and someone closes the search
                 // we show all results again
@@ -911,7 +897,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
             $.each(patternsToReplace, function (index, pattern) {
                 if (0 === keyword.indexOf(pattern.from)) {
-                    keyword = pattern.to + keyword.substr(1);
+                    keyword = pattern.to + keyword.slice(1);
                 }
             });
 
@@ -1017,7 +1003,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
     handleEvolutionAnnotations: function (domElem) {
         var self = this;
-        if (self.param.viewDataTable == 'graphEvolution'
+        if ((self.param.viewDataTable === 'graphEvolution' || self.param.viewDataTable === 'graphStackedBarEvolution')
             && $('.annotationView', domElem).length > 0) {
             // get dates w/ annotations across evolution period (have to do it through AJAX since we
             // determine placement using the elements created by jqplot)
@@ -1236,31 +1222,26 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         }
 
         if ((typeof self.numberOfSubtables == 'undefined' || self.numberOfSubtables == 0)
-            && (typeof self.param.flat == 'undefined' || self.param.flat != 1)) {
+            && (typeof self.param.flat == 'undefined' || self.param.flat != 1)
+        ) {
             // if there are no subtables, remove the flatten action
-            $('.dataTableFlatten', domElem).parent().remove();
+            const dataTableActionsVueApp = $('[vue-entry="CoreHome.DataTableActions"]', domElem).data('vueAppInstance');
+            if (dataTableActionsVueApp) {
+              dataTableActionsVueApp.showFlattenTable_ = false;
+            }
         }
 
         var ul = $('ul.tableConfiguration', domElem);
-        function hideConfigurationIcon() {
-            // hide the icon when there are no actions available or we're not in a table view
-            $('.dropdownConfigureIcon', domElem).remove();
-        }
-
         if (!ul.find('li').length) {
-            hideConfigurationIcon();
             return;
         }
-
-        var icon = $('a.dropdownConfigureIcon', domElem);
-        var iconHighlighted = false;
 
         var generateClickCallback = function (paramName, callbackAfterToggle, setParamCallback) {
             return function () {
                 if (setParamCallback) {
                     var data = setParamCallback();
                 } else {
-                    self.param[paramName] = (1 - self.param[paramName]) + '';
+                    self.param[paramName] = (1 - (self.param[paramName] || 0)) + '';
                     var data = {};
                 }
                 self.param.filter_offset = 0;
@@ -1272,70 +1253,19 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             };
         };
 
-        var getText = function (text, addDefault, replacement) {
-            if (/(%(.\$)?s+)/g.test(_pk_translate(text))) {
-                var values = ['<br /><span class="action">'];
-                if(replacement) {
-                    values.push(replacement);
-                }
-                text = _pk_translate(text, values);
-                if (addDefault) text += ' (' + _pk_translate('CoreHome_Default') + ')';
-                text += '</span>';
-                return text;
-            }
-            return _pk_translate(text);
-        };
-
-        var setText = function (el, paramName, textA, textB) {
-            if (typeof self.param[paramName] != 'undefined' && self.param[paramName] == 1) {
-                $(el).html(getText(textA, true));
-                iconHighlighted = true;
-            }
-            else {
-                self.param[paramName] = 0;
-                $(el).html(getText(textB));
-            }
-        };
-
         // handle low population
         $('.dataTableExcludeLowPopulation', domElem)
-            .each(function () {
-                // Set the text, either "Exclude low pop" or "Include all"
-                if (typeof self.param.enable_filter_excludelowpop == 'undefined') {
-                    self.param.enable_filter_excludelowpop = 0;
-                }
-                if (Number(self.param.enable_filter_excludelowpop) != 0) {
-                    var string = getText('CoreHome_IncludeRowsWithLowPopulation', true);
-                    self.param.enable_filter_excludelowpop = 1;
-                    iconHighlighted = true;
-                }
-                else {
-                    var string = getText('CoreHome_ExcludeRowsWithLowPopulation');
-                    self.param.enable_filter_excludelowpop = 0;
-                }
-                $(this).html(string);
-            })
             .click(generateClickCallback('enable_filter_excludelowpop'));
 
         // handle flatten
         $('.dataTableFlatten', domElem)
-            .each(function () {
-                setText(this, 'flat', 'CoreHome_UnFlattenDataTable', 'CoreHome_FlattenDataTable');
-            })
             .click(generateClickCallback('flat'));
 
         // handle flatten
         $('.dataTableShowTotalsRow', domElem)
-            .each(function () {
-                setText(this, 'keep_totals_row', 'CoreHome_RemoveTotalsRowDataTable', 'CoreHome_AddTotalsRowDataTable');
-            })
             .click(generateClickCallback('keep_totals_row'));
 
         $('.dataTableIncludeAggregateRows', domElem)
-            .each(function () {
-                setText(this, 'include_aggregate_rows', 'CoreHome_DataTableExcludeAggregateRows',
-                    'CoreHome_DataTableIncludeAggregateRows');
-            })
             .click(generateClickCallback('include_aggregate_rows', function () {
                 if (self.param.include_aggregate_rows == 1) {
                     // when including aggregate rows is enabled, we remove the sorting
@@ -1346,25 +1276,10 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             }));
 
         $('.dataTableShowDimensions', domElem)
-            .each(function () {
-                setText(this, 'show_dimensions', 'CoreHome_DataTableCombineDimensions',
-                    'CoreHome_DataTableShowDimensions');
-            })
             .click(generateClickCallback('show_dimensions'));
 
         // handle pivot by
         $('.dataTablePivotBySubtable', domElem)
-            .each(function () {
-                if (self.param.pivotBy
-                    && self.param.pivotBy != '0'
-                ) {
-                    $(this).html(getText('CoreHome_UndoPivotBySubtable', true));
-                    iconHighlighted = true;
-                } else {
-                    var optionLabelText = getText('CoreHome_PivotBySubtable', false, self.props.pivot_dimension_name);
-                    $(this).html(optionLabelText);
-                }
-            })
             .click(generateClickCallback('pivotBy', null, function () {
                 if (self.param.pivotBy
                     && self.param.pivotBy != '0'
@@ -1382,19 +1297,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 self.param.filter_sort_column = '';
                 return {filter_sort_column: ''};
             }));
-
-        // handle highlighted icon
-        if (iconHighlighted) {
-            icon.addClass('highlighted');
-        }
-
-        if (!iconHighlighted
-            && !(self.param.viewDataTable == 'table'
-            || self.param.viewDataTable == 'tableAllColumns'
-            || self.param.viewDataTable == 'tableGoals')) {
-            hideConfigurationIcon();
-            return;
-        }
     },
 
     notifyWidgetParametersChange: function (domWidget, parameters) {
@@ -1465,37 +1367,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
     },
 
     handleColumnHighlighting: function (domElem) {
-        var maxWidth = {};
+
         var currentNthChild = null;
         var self = this;
 
-        // give all values consistent width
-        $('td', domElem).each(function () {
-            var $this = $(this);
-            if ($this.hasClass('label')) {
-                return;
-            }
-
-            var table    = $this.closest('table');
-            var nthChild = $this.parent('tr').children().index($(this)) + 1;
-            var rows     = $('> tbody > tr', table);
-
-            if (!maxWidth[nthChild]) {
-                maxWidth[nthChild] = 0;
-                rows.find("td:nth-child(" + (nthChild) + ").column .value").add('> thead th:not(.label) .thDIV', table).each(function (index, element) {
-                    var width = $(element).width();
-                    if (width > maxWidth[nthChild]) {
-                        maxWidth[nthChild] = width;
-                    }
-                });
-                rows.find("td:nth-child(" + (nthChild) + ").column .value").each(function (index, element) {
-                    $(element).closest('td').css({width: maxWidth[nthChild]});
-                });
-            }
-        });
-
-        // higlight all columns on hover
-        $(domElem).on('mouseenter', 'td', function (e) {
+        // highlight all columns on hover
+        $(domElem).on('mouseenter', 'td:not(.cellSubDataTable)', function (e) {
             e.stopPropagation();
             var $this = $(e.target);
             if ($this.hasClass('label')) {
@@ -1636,12 +1513,14 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         $('th:has(.columnDocumentation)', domElem).each(function () {
             var th = $(this);
             var tooltip = th.find('.columnDocumentation');
-            
+
             tooltip.next().hover(function () {
                 var left = (-1 * tooltip.outerWidth() / 2) + th.width() / 2;
                 var top = -1 * tooltip.outerHeight();
-
                 var thPos = th.position();
+                var distance = tooltip.parent().offset().top;
+                var scroller = tooltip.closest('.dataTableScroller');
+
                 var thPosTop = 0;
 
                 if (thPos && thPos.top) {
@@ -1652,8 +1531,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 // headline
                 top = top + thPosTop;
 
+                if ($(window).scrollTop() >= distance - 100 || scroller.css('overflow-x')==='scroll') {
+                      top = tooltip.parent().outerHeight()
+                }
+
                 if (!th.next().length) {
-                    left = (-1 * tooltip.outerWidth()) + th.width() +
+                      left = (-1 * tooltip.outerWidth()) + th.width() +
                         parseInt(th.css('padding-right'), 10);
                 }
 
@@ -1667,10 +1550,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                     top: 0
                 });
 
+                $(".dataTable thead").addClass('with-z-index');
                 tooltip.stop(true, true).fadeIn(250);
             },
             function () {
-                $(this).prev().stop(true, true).fadeOut(400);
+              $(this).prev().stop(true, true).fadeOut(250);
+              $(".dataTable thead").removeClass('with-z-index');
             });
         });
     },
@@ -1739,7 +1624,17 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 if (scope) {
                     var $doc = domElem.find('.reportDocumentation');
                     if ($doc.length) {
+                        // hackish solution to get binded html of p tag within the help node
+                        // at this point the ng-bind-html is not yet converted into html when report is not
+                        // initially loaded. Using $compile doesn't work. So get and set it manually
+                        var helpParagraph = $doc.attr('data-content');
+
+                        if (helpParagraph.length) {
+                            helpParagraph.html(window.vueSanitize(helpParagraph));
+                        }
+
                         scope.inlineHelp = $.trim($doc.html());
+
                     }
                     scope.featureName = $.trim(relatedReportName);
                     setTimeout(function (){
@@ -1817,7 +1712,8 @@ $.extend(DataTable.prototype, UIControl.prototype, {
     },
 
     handleSummaryRow: function (domElem) {
-        var details = _pk_translate('General_LearnMore', [' (<a href="https://matomo.org/faq/how-to/faq_54/" rel="noreferrer noopener" target="_blank">', '</a>)']);
+        var details = _pk_translate('General_LearnMore', [' (<a href="'
+        + _pk_externalRawLink('https://matomo.org/faq/how-to/faq_54/') + '" rel="noreferrer noopener" target="_blank">', '</a>)']);
 
         domElem.find('tr.summaryRow').each(function () {
             var labelSpan = $(this).find('.label .value').filter(function(index, elem){
@@ -1839,7 +1735,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         if (!trs || !trs.length || !trs[0]) {
             return;
         }
-        var parent = $(trs[0]).parents('table');
+        var parent = $(trs[0]).closest('table');
 
         var self = this;
 
@@ -1974,6 +1870,20 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                     items: 'a',
                     content: '<h3>'+action.dataTableIconTooltip[0]+'</h3>'+action.dataTableIconTooltip[1],
                     tooltipClass: 'rowActionTooltip',
+                    // ensure the tooltips of parent elements are hidden when the action tooltip is shown
+                    // otherwise it can happen that tooltips for subtable rows are shown as well.
+                    open: function() {
+                        var tooltip = $(this).parents('.matomo-widget').tooltip('instance');
+                        if (tooltip) {
+                            tooltip.disable();
+                        }
+                    },
+                    close: function() {
+                        var tooltip = $(this).parents('.matomo-widget').tooltip('instance');
+                        if (tooltip) {
+                            tooltip.enable();
+                        }
+                    },
                     show: false,
                     hide: false
                 });

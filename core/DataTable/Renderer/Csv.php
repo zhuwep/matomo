@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -151,7 +151,7 @@ class Csv extends Renderer
             // when in xml we would output <result date="2008-01-15" />
             if (!empty($returned)) {
                 foreach ($returned as &$row) {
-                    $row = $currentLinePrefix . $this->separator . $row;
+                    $row = $this->formatValue($currentLinePrefix) . $this->separator . $row;
                 }
                 $str .= "\n" . implode("\n", $returned);
             }
@@ -179,7 +179,7 @@ class Csv extends Renderer
             $row = $table->getFirstRow();
             if ($row !== false) {
                 $columnNameToValue = $row->getColumns();
-                if (count($columnNameToValue) == 1) {
+                if (count($columnNameToValue) === 1) {
                     // simple tables should only have one column, the value
                     $allColumns['value'] = true;
 
@@ -191,15 +191,6 @@ class Csv extends Renderer
         }
 
         $csv = $this->makeArrayFromDataTable($table, $allColumns);
-
-        // now we make sure that all the rows in the CSV array have all the columns
-        foreach ($csv as &$row) {
-            foreach ($allColumns as $columnName => $true) {
-                if (!isset($row[$columnName])) {
-                    $row[$columnName] = '';
-                }
-            }
-        }
 
         $str = $this->buildCsvString($allColumns, $csv);
         return $str;
@@ -236,23 +227,31 @@ class Csv extends Renderer
      * @param mixed $value
      * @return string
      */
-    protected function formatValue($value)
+    public function formatValue($value)
     {
-        if (is_string($value)
+        if (
+            is_string($value)
             && !is_numeric($value)
         ) {
-            $value = html_entity_decode($value, ENT_COMPAT, 'UTF-8');
+            $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
         } elseif ($value === false) {
             $value = 0;
         }
 
         $value = $this->formatFormulas($value);
 
-        if (is_string($value)
-            && (strpos($value, '"') !== false
-                || strpos($value, $this->separator) !== false)
-        ) {
-            $value = '"' . str_replace('"', '""', $value) . '"';
+        if (is_string($value)) {
+            $value = str_replace(["\t"], ' ', $value);
+
+            // surround value with double quotes if it contains a double quote or a commonly used separator
+            if (
+                strpos($value, '"') !== false
+                || strpos($value, $this->separator) !== false
+                || strpos($value, ',') !== false
+                || strpos($value, ';') !== false
+            ) {
+                $value = '"' . str_replace('"', '""', $value) . '"';
+            }
         }
 
         // in some number formats (e.g. German), the decimal separator is a comma
@@ -273,7 +272,8 @@ class Csv extends Renderer
         // remove first % sign and if string is still a number, return it as is
         $valueWithoutFirstPercentSign = $this->removeFirstPercentSign($value);
 
-        if (empty($valueWithoutFirstPercentSign)
+        if (
+            empty($valueWithoutFirstPercentSign)
             || !is_string($value)
             || is_numeric($valueWithoutFirstPercentSign)) {
             return $value;
@@ -300,7 +300,7 @@ class Csv extends Renderer
         if ($period || $date) {
             // in test cases, there are no request params set
 
-            if ($period == 'range') {
+            if ($period === 'range') {
                 $period = new Range($period, $date);
             } elseif (strpos($date, ',') !== false) {
                 $period = new Range('range', $date);
@@ -311,13 +311,14 @@ class Csv extends Renderer
             $prettyDate = $period->getLocalizedLongString();
 
             $meta = $this->getApiMetaData();
+            $name = !empty($meta['name']) ? $meta['name'] : '';
 
-            $fileName .= ' _ ' . $meta['name']
+            $fileName .= ' _ ' . $name
                 . ' _ ' . $prettyDate . '.csv';
         }
 
         // silent fail otherwise unit tests fail
-        Common::sendHeader('Content-Disposition: attachment; filename="' . $fileName . '"', true);
+        Common::sendHeader("Content-Disposition: attachment; filename*=UTF-8''" . rawurlencode($fileName), true);
         ProxyHttp::overrideCacheControlHeaders();
     }
 
@@ -335,11 +336,12 @@ class Csv extends Renderer
                 // format becomes a bit more complicated. also in this case, we assume $value is not
                 // nested beyond 2 levels (ie, array(0 => array(0 => 1, 1 => 2)), but not array(
                 // 0 => array(0 => array(), 1 => array())) )
-                if ($this->translateColumnNames
+                if (
+                    $this->translateColumnNames
                     && is_array(reset($value))
                 ) {
                     foreach ($value as $level1Key => $level1Value) {
-                        $inner = $name == 'goals' ? Piwik::translate('Goals_GoalX', $level1Key) : $name . ' ' . $level1Key;
+                        $inner = $name === 'goals' ? Piwik::translate('Goals_GoalX', $level1Key) : $name . ' ' . $level1Key;
                         $columnNameTemplate = '%s (' . $inner . ')';
 
                         $this->flattenColumnArray($level1Value, $csvRow, $columnNameTemplate);
@@ -375,7 +377,8 @@ class Csv extends Renderer
 
         // specific case, we have only one column and this column wasn't named properly (indexed by a number)
         // we don't print anything in the CSV file => an empty line
-        if (sizeof($allColumns) == 1
+        if (
+            sizeof($allColumns) === 1
             && reset($allColumns)
             && !is_string(key($allColumns))
         ) {
@@ -389,7 +392,7 @@ class Csv extends Renderer
         foreach ($csv as $theRow) {
             $rowStr = '';
             foreach ($allColumns as $columnName => $true) {
-                $rowStr .= $this->formatValue($theRow[$columnName]) . $this->separator;
+                $rowStr .= $this->formatValue($theRow[$columnName] ?? '') . $this->separator;
             }
             // remove the last separator
             $rowStr = substr_replace($rowStr, "", -strlen($this->separator));
@@ -413,7 +416,7 @@ class Csv extends Renderer
             if ($this->exportMetadata) {
                 $metadata = $row->getMetadata();
                 foreach ($metadata as $name => $value) {
-                    if ($name == 'idsubdatatable_in_db') {
+                    if ($name === 'idsubdatatable_in_db') {
                         continue;
                     }
                     //if a metadata and a column have the same name make sure they don't overwrite
@@ -423,7 +426,8 @@ class Csv extends Renderer
                         $name = 'metadata_' . $name;
                     }
 
-                    if (is_array($value)
+                    if (
+                        is_array($value)
                         || is_object($value)
                     ) {
                         if (!in_array($name, $this->unsupportedColumns)) {
@@ -432,7 +436,6 @@ class Csv extends Renderer
                     } else {
                         $csvRow[$name] = $value;
                     }
-
                 }
             }
 
@@ -446,7 +449,8 @@ class Csv extends Renderer
 
             if ($this->exportIdSubtable) {
                 $idsubdatatable = $row->getIdSubDataTable();
-                if ($idsubdatatable !== false
+                if (
+                    $idsubdatatable !== false
                     && $this->hideIdSubDatatable === false
                 ) {
                     $csvRow['idsubdatatable'] = $idsubdatatable;
@@ -473,7 +477,8 @@ class Csv extends Renderer
      */
     private function convertToUnicode($str)
     {
-        if ($this->convertToUnicode
+        if (
+            $this->convertToUnicode
             && function_exists('mb_convert_encoding')
         ) {
             $str = chr(255) . chr(254) . mb_convert_encoding($str, 'UTF-16LE', 'UTF-8');
@@ -488,7 +493,7 @@ class Csv extends Renderer
     protected function removeFirstPercentSign($value)
     {
         $needle = '%';
-        $posPercent = strpos($value, $needle);
+        $posPercent = strpos($value ?? '', $needle);
         if ($posPercent !== false) {
             return substr_replace($value, '', $posPercent, strlen($needle));
         }

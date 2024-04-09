@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * row evolution screenshot tests
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -48,7 +48,10 @@ describe("RowEvolution", function () {
     });
 
     it('should load multi-row evolution correctly', async function() {
-        await page.click('.rowevolution-startmulti');
+        await page.evaluate(function() {
+            $('.rowevolution-startmulti').click();
+        });
+        await page.waitForFunction("$('.ui-dialog').length === 0");
 
         const row = await page.waitForSelector('tbody tr:nth-child(2)');
         await row.hover();
@@ -76,8 +79,8 @@ describe("RowEvolution", function () {
         expect(await dialog.screenshot()).to.matchImage('multirow_evolution_other_metric');
     });
 
-    it('should display row evolution for an ecommerce item report correctly', async function() {
-        await page.goto(ecommerceItemReportWidgetized);
+    it('should load row evolution for goals view', async function() {
+        await page.goto(viewDataTableUrl + '&forceView=1&viewDataTable=tableGoals');
         const row = await page.waitForSelector('tbody tr:first-child');
         await row.hover();
 
@@ -86,6 +89,35 @@ describe("RowEvolution", function () {
 
         await page.waitForSelector('.ui-dialog');
         await page.waitForNetworkIdle();
+
+        const dialog = await page.$('.ui-dialog');
+        expect(await dialog.screenshot()).to.matchImage('row_evolution_goal_view');
+    });
+
+    it('should load row evolution with goal metrics again when reloading the page url', async function() {
+        // page.reload() won't work with url hashes
+        const url = await page.evaluate('location.href');
+        await page.goto('about:blank');
+        await page.goto(url);
+
+        await page.waitForSelector('.ui-dialog');
+        await page.waitForNetworkIdle();
+
+        const dialog = await page.$('.ui-dialog');
+        expect(await dialog.screenshot()).to.matchImage('row_evolution_goal_view_reload');
+    });
+
+    it('should display row evolution for an ecommerce item report correctly', async function() {
+        await page.goto(ecommerceItemReportWidgetized);
+        const row = await page.waitForSelector('tbody tr:first-child');
+        await row.hover();
+
+        const icon = await page.waitForSelector('tbody tr:first-child a.actionRowEvolution');
+        await icon.click();
+
+        await page.waitForSelector('.ui-dialog', { visible: true });
+        await page.waitForNetworkIdle();
+        await page.waitForTimeout(250); // wait till annotations are rendered
 
         const dialog = await page.$('.ui-dialog');
         expect(await dialog.screenshot()).to.matchImage('row_evolution_ecommerce_item');

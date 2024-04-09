@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -21,7 +21,7 @@ use Piwik\Plugins\VisitsSummary\Reports\Get;
 class VisitsSummary extends \Piwik\Plugin
 {
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
@@ -58,7 +58,8 @@ class VisitsSummary extends \Piwik\Plugin
         /** @var DataTable|DataTable\Map $dataTable */
         $dataTable = $response['reportData'];
 
-        if (!$userId->hasDataTableUsers($dataTable) &&
+        if (
+            !$userId->hasDataTableUsers($dataTable) &&
             !$userId->isUsedInAtLeastOneSite($idSites, $period, $date)) {
             $report = new Get();
             $report->removeUsersFromProcessedReport($response);
@@ -69,6 +70,4 @@ class VisitsSummary extends \Piwik\Plugin
     {
         $stylesheets[] = "plugins/VisitsSummary/stylesheets/datatable.less";
     }
-
 }
-

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik;
 
 use Exception;
-use Piwik\DataAccess\TableMetadata;
 use Piwik\Db\Adapter;
 
 /**
@@ -40,6 +39,8 @@ class Db
 
     private static $logQueries = true;
 
+    // this is used for indicate TransactionLevel Cache
+    public $supportsUncommitted;
     /**
      * Returns the database connection and creates it if it hasn't been already.
      *
@@ -184,6 +185,10 @@ class Db
 
         $db = @Adapter::factory($dbConfig['adapter'], $dbConfig);
 
+        if (!empty($dbConfig['aurora_readonly_read_committed'])) {
+            $db->exec('set session aurora_read_replica_read_committed = ON;set session transaction isolation level read committed;');
+        }
+
         self::$readerConnection = $db;
     }
 
@@ -277,6 +282,49 @@ class Db
         } catch (Exception $ex) {
             self::logExtraInfoIfDeadlock($ex);
             throw $ex;
+        }
+    }
+
+    /**
+     * Executes a callback with potential recovery from a "MySQL server has gone away" error.
+     *
+     * If the callback throws a "MySQL server has gone away" exception
+     * it will be called again after a single reconnection attempt.
+     *
+     * @param callable $callback
+     *
+     * @return mixed
+     *
+     * @throws Exception
+     *
+     * @internal
+     */
+    public static function executeWithDatabaseWriterReconnectionAttempt(callable $callback)
+    {
+        try {
+            return $callback();
+        } catch (Exception $ex) {
+            // only attempt reconnection in a reader/writer configuration
+            if (!self::hasReaderConfigured()) {
+                throw $ex;
+            }
+
+            // only attempt reconnection if we encounter a "server has gone away" error
+            if (
+                !self::get()->isErrNo($ex, Updater\Migration\Db::ERROR_CODE_MYSQL_SERVER_HAS_GONE_AWAY)
+                && false === stripos($ex->getMessage(), 'server has gone away')
+            ) {
+                throw $ex;
+            }
+
+            // reconnect and retry query
+            // after a 100ms wait (to avoid re-hitting a network problem immediately)
+            self::$connection = null;
+
+            usleep(100 * 1000);
+            self::createDatabaseObject();
+
+            return $callback();
         }
     }
 
@@ -416,13 +464,14 @@ class Db
      * @param string|array $tables The name of the table to optimize or an array of tables to optimize.
      *                             Table names must be prefixed (see {@link Piwik\Common::prefixTable()}).
      * @param bool $force If true, the `OPTIMIZE TABLE` query will be run even if InnoDB tables are being used.
-     * @return \Zend_Db_Statement
+     * @return bool
      */
     public static function optimizeTables($tables, $force = false)
     {
         $optimize = Config::getInstance()->General['enable_sql_optimize_queries'];
 
-        if (empty($optimize)
+        if (
+            empty($optimize)
             && !$force
         ) {
             return false;
@@ -436,13 +485,15 @@ class Db
             $tables = array($tables);
         }
 
-        if (!self::isOptimizeInnoDBSupported()
+        if (
+            !self::isOptimizeInnoDBSupported()
             && !$force
         ) {
             // filter out all InnoDB tables
             $myisamDbTables = array();
             foreach (self::getTableStatus() as $row) {
-                if (strtolower($row['Engine']) == 'myisam'
+                if (
+                    strtolower($row['Engine']) == 'myisam'
                     && in_array($row['Name'], $tables)
                 ) {
                     $myisamDbTables[] = $row['Name'];
@@ -457,7 +508,15 @@ class Db
         }
 
         // optimize the tables
-        return self::query("OPTIMIZE TABLE " . implode(',', $tables));
+        $success = true;
+        foreach ($tables as &$t) {
+            $ok = self::query('OPTIMIZE TABLE ' . $t);
+            if (!$ok) {
+                $success = false;
+            }
+        }
+
+        return $success;
     }
 
     private static function getTableStatus()
@@ -488,19 +547,6 @@ class Db
     {
         $tablesAlreadyInstalled = DbHelper::getTablesInstalled();
         self::dropTables($tablesAlreadyInstalled);
-    }
-
-    /**
-     * Get columns information from table
-     *
-     * @param string|array $table The name of the table you want to get the columns definition for.
-     * @return \Zend_Db_Statement
-     * @deprecated since 2.11.0
-     */
-    public static function getColumnNamesFromTable($table)
-    {
-        $tableMetadataAccess = new TableMetadata();
-        return $tableMetadataAccess->getColumns($table);
     }
 
     /**
@@ -786,7 +832,7 @@ class Db
     {
         if (is_null(self::$lockPrivilegeGranted)) {
             try {
-                Db::lockTables(Common::prefixTable('log_visit'));
+                Db::lockTables(Common::prefixTable('site_url'));
                 Db::unlockAllTables();
 
                 self::$lockPrivilegeGranted = true;
@@ -800,7 +846,8 @@ class Db
 
     private static function logExtraInfoIfDeadlock($ex)
     {
-        if (!self::get()->isErrNo($ex, 1213)
+        if (
+            !self::get()->isErrNo($ex, 1213)
             && !self::get()->isErrNo($ex, 1205)
         ) {
             return;
@@ -818,7 +865,10 @@ class Db
 
     private static function logSql($functionName, $sql, $parameters = array())
     {
-        if (self::$logQueries === false
+        self::checkBoundParametersIfInDevMode($sql, $parameters);
+
+        if (
+            self::$logQueries === false
             || @Config::getInstance()->Debug['log_sql_queries'] != 1
         ) {
             return;
@@ -826,6 +876,23 @@ class Db
 
         // NOTE: at the moment we don't log parameters in order to avoid sensitive information leaks
         Log::debug("Db::%s() executing SQL: %s", $functionName, $sql);
+    }
+
+    private static function checkBoundParametersIfInDevMode($sql, $parameters)
+    {
+        if (!Development::isEnabled()) {
+            return;
+        }
+
+        if (!is_array($parameters)) {
+            $parameters = [$parameters];
+        }
+
+        foreach ($parameters as $index => $parameter) {
+            if ($parameter instanceof Date) {
+                throw new \Exception("Found bound parameter (index = $index) is Date instance which will not work correctly in following SQL: $sql");
+            }
+        }
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,7 @@ namespace Piwik\Category;
 use Piwik\Piwik;
 
 /**
- * Base type for category. lets you change the name for a categoryId and specifiy a different order
+ * Base type for category. lets you change the name for a categoryId and specify a different order
  * so the category appears eg at a different order in the reporting menu.
  *
  * This class is for now not exposed as public API until needed. Categories of plugins will be automatically
@@ -42,6 +42,13 @@ class Category
      * @var int
      */
     protected $icon = '';
+
+    /**
+     * Optional widget spec to replace the category in the reporting menu, e.g. Marketplace.RichMenuButton
+     *
+     * @var string
+     */
+    protected $widget = '';
 
     /**
      * @param int $order
@@ -79,7 +86,7 @@ class Category
         $subcategoryId = $subcategory->getId();
 
         if ($this->hasSubcategory($subcategoryId)) {
-            throw new \Exception(sprintf('Subcategory %s already exists', $subcategoryId));
+            throw new \Exception(sprintf('Subcategory %s already exists for category %s', $subcategoryId, $this->getId()));
         }
 
         $this->subcategories[$subcategoryId] = $subcategory;
@@ -121,4 +128,23 @@ class Category
         return $this->icon;
     }
 
+    public function setWidget(string $widget): self
+    {
+        $this->widget = $widget;
+        return $this;
+    }
+
+    public function getWidget(): string
+    {
+        return $this->widget;
+    }
+
+    /**
+     * Get the help text (if any) for this category.
+     * @return null
+     */
+    public function getHelp()
+    {
+        return null;
+    }
 }

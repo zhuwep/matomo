@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\Insights;
 use Piwik\API\Request;
 use Piwik\Common;
 use Piwik\Piwik;
-use Piwik\Plugins\Insights\Visualizations\Insight;
 use Piwik\View;
 
 /**
@@ -19,7 +18,6 @@ use Piwik\View;
  */
 class Controller extends \Piwik\Plugin\Controller
 {
-
     public function __construct()
     {
         parent::__construct();

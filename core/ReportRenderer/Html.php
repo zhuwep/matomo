@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -83,8 +83,15 @@ class Html extends ReportRenderer
 
     public function renderFrontPage($reportTitle, $prettyDate, $description, $reportMetadata, $segment)
     {
-        $frontPageView = new View\HtmlReportEmailHeaderView($reportTitle, $prettyDate, $description, $reportMetadata,
-            $segment, $this->idSite, $this->report['period']);
+        $frontPageView = new View\HtmlReportEmailHeaderView(
+            $reportTitle,
+            $prettyDate,
+            $description,
+            $reportMetadata,
+            $segment,
+            $this->idSite,
+            $this->report['period']
+        );
         $this->rendering .= $frontPageView->render();
     }
 
@@ -176,8 +183,6 @@ class Html extends ReportRenderer
             );
 
         $additionalFile['mimeType'] = 'image/png';
-
-        $additionalFile['encoding'] = \Zend_Mime::ENCODING_BASE64;
 
         return $additionalFile;
     }

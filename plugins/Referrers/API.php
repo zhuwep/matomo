@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,22 +14,19 @@ use Piwik\API\ResponseBuilder;
 use Piwik\Archive;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\DataTable\Filter\ColumnCallbackAddColumnPercentage;
 use Piwik\Date;
 use Piwik\Metrics;
 use Piwik\Piwik;
-use Piwik\Plugin\ReportsProvider;
+use Piwik\Plugins\Referrers\Columns\Metrics\VisitorsFromReferrerPercent;
 use Piwik\Plugins\Referrers\DataTable\Filter\GroupDifferentSocialWritings;
-use Piwik\Plugins\Referrers\Reports\Get;
 use Piwik\Site;
 
 /**
  * The Referrers API lets you access reports about Websites, Search engines, Keywords, Campaigns used to access your website.
  *
- * For example, "getKeywords" returns all search engine keywords (with <a href='http://matomo.org/docs/analytics-api/reference/#toc-metric-definitions' rel='noreferrer' target='_blank'>general analytics metrics</a> for each keyword), "getWebsites" returns referrer websites (along with the full Referrer URL if the parameter &expanded=1 is set).
+ * For example, "getKeywords" returns all search engine keywords (with <a href='https://developer.matomo.org/api-reference/reporting-api#api-response-metric-definitions' rel='noreferrer' target='_blank'>general analytics metrics</a> for each keyword), "getWebsites" returns referrer websites (along with the full Referrer URL if the parameter &expanded=1 is set).
  * "getReferrerType" returns the Referrer overview report. "getCampaigns" returns the list of all campaigns (and all campaign keywords if the parameter &expanded=1 is set).
  *
- * The methods "getKeywordsForPageUrl" and "getKeywordsForPageTitle" are used to output the top keywords used to find a page.
  * @method static \Piwik\Plugins\Referrers\API getInstance()
  */
 class API extends \Piwik\Plugin\API
@@ -55,20 +52,22 @@ class API extends \Piwik\Plugin\API
 
         $totalVisits = array_sum($dataTableReferrersType->getColumn(Metrics::INDEX_NB_VISITS));
 
-        $percentColumns = [
-            'Referrers_visitorsFromDirectEntry',
-            'Referrers_visitorsFromSearchEngines',
-            'Referrers_visitorsFromCampaigns',
-            'Referrers_visitorsFromSocialNetworks',
-            'Referrers_visitorsFromWebsites',
-        ];
-        foreach ($percentColumns as $column) {
-            $dataTable->filter(ColumnCallbackAddColumnPercentage::class, [
-                $column . '_percent',
-                $column,
-                $totalVisits
-            ]);
-        }
+        $dataTable->filter(function (DataTable $table) use ($totalVisits) {
+            $processedMetrics = $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME) ?: [];
+
+            $percentColumns = [
+                'Referrers_visitorsFromDirectEntry',
+                'Referrers_visitorsFromSearchEngines',
+                'Referrers_visitorsFromCampaigns',
+                'Referrers_visitorsFromSocialNetworks',
+                'Referrers_visitorsFromWebsites',
+            ];
+            foreach ($percentColumns as $column) {
+                $processedMetrics[] = new VisitorsFromReferrerPercent($column . '_percent', $column, $totalVisits);
+            }
+
+            $table->setMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME, $processedMetrics);
+        });
 
         if (!empty($requestedColumns)) {
             $requestedColumns = Piwik::getArrayFromApiParameter($columns);
@@ -90,7 +89,7 @@ class API extends \Piwik\Plugin\API
      */
     protected function getDataTable($name, $idSite, $period, $date, $segment, $expanded = false, $idSubtable = null)
     {
-        $dataTable = Archive::createDataTableFromArchive($name, $idSite, $period, $date, $segment, $expanded, $flat=false, $idSubtable);
+        $dataTable = Archive::createDataTableFromArchive($name, $idSite, $period, $date, $segment, $expanded, $flat = false, $idSubtable);
         return $dataTable;
     }
 
@@ -114,9 +113,16 @@ class API extends \Piwik\Plugin\API
      * @param bool $expanded Whether to get report w/ subtables loaded or not.
      * @return DataTable
      */
-    public function getReferrerType($idSite, $period, $date, $segment = false, $typeReferrer = false,
-                                    $idSubtable = false, $expanded = false)
-    {
+    public function getReferrerType(
+        $idSite,
+        $period,
+        $date,
+        $segment = false,
+        $typeReferrer = false,
+        $idSubtable = false,
+        $expanded = false,
+        $_setReferrerTypeLabel = true
+    ) {
         Piwik::checkUserHasViewAccess($idSite);
 
         $this->checkSingleSite($idSite, 'getReferrerType');
@@ -142,9 +148,6 @@ class API extends \Piwik\Plugin\API
             }
 
             if ($result) {
-                $result->filter('ColumnCallbackDeleteMetadata', array('segment'));
-                $result->filter('ColumnCallbackDeleteMetadata', array('segmentValue'));
-
                 return $this->removeSubtableIds($result); // this report won't return subtables of individual reports
             }
         }
@@ -152,7 +155,9 @@ class API extends \Piwik\Plugin\API
         // get visits by referrer type
         $dataTable = $this->getDataTable(Archiver::REFERRER_TYPE_RECORD_NAME, $idSite, $period, $date, $segment);
 
-        if ($typeReferrer !== false) // filter for a specific referrer type
+        // checks for  && $typeReferrer !== 'false' && $typeReferrer !== '0' added to cover intention when
+        // it is passed as a string in a GET or POST parameter
+        if ($typeReferrer !== false && $typeReferrer !== 'false' && $typeReferrer !== '0') // filter for a specific referrer type
         {
             $dataTable->filter('Pattern', array('label', $typeReferrer));
         }
@@ -170,8 +175,12 @@ class API extends \Piwik\Plugin\API
                 Common::REFERRER_TYPE_WEBSITE        => 'website',
             )
         ));
+
         // set referrer type column to readable value
-        $dataTable->queueFilter('ColumnCallbackReplace', array('label', __NAMESPACE__ . '\getReferrerTypeLabel'));
+        if ($_setReferrerTypeLabel == 1) {
+            $dataTable->filter(DataTable\Filter\ColumnCallbackAddMetadata::class, ['label', 'referrer_type']);
+            $dataTable->filter('ColumnCallbackReplace', array('label', __NAMESPACE__ . '\getReferrerTypeLabel'));
+        }
 
         return $dataTable;
     }
@@ -180,7 +189,7 @@ class API extends \Piwik\Plugin\API
     {
         $idSites = Site::getIdSitesFromIdSitesString($idSite);
 
-        if (count($idSites) > 1) {
+        if (count($idSites) > 1 || 'all' === $idSite) {
             throw new Exception("Referrers.$method with multiple sites is not supported (yet).");
         }
     }
@@ -201,6 +210,7 @@ class API extends \Piwik\Plugin\API
             'expanded' => true,
             'disable_generic_filters' => true,
             'disable_queued_filters' => true,
+            '_setReferrerTypeLabel' => 0,
         ], []);
 
         if ($dataTable instanceof DataTable\Map) {
@@ -223,7 +233,7 @@ class API extends \Piwik\Plugin\API
         if ($flat) {
             $dataTable->filterSubtables('Piwik\Plugins\Referrers\DataTable\Filter\SearchEnginesFromKeywordId', array($dataTable));
         } else {
-            $dataTable->filter('AddSegmentValue');
+            $dataTable->filter('AddSegmentByLabel', ['referrerKeyword', '', $allowEmptyValue = true]);
             $dataTable->queueFilter('PrependSegment', array('referrerType==search;'));
         }
 
@@ -250,29 +260,6 @@ class API extends \Piwik\Plugin\API
         return $label == self::LABEL_KEYWORD_NOT_DEFINED
             ? self::getKeywordNotDefinedString()
             : $label;
-    }
-
-    /**
-     * @deprecated will be removed in Matomo 4.0.0
-     */
-    public function getKeywordsForPageUrl($idSite, $period, $date, $url)
-    {
-        // Fetch the Top keywords for this page
-        $segment = 'entryPageUrl==' . $url;
-        $table = $this->getKeywords($idSite, $period, $date, $segment);
-        $this->filterOutKeywordNotDefined($table);
-        return $this->getLabelsFromTable($table);
-    }
-
-    /**
-     * @deprecated will be removed in Matomo 4.0.0
-     */
-    public function getKeywordsForPageTitle($idSite, $period, $date, $title)
-    {
-        $segment = 'entryPageTitle==' . $title;
-        $table = $this->getKeywords($idSite, $period, $date, $segment);
-        $this->filterOutKeywordNotDefined($table);
-        return $this->getLabelsFromTable($table);
     }
 
     /**
@@ -316,7 +303,7 @@ class API extends \Piwik\Plugin\API
 
         $dataTable->filter('Piwik\Plugins\Referrers\DataTable\Filter\SearchEnginesFromKeywordId', array($keywords, $idSubtable));
         $dataTable->filter('AddSegmentByLabel', array('referrerName'));
-        $dataTable->queueFilter('PrependSegment', array('referrerKeyword=='.$keyword.';referrerType==search;'));
+        $dataTable->queueFilter('PrependSegment', array('referrerKeyword==' . $keyword . ';referrerType==search;'));
 
         return $dataTable;
     }
@@ -327,14 +314,41 @@ class API extends \Piwik\Plugin\API
         $dataTable = Archive::createDataTableFromArchive(Archiver::SEARCH_ENGINES_RECORD_NAME, $idSite, $period, $date, $segment, $expanded, $flat);
 
         if ($flat) {
-            $dataTable->filter('ColumnCallbackAddMetadata', array('label', 'url', function ($url) { return SearchEngine::getInstance()->getUrlFromName($url); }));
-            $dataTable->filter('MetadataCallbackAddMetadata', array('url', 'logo', function ($url) { return SearchEngine::getInstance()->getLogoFromUrl($url); }));
-            $dataTable->filterSubtables('Piwik\Plugins\Referrers\DataTable\Filter\KeywordsFromSearchEngineId', array($dataTable));
+            $dataTable->filter('ColumnCallbackAddMetadata', array(
+                'label',
+                'url',
+                function ($url) {
+                    return SearchEngine::getInstance()->getUrlFromName($url);
+                }
+            ));
+            $dataTable->filter('MetadataCallbackAddMetadata', array(
+                'url',
+                'logo',
+                function ($url) {
+                    return SearchEngine::getInstance()->getLogoFromUrl($url);
+                }
+            ));
+            $dataTable->filterSubtables(
+                'Piwik\Plugins\Referrers\DataTable\Filter\KeywordsFromSearchEngineId',
+                array($dataTable)
+            );
         } else {
             $dataTable->filter('AddSegmentByLabel', array('referrerName'));
             $dataTable->queueFilter('PrependSegment', array('referrerType==search;'));
-            $dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'url', function ($url) { return SearchEngine::getInstance()->getUrlFromName($url); }));
-            $dataTable->queueFilter('MetadataCallbackAddMetadata', array('url', 'logo', function ($url) { return SearchEngine::getInstance()->getLogoFromUrl($url); }));
+            $dataTable->queueFilter('ColumnCallbackAddMetadata', array(
+                'label',
+                'url',
+                function ($url) {
+                    return SearchEngine::getInstance()->getUrlFromName($url);
+                }
+            ));
+            $dataTable->queueFilter('MetadataCallbackAddMetadata', array(
+                'url',
+                'logo',
+                function ($url) {
+                    return SearchEngine::getInstance()->getLogoFromUrl($url);
+                }
+            ));
         }
 
         return $dataTable;
@@ -343,16 +357,21 @@ class API extends \Piwik\Plugin\API
     public function getKeywordsFromSearchEngineId($idSite, $period, $date, $idSubtable, $segment = false)
     {
         Piwik::checkUserHasViewAccess($idSite);
+
         $dataTable = $this->getDataTable(Archiver::SEARCH_ENGINES_RECORD_NAME, $idSite, $period, $date, $segment, $expanded = false, $idSubtable);
 
         // get the search engine and create the URL to the search result page
         $searchEngines = $this->getSearchEngines($idSite, $period, $date, $segment);
         $searchEngines->applyQueuedFilters();
-        $searchEngine  = $searchEngines->getRowFromIdSubDataTable($idSubtable)->getColumn('label');
+        $row  = $searchEngines->getRowFromIdSubDataTable($idSubtable);
 
         $dataTable->filter('Piwik\Plugins\Referrers\DataTable\Filter\KeywordsFromSearchEngineId', array($searchEngines, $idSubtable));
-        $dataTable->filter('AddSegmentByLabel', array('referrerKeyword'));
-        $dataTable->queueFilter('PrependSegment', array('referrerName=='.$searchEngine.';referrerType==search;'));
+        $dataTable->filter('AddSegmentByLabel', ['referrerKeyword']);
+
+        if (!empty($row)) {
+            $searchEngine = $row->getColumn('label');
+            $dataTable->queueFilter('PrependSegment', ['referrerName==' . $searchEngine . ';referrerType==search;']);
+        }
 
         return $dataTable;
     }
@@ -373,11 +392,12 @@ class API extends \Piwik\Plugin\API
         Piwik::checkUserHasViewAccess($idSite);
         $campaigns = $this->getCampaigns($idSite, $period, $date, $segment);
         $campaigns->applyQueuedFilters();
-        $campaign  = $campaigns->getRowFromIdSubDataTable($idSubtable)->getColumn('label');
+        $row = $campaigns->getRowFromIdSubDataTable($idSubtable);
+        $campaign = $row ? $row->getColumn('label') : '';
 
         $dataTable = $this->getDataTable(Archiver::CAMPAIGNS_RECORD_NAME, $idSite, $period, $date, $segment, $expanded = false, $idSubtable);
         $dataTable->filter('AddSegmentByLabel', array('referrerKeyword'));
-        $dataTable->queueFilter('PrependSegment', array('referrerName=='.$campaign.';referrerType==campaign;'));
+        $dataTable->queueFilter('PrependSegment', array('referrerName==' . $campaign . ';referrerType==campaign;'));
         return $dataTable;
     }
 
@@ -400,7 +420,7 @@ class API extends \Piwik\Plugin\API
         Piwik::checkUserHasViewAccess($idSite);
         $dataTable = $this->getDataTable(Archiver::WEBSITES_RECORD_NAME, $idSite, $period, $date, $segment, $expanded = false, $idSubtable);
         $dataTable->filter('Piwik\Plugins\Referrers\DataTable\Filter\UrlsFromWebsiteId');
-        $dataTable->filter('MetadataCallbackAddMetadata', array('url', 'segment', function($url) {
+        $dataTable->filter('MetadataCallbackAddMetadata', array('url', 'segment', function ($url) {
             return 'referrerUrl==' . urlencode($url);
         }));
 
@@ -433,14 +453,23 @@ class API extends \Piwik\Plugin\API
 
         $dataTable = $this->completeSocialTablesWithOldReports($dataTable, $idSite, $period, $date, $segment, $expanded, $flat);
 
-        $dataTable->filter('MetadataCallbackAddMetadata', array('url', 'logo', function ($url) { return Social::getInstance()->getLogoFromUrl($url); }));
+        $dataTable->filter('MetadataCallbackAddMetadata', array(
+            'url',
+            'logo',
+            function ($url) {
+                return Social::getInstance()->getLogoFromUrl($url);
+            }
+        ));
+
+        $dataTable->filter('AddSegmentByLabel', array('referrerName'));
+        $dataTable->queueFilter('PrependSegment', array('referrerType==social;'));
 
         return $dataTable;
     }
 
     private function completeSocialTablesWithOldReports($dataTable, $idSite, $period, $date, $segment, $expanded, $flat)
     {
-        return $this->combineDataTables($dataTable, function() use ($idSite, $period, $date, $segment, $expanded, $flat) {
+        return $this->combineDataTables($dataTable, function () use ($idSite, $period, $date, $segment, $expanded, $flat) {
             $dataTableFiltered = Archive::createDataTableFromArchive(Archiver::WEBSITES_RECORD_NAME, $idSite, $period, $date, $segment, $expanded, false);
 
             $this->filterWebsitesForSocials($dataTableFiltered, $idSite, $period, $date, $segment, $expanded, $flat);
@@ -533,7 +562,7 @@ class API extends \Piwik\Plugin\API
             $dataTable = $dataTable->mergeSubtables();
         }
 
-        $dataTable = $this->combineDataTables($dataTable, function() use ($idSite, $period, $date, $segment, $idSubtable) {
+        $dataTable = $this->combineDataTables($dataTable, function () use ($idSite, $period, $date, $segment, $idSubtable) {
             $dataTableFiltered = $this->getDataTable(Archiver::WEBSITES_RECORD_NAME, $idSite, $period, $date, $segment, $expanded = true);
 
             $socialNetworks = array_values(Social::getInstance()->getDefinitions());
@@ -723,20 +752,22 @@ class API extends \Piwik\Plugin\API
     {
         if ($table instanceof DataTable) {
             $nameToColumnId = array(
-                'Referrers_visitorsFromSearchEngines'  => Common::REFERRER_TYPE_SEARCH_ENGINE,
-                'Referrers_visitorsFromSocialNetworks' => Common::REFERRER_TYPE_SOCIAL_NETWORK,
-                'Referrers_visitorsFromDirectEntry'    => Common::REFERRER_TYPE_DIRECT_ENTRY,
-                'Referrers_visitorsFromWebsites'       => Common::REFERRER_TYPE_WEBSITE,
-                'Referrers_visitorsFromCampaigns'      => Common::REFERRER_TYPE_CAMPAIGN,
+                Common::REFERRER_TYPE_SEARCH_ENGINE => 'Referrers_visitorsFromSearchEngines',
+                Common::REFERRER_TYPE_SOCIAL_NETWORK => 'Referrers_visitorsFromSocialNetworks',
+                Common::REFERRER_TYPE_DIRECT_ENTRY => 'Referrers_visitorsFromDirectEntry',
+                Common::REFERRER_TYPE_WEBSITE => 'Referrers_visitorsFromWebsites',
+                Common::REFERRER_TYPE_CAMPAIGN => 'Referrers_visitorsFromCampaigns',
             );
 
-            $newRow = array();
-            foreach ($nameToColumnId as $nameVar => $columnId) {
-                $value = 0;
-                $row = $table->getRowFromLabel($columnId);
-                if ($row !== false) {
-                    $value = $row->getColumn(Metrics::INDEX_NB_VISITS);
+            $newRow = array_fill_keys(array_values($nameToColumnId), 0);
+            foreach ($table->getRows() as $row) {
+                $referrerType = $row->getMetadata('referrer_type');
+                if (empty($nameToColumnId[$referrerType])) {
+                    continue;
                 }
+
+                $nameVar = $nameToColumnId[$referrerType];
+                $value = $row->getColumn(Metrics::INDEX_NB_VISITS);
                 $newRow[$nameVar] = $value;
             }
 
@@ -747,8 +778,12 @@ class API extends \Piwik\Plugin\API
             $result = new DataTable\Map();
             $result->setKeyName($table->getKeyName());
             foreach ($table->getDataTables() as $label => $childTable) {
-                $referrerTypeTable = $this->createReferrerTypeTable($childTable);
-                $result->addTable($referrerTypeTable, $label);
+                if ($childTable->getRowsCount() > 0) {
+                    $referrerTypeTable = $this->createReferrerTypeTable($childTable);
+                    $result->addTable($referrerTypeTable, $label);
+                } else {
+                    $result->addTable(new DataTable(), $label);
+                }
             }
         } else {
             throw new \Exception("Unexpected DataTable type: " . get_class($table)); // sanity check
@@ -766,12 +801,12 @@ class API extends \Piwik\Plugin\API
 
             $table->setAllTableMetadata($numericArchives->getAllTableMetadata());
 
-            if ($table->getRows() == 0) {
-                $table->addRow(new DataTable\Row());
-            }
-
             if ($numericArchives->getRowsCount() == 0) {
                 return;
+            }
+
+            if ($table->getRowsCountWithoutSummaryRow() == 0) {
+                $table->addRow(new DataTable\Row());
             }
 
             $row = $table->getFirstRow();

@@ -1,11 +1,11 @@
 <?php
 
-use \Piwik\Tracker\Request;
-use \Piwik\Tracker\Failures;
+use Piwik\Tracker\Request;
+use Piwik\Tracker\Failures;
 
 return array(
 
-    'Piwik\Tracker\Failures' => DI\decorate(function ($previous) {
+    'Piwik\Tracker\Failures' => Piwik\DI::decorate(function ($previous) {
         /** @var Failures $previous */
 
         $generate = \Piwik\Container\StaticContainer::get('test.vars.generateTrackingFailures');

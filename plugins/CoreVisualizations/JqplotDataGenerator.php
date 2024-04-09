@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,18 +10,12 @@
 namespace Piwik\Plugins\CoreVisualizations;
 
 use Exception;
-use Piwik\API\Request;
 use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\Metrics;
-use Piwik\Period\Factory;
-use Piwik\Piwik;
-use Piwik\Plugins\API\Filter\DataComparisonFilter;
 use Piwik\Plugins\CoreVisualizations\JqplotDataGenerator\Chart;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph;
-
-require_once PIWIK_INCLUDE_PATH . '/plugins/CoreVisualizations/JqplotDataGenerator/Evolution.php';
 
 /**
  * Generates JSON data used to configure and populate JQPlot graphs.
@@ -40,8 +34,6 @@ class JqplotDataGenerator
     protected $graphType;
 
     protected $isComparing;
-
-    private $availableSegments;
 
     /**
      * @var JqplotGraph
@@ -83,8 +75,6 @@ class JqplotDataGenerator
         $this->graphType = $graphType;
         $this->isComparing = $graph->isComparing();
         $this->graph = $graph;
-
-        $this->availableSegments = Request::processRequest('SegmentEditor.getAll', $override = [], $default = []);
     }
 
     /**
@@ -120,12 +110,11 @@ class JqplotDataGenerator
 
         $seriesMetadata = null;
         if ($this->isComparing) {
-            list($yLabels, $serieses, $seriesMetadata) = $this->getComparisonTableSerieses($dataTable, $columnsToDisplay);
+            [$yLabels, $serieses, $seriesMetadata] = $this->getComparisonTableSerieses($dataTable, $columnsToDisplay);
         } else {
-            list($yLabels, $serieses) = $this->getMainTableSerieses($dataTable, $columnsToDisplay);
+            [$yLabels, $serieses] = $this->getMainTableSerieses($dataTable, $columnsToDisplay);
         }
 
-        $visualization->dataTable = $dataTable;
         $visualization->properties = $this->properties;
 
         $visualization->setAxisXLabels($xLabels);

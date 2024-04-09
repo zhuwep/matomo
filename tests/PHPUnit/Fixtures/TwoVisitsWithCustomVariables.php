@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -28,13 +28,13 @@ class TwoVisitsWithCustomVariables extends Fixture
     public $resolutionWidthToUse = 1111;
     public $resolutionHeightToUse = 222;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -106,12 +106,24 @@ class TwoVisitsWithCustomVariables extends Fixture
         self::checkResponse($visitorA->doTrackGoal($idGoal));
 
         if ($this->doExtraQuoteTests) {
-            $visitorA->setCustomVariable($id = 2, $name = 'var1', $value = 'looking at "profile page"',
-                $scope = 'page');
-            $visitorA->setCustomVariable($id = 3, $name = 'var2', $value = '\'looking at "\profile page"\'',
-                $scope = 'page');
-            $visitorA->setCustomVariable($id = 4, $name = 'var3', $value = '\\looking at "\profile page"\\',
-                $scope = 'page');
+            $visitorA->setCustomVariable(
+                $id = 2,
+                $name = 'var1',
+                $value = 'looking at "profile page"',
+                $scope = 'page'
+            );
+            $visitorA->setCustomVariable(
+                $id = 3,
+                $name = 'var2',
+                $value = '\'looking at "\profile page"\'',
+                $scope = 'page'
+            );
+            $visitorA->setCustomVariable(
+                $id = 4,
+                $name = 'var3',
+                $value = '\\looking at "\profile page"\\',
+                $scope = 'page'
+            );
             self::checkResponse($visitorA->doTrackPageView('Concurrent page views'));
         }
 
@@ -123,6 +135,7 @@ class TwoVisitsWithCustomVariables extends Fixture
         }
         $visitorB->setUrlReferrer('');
 
+        // Test campaigns that are specified using the _rcn tracker parameter, only conversions will be attributed to the campaign
         $attribution = array(
             ' CAMPAIGN NAME -%20YEAH! ',
             ' CAMPAIGN%20KEYWORD - RIGHT... ',

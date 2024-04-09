@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,8 +10,12 @@ namespace Piwik;
 use Piwik\Archiver\Request;
 use Piwik\CliMulti\CliPhp;
 use Piwik\CliMulti\Output;
+use Piwik\CliMulti\OutputInterface;
 use Piwik\CliMulti\Process;
+use Piwik\CliMulti\StaticOutput;
 use Piwik\Container\StaticContainer;
+use Piwik\Log\LoggerInterface;
+use Piwik\Log\NullLogger;
 
 /**
  * Class CliMulti.
@@ -39,7 +43,7 @@ class CliMulti
     private $concurrentProcessesLimit = null;
 
     /**
-     * @var Output[]
+     * @var OutputInterface[]
      */
     private $outputs = array();
 
@@ -64,9 +68,22 @@ class CliMulti
      */
     private $onProcessFinish = null;
 
-    public function __construct()
+    /**
+     * @var Timer[]
+     */
+    protected $timers = [];
+
+    protected $isTimingRequests = false;
+
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+    public function __construct(LoggerInterface $logger = null)
     {
         $this->supportsAsync = $this->supportsAsync();
+        $this->logger = $logger ?: new NullLogger();
     }
 
     /**
@@ -84,6 +101,12 @@ class CliMulti
      */
     public function request(array $piwikUrls)
     {
+        if ($this->isTimingRequests) {
+            foreach ($piwikUrls as $url) {
+                $this->timers[] = new Timer();
+            }
+        }
+
         $chunks = array($piwikUrls);
         if ($this->concurrentProcessesLimit) {
             $chunks = array_chunk($piwikUrls, $this->concurrentProcessesLimit);
@@ -131,6 +154,7 @@ class CliMulti
 
     private function start($piwikUrls)
     {
+        $numUrls = count($piwikUrls);
         foreach ($piwikUrls as $index => $url) {
             $shouldStart = null;
             if ($url instanceof Request) {
@@ -141,40 +165,58 @@ class CliMulti
 
             if ($shouldStart === Request::ABORT) {
                 // output is needed to ensure same order of url to response
-                $output = new Output($cmdId);
+                $output = new StaticOutput($cmdId);
                 $output->write(serialize(array('aborted' => '1')));
                 $this->outputs[] = $output;
             } else {
-                $this->executeUrlCommand($cmdId, $url);
+                $this->executeUrlCommand($cmdId, $url, $numUrls);
             }
         }
     }
 
-    private function executeUrlCommand($cmdId, $url)
+    private function executeUrlCommand($cmdId, $url, $numUrls)
     {
-        $output = new Output($cmdId);
-
         if ($this->supportsAsync) {
-            $this->executeAsyncCli($url, $output, $cmdId);
+            if ($numUrls === 1) {
+                $output = new StaticOutput($cmdId);
+                $this->executeSyncCli($url, $output);
+            } else {
+                $output = new Output($cmdId);
+                $this->executeAsyncCli($url, $output, $cmdId);
+            }
         } else {
+            $output = new StaticOutput($cmdId);
             $this->executeNotAsyncHttp($url, $output);
         }
 
         $this->outputs[] = $output;
     }
 
-    private function buildCommand($hostname, $query, $outputFile, $doEsacpeArg = true)
+    private function buildCommand($hostname, $query, $outputFileIfAsync, $doEsacpeArg = true)
     {
         $bin = $this->findPhpBinary();
         $superuserCommand = $this->runAsSuperUser ? "--superuser" : "";
+
+        $append = '2>&1';
+        if ($outputFileIfAsync) {
+            $append = sprintf(' > %s 2>&1 &', $outputFileIfAsync);
+        }
 
         if ($doEsacpeArg) {
             $hostname = escapeshellarg($hostname);
             $query = escapeshellarg($query);
         }
 
-        return sprintf('%s %s %s/console climulti:request -q --matomo-domain=%s %s %s > %s 2>&1 &',
-                       $bin, $this->phpCliOptions, PIWIK_INCLUDE_PATH, $hostname, $superuserCommand, $query, $outputFile);
+        return sprintf(
+            '%s %s %s/console climulti:request -q --matomo-domain=%s %s %s %s',
+            $bin,
+            $this->phpCliOptions,
+            PIWIK_INCLUDE_PATH,
+            $hostname,
+            $superuserCommand,
+            $query,
+            $append
+        );
     }
 
     private function getResponse()
@@ -182,7 +224,17 @@ class CliMulti
         $response = array();
 
         foreach ($this->outputs as $output) {
-            $response[] = $output->get();
+            $content = $output->get();
+            // Remove output that can be ignored in climulti . works around some worpdress setups where the hash bang may
+            // be printed
+            $search = '#!/usr/bin/env php';
+            if (
+                !empty($content)
+                && is_string($content)
+                && mb_substr(trim($content), 0, strlen($search)) === $search) {
+                $content = trim(mb_substr(trim($content), strlen($search)));
+            }
+            $response[] = $content;
         }
 
         return $response;
@@ -210,13 +262,17 @@ class CliMulti
             foreach ($this->outputs as $output) {
                 if ($output->getOutputId() === $pid && $output->isAbnormal()) {
                     $process->finishProcess();
-                    return true;
+                    continue;
                 }
             }
 
             if ($process->hasFinished()) {
                 // prevent from checking this process over and over again
                 unset($this->processes[$index]);
+
+                if ($this->isTimingRequests) {
+                    $this->timers[$index]->finish();
+                }
 
                 if ($this->onProcessFinish) {
                     $onProcessFinish = $this->onProcessFinish;
@@ -307,52 +363,35 @@ class CliMulti
         return StaticContainer::get('path.tmp') . '/climulti';
     }
 
-    public function isCommandAlreadyRunning($url)
-    {
-        if (defined('PIWIK_TEST_MODE')) {
-            return false; // skip check in tests as it might result in random failures
-        }
-
-        if (!$this->supportsAsync) {
-            // we cannot detect if web archive is still running
-            return false;
-        }
-
-        $query = UrlHelper::getQueryFromUrl($url, array('pid' => 'removeme'));
-        $hostname = Url::getHost($checkIfTrusted = false);
-        $commandToCheck = $this->buildCommand($hostname, $query, $output = '', $escape = false);
-
-        $currentlyRunningJobs = `ps aux`;
-
-        $posStart = strpos($commandToCheck, 'console climulti');
-        $posPid = strpos($commandToCheck, '&pid='); // the pid is random each time so we need to ignore it.
-        $shortendCommand = substr($commandToCheck, $posStart, $posPid - $posStart);
-        // equals eg console climulti:request -q --matomo-domain= --superuser module=API&method=API.get&idSite=1&period=month&date=2018-04-08,2018-04-30&format=php&trigger=archivephp
-        $shortendCommand      = preg_replace("/([&])date=.*?(&|$)/", "", $shortendCommand);
-        $currentlyRunningJobs = preg_replace("/([&])date=.*?(&|$)/", "", $currentlyRunningJobs);
-
-        if (strpos($currentlyRunningJobs, $shortendCommand) !== false) {
-            Log::debug($shortendCommand . ' is already running');
-            return true;
-        }
-
-        return false;
-    }
-
     private function executeAsyncCli($url, Output $output, $cmdId)
     {
         $this->processes[] = new Process($cmdId);
 
         $url = $this->appendTestmodeParamToUrlIfNeeded($url);
-        $query = UrlHelper::getQueryFromUrl($url, array('pid' => $cmdId, 'runid' => getmypid()));
+        $query = UrlHelper::getQueryFromUrl($url, ['pid' => $cmdId, 'runid' => Common::getProcessId()]);
         $hostname = Url::getHost($checkIfTrusted = false);
         $command = $this->buildCommand($hostname, $query, $output->getPathToFile());
 
-        Log::debug($command);
+        $this->logger->debug("Running command: {command}", ['command' => $command]);
         shell_exec($command);
     }
 
-    private function executeNotAsyncHttp($url, Output $output)
+    private function executeSyncCli($url, StaticOutput $output)
+    {
+        $url = $this->appendTestmodeParamToUrlIfNeeded($url);
+        $query = UrlHelper::getQueryFromUrl($url, array());
+        $hostname = Url::getHost($checkIfTrusted = false);
+        $command = $this->buildCommand($hostname, $query, '', true);
+
+        $this->logger->debug("Running command: {command}", ['command' => $command]);
+        $result = shell_exec($command);
+        if ($result) {
+            $result = trim($result);
+        }
+        $output->write($result);
+    }
+
+    private function executeNotAsyncHttp($url, StaticOutput $output)
     {
         $piwikUrl = $this->urlToPiwik ?: SettingsPiwik::getPiwikUrl();
         if (empty($piwikUrl)) {
@@ -364,9 +403,9 @@ class CliMulti
             $url = str_replace("http://", "https://", $url);
         }
 
+        $requestBody = null;
         if ($this->runAsSuperUser) {
-            $tokenAuths = self::getSuperUserTokenAuths();
-            $tokenAuth = reset($tokenAuths);
+            $tokenAuth = self::getSuperUserTokenAuth();
 
             if (strpos($url, '?') === false) {
                 $url .= '?';
@@ -374,12 +413,12 @@ class CliMulti
                 $url .= '&';
             }
 
-            $url .= 'token_auth=' . $tokenAuth;
+            $requestBody = 'token_auth=' . $tokenAuth;
         }
 
         try {
-            Log::debug("Execute HTTP API request: "  . $url);
-            $response = Http::sendHttpRequestBy('curl', $url, $timeout = 0, $userAgent = null, $destinationPath = null, $file = null, $followDepth = 0, $acceptLanguage = false, $this->acceptInvalidSSLCertificate);
+            $this->logger->debug("Execute HTTP API request: "  . $url);
+            $response = Http::sendHttpRequestBy('curl', $url, $timeout = 0, $userAgent = null, $destinationPath = null, $file = null, $followDepth = 0, $acceptLanguage = false, $this->acceptInvalidSSLCertificate, false, false, 'POST', null, null, $requestBody, [], $forcePost = true);
             $output->write($response);
         } catch (\Exception $e) {
             $message = "Got invalid response from API request: $url. ";
@@ -392,7 +431,7 @@ class CliMulti
 
             $output->write($message);
 
-            Log::debug($e);
+            $this->logger->debug($message, ['exception' => $e]);
         }
     }
 
@@ -422,7 +461,9 @@ class CliMulti
             $elapsed = time() - $startTime;
             $timeToWait = $this->getTimeToWaitBeforeNextCheck($elapsed);
 
-            usleep($timeToWait);
+            if (count($this->processes)) {
+                usleep($timeToWait);
+            }
         } while (!$this->hasFinished());
 
         $results = $this->getResponse();
@@ -433,18 +474,9 @@ class CliMulti
         return $results;
     }
 
-    private static function getSuperUserTokenAuths()
+    private static function getSuperUserTokenAuth()
     {
-        $tokens = array();
-
-        /**
-         * Used to be in CronArchive, moved to CliMulti.
-         *
-         * @ignore
-         */
-        Piwik::postEvent('CronArchive.getTokenAuth', array(&$tokens));
-
-        return $tokens;
+        return Piwik::requestTemporarySystemAuthToken('CliMultiNonAsyncArchive', 36);
     }
 
     public function setUrlToPiwik($urlToPiwik)
@@ -467,5 +499,16 @@ class CliMulti
     public static function isCliMultiRequest()
     {
         return Common::getRequestVar('pid', false) !== false;
+    }
+
+    public function timeRequests()
+    {
+        $this->timers = [];
+        $this->isTimingRequests = true;
+    }
+
+    public function getTimers()
+    {
+        return $this->timers;
     }
 }

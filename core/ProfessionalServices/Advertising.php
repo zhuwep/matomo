@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@ namespace Piwik\ProfessionalServices;
 
 use Piwik\Plugin;
 use Piwik\Config;
+use Piwik\Url;
 
 /**
  * Advertising for providers of Professional Support for Piwik.
@@ -55,15 +56,12 @@ class Advertising
      */
     public function getPromoUrlForProfessionalServices($campaignMedium, $campaignContent = '')
     {
-        $url = 'https://matomo.org/support-plans/?';
-
-        $campaign = $this->getCampaignParametersForPromoUrl(
-            $name = self::CAMPAIGN_NAME_PROFESSIONAL_SERVICES,
-            $campaignMedium,
-            $campaignContent
+        return Url::addCampaignParametersToMatomoLink(
+            'https://matomo.org/support-plans/',
+            self::CAMPAIGN_NAME_PROFESSIONAL_SERVICES,
+            null,
+            $campaignMedium
         );
-
-        return $url . $campaign;
     }
 
     /**
@@ -73,26 +71,21 @@ class Advertising
      * @param string $campaignName
      * @param string $campaignMedium
      * @param string $campaignContent
+     * @param string $campaignSource
      * @return string
      */
-    public function addPromoCampaignParametersToUrl($url, $campaignName, $campaignMedium, $campaignContent = '')
+    public function addPromoCampaignParametersToUrl($url, $campaignName, $campaignMedium, $campaignContent = '', $campaignSource = null)
     {
         if (empty($url)) {
             return '';
         }
 
-        if (strpos($url, '?') === false) {
-            $url .= '?';
-        } else {
-            $url .= '&';
-        }
-
-        $url .= $this->getCampaignParametersForPromoUrl($campaignName, $campaignMedium, $campaignContent);
-
-        return $url;
+        return Url::addCampaignParametersToMatomoLink($url, $campaignName, $campaignSource, $campaignMedium .
+            ($campaignContent !== '' ? '.' . $campaignContent : ''));
     }
 
     /**
+     * @deprecated
      * Generates campaign URL parameters that can be used with promoting Professional Support service.
      *
      * @param string $campaignName
@@ -117,7 +110,10 @@ class Advertising
      */
     public static function isAdsEnabledInConfig($configGeneralSection)
     {
-        $oldSettingValue = @$configGeneralSection['piwik_pro_ads_enabled'];
+        $oldSettingValue = false;
+        if (isset($configGeneralSection['piwik_pro_ads_enabled'])) {
+            $oldSettingValue = @$configGeneralSection['piwik_pro_ads_enabled'];
+        }
         $newSettingValue = @$configGeneralSection['piwik_professional_support_ads_enabled'];
         return (bool) ($newSettingValue || $oldSettingValue);
     }

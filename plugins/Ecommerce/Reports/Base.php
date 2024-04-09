@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,6 +12,7 @@ use Piwik\Common;
 use Piwik\Piwik;
 use Piwik\Plugin\Report;
 use Piwik\Site;
+use Piwik\Url;
 
 abstract class Base extends Report
 {
@@ -19,7 +20,7 @@ abstract class Base extends Report
     {
         $this->module   = 'Goals';
         $this->categoryId = 'Goals_Ecommerce';
-        $this->onlineGuideUrl = 'https://matomo.org/docs/ecommerce-analytics/';
+        $this->onlineGuideUrl = Url::addCampaignParametersToMatomoLink('https://matomo.org/docs/ecommerce-analytics/');
     }
 
     public function isEnabled()
@@ -57,7 +58,7 @@ abstract class Base extends Report
     {
         $idSite = $infos['idSite'];
 
-        if (empty($idSite)) {
+        if (empty($idSite) || !is_numeric($idSite)) {
             return false;
         }
 
@@ -70,5 +71,4 @@ abstract class Base extends Report
 
         return $site->isEcommerceEnabled();
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -47,8 +47,6 @@ class GetDownloads extends Base
 
     public function configureView(ViewDataTable $view)
     {
-        $view->config->addTranslations(array('label' => $this->dimension->getName()));
-
         $view->config->columns_to_display = array('label', 'nb_visits', 'nb_hits');
         $view->config->show_exclude_low_population = false;
 

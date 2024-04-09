@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,16 +17,13 @@ use Piwik\Plugins\CoreAdminHome\Emails\JsTrackingCodeMissingEmail;
 use Piwik\Plugins\CoreAdminHome\Emails\TrackingFailuresEmail;
 use Piwik\Plugins\CoreAdminHome\Tasks;
 use Piwik\Plugins\CoreAdminHome\Tasks\ArchivesToPurgeDistributedList;
-use Piwik\Plugins\CustomDimensions\CustomDimensions;
-use Piwik\Plugins\CustomDimensions\Dao\Configuration;
-use Piwik\Plugins\SegmentEditor\Model;
 use Piwik\Scheduler\Task;
 use Piwik\Tests\Fixtures\RawArchiveDataWithTempAndInvalidated;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Tracker\Failures;
 use Piwik\Tracker\Request;
-use Psr\Log\NullLogger;
+use Piwik\Log\NullLogger;
 
 /**
  * @group Core
@@ -58,7 +55,7 @@ class TasksTest extends IntegrationTestCase
      */
     private $mail;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -77,9 +74,9 @@ class TasksTest extends IntegrationTestCase
         $this->mail = null;
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
-        unset($_GET['trigger']);
+        Rules::$disablePureOutdatedArchive = false;
 
         parent::tearDown();
     }
@@ -103,8 +100,6 @@ class TasksTest extends IntegrationTestCase
     public function test_purgeOutdatedArchives_SkipsPurging_WhenBrowserArchivingDisabled_AndCronArchiveTriggerNotPresent()
     {
         Rules::setBrowserTriggerArchiving(false);
-        unset($_GET['trigger']);
-
         $wasPurged = $this->tasks->purgeOutdatedArchives();
         $this->assertFalse($wasPurged);
     }
@@ -112,7 +107,7 @@ class TasksTest extends IntegrationTestCase
     public function test_purgeOutdatedArchives_Purges_WhenBrowserArchivingEnabled_AndCronArchiveTriggerPresent()
     {
         Rules::setBrowserTriggerArchiving(false);
-        $_GET['trigger'] = 'archivephp';
+        Rules::$disablePureOutdatedArchive = true;
 
         $wasPurged = $this->tasks->purgeOutdatedArchives();
         $this->assertTrue($wasPurged);
@@ -129,16 +124,21 @@ class TasksTest extends IntegrationTestCase
         $this->tasks->schedule();
 
         $tasks = $this->tasks->getScheduledTasks();
-        $tasks = array_map(function (Task $task) { return $task->getMethodName() . '.' . $task->getMethodParameter(); }, $tasks);
+        $tasks = array_map(function (Task $task) {
+            return $task->getMethodName() . '.' . $task->getMethodParameter();
+        }, $tasks);
 
         $expected = [
+            'invalidateOutdatedArchives.',
+            'deleteOldFingerprintSalts.',
             'purgeOutdatedArchives.',
             'purgeInvalidatedArchives.',
+            'purgeInvalidationsForDeletedSites.',
             'purgeOrphanedArchives.',
             'optimizeArchiveTable.',
             'cleanupTrackingFailures.',
             'notifyTrackingFailures.',
-            'updateSpammerBlacklist.',
+            'updateSpammerList.',
             'checkSiteHasTrackedVisits.2',
             'checkSiteHasTrackedVisits.3',
             'checkSiteHasTrackedVisits.4',
@@ -192,9 +192,10 @@ class TasksTest extends IntegrationTestCase
 
     public function test_cleanupTrackingFailures_doesNotCauseAnyException()
     {
+        self::expectNotToPerformAssertions();
+
         // it is only calling one method which is already tested... no need to write complex tests for it
         $this->tasks->cleanupTrackingFailures();
-        $this->assertTrue(true);
     }
 
     public function test_notifyTrackingFailures_doesNotSendAnyMailWhenThereAreNoTrackingRequests()
@@ -236,10 +237,10 @@ class TasksTest extends IntegrationTestCase
     public function provideContainerConfig()
     {
         return [
-            'observers.global' => \DI\add([
-                ['Mail.send', function (Mail $mail) {
+            'observers.global' => \Piwik\DI::add([
+                ['Mail.send', \Piwik\DI::value(function (Mail $mail) {
                     $this->mail = $mail;
-                }],
+                })],
             ]),
         ];
     }

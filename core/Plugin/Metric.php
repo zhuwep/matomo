@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -74,6 +74,27 @@ abstract class Metric
     public function getDocumentation()
     {
         return "";
+    }
+
+    /**
+     * Returns this metric's semantic type. This can be used to provide the semantic
+     * type for processed metrics.
+     *
+     * A metric's semantic type is metadata used primarily in integrations with Matomo
+     * and third party services/applications. It provides information that can be used
+     * to determine how to display or use the information.
+     *
+     * It is recommended for your plugin to provide this information so users of third
+     * party services that connect with Matomo can make full use of the data your plugin
+     * tracks.
+     *
+     * See {@link \Piwik\Columns\Dimension} for the list of available semantic types.
+     *
+     * @return string|null
+     */
+    public function getSemanticType(): ?string
+    {
+        return null;
     }
 
     /**

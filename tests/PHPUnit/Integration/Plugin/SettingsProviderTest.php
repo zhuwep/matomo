@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,13 +9,11 @@
 namespace Piwik\Tests\Integration\Plugin;
 
 use Piwik\Container\StaticContainer;
-use Piwik\Db;
 use Piwik\Plugin;
 use Piwik\Plugin\SettingsProvider;
 use Piwik\Settings\Measurable\MeasurableSettings;
 use Piwik\Settings\Plugin\SystemSettings;
 use Piwik\Settings\Plugin\UserSettings;
-use Piwik\Settings\Storage;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -37,7 +35,7 @@ class SettingsProviderTest extends IntegrationTestCase
 
     private $examplePlugin = 'ExampleSettingsPlugin';
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -50,7 +48,7 @@ class SettingsProviderTest extends IntegrationTestCase
         $this->settings = new SettingsProvider($this->pluginManager);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($_GET['idSite']);
@@ -161,5 +159,4 @@ class SettingsProviderTest extends IntegrationTestCase
             $this->assertTrue($setting instanceof MeasurableSettings);
         }
     }
-
 }

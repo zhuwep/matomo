@@ -1,11 +1,11 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
- (function ($, require) {
+(function ($, require) {
 
     var exports = require('piwik/UI'),
         DataTable = exports.DataTable,
@@ -19,19 +19,9 @@
 
         var currentLevelIndex = style.indexOf('level');
         if (currentLevelIndex >= 0) {
-            currentLevel = Number(style.substr(currentLevelIndex + 5, 1));
+            currentLevel = Number(style.slice(currentLevelIndex + 5, currentLevelIndex + 6));
         }
         return currentLevel;
-    }
-
-    // helper function for ActionDataTable
-    function setImageMinus(domElem) {
-        $('img.plusMinus', domElem).attr('src', 'plugins/Morpheus/images/minus.png');
-    }
-
-    // helper function for ActionDataTable
-    function setImagePlus(domElem) {
-        $('img.plusMinus', domElem).attr('src', 'plugins/Morpheus/images/plus.png');
     }
 
     /**
@@ -102,7 +92,7 @@
 
             if (hasOnlyOneSubtable) {
                 var hasOnlyOneRow = domElem.find('tbody tr.level0').length === 1;
-                
+
                 if (hasOnlyOneRow) {
                     var $labels = $subtables.find('.label');
                     if ($labels.length) {
@@ -133,17 +123,12 @@
             rowsWithSubtables.css('font-weight', 'bold');
 
             $("th:first-child", domElem).addClass('label');
-            var imagePlusMinusWidth = 12;
-            var imagePlusMinusHeight = 12;
-            $('td:first-child', rowsWithSubtables)
+            $(rowsWithSubtables)
                 .each(function () {
-                    $('<img width="' + imagePlusMinusWidth + '" height="' + imagePlusMinusHeight + '" class="plusMinus" src="" />').insertBefore($(this).children('.label'));
-
                     if (self.param.filter_pattern_recursive) {
-                        setImageMinus(this);
-                    }
-                    else {
-                        setImagePlus(this);
+                        $(this).addClass('expanded');
+                        // remove tooltip "Click this row to expand or contract the subtable"
+                        $(this).attr('title', '');
                     }
                 });
 
@@ -243,26 +228,26 @@
             }
             // else we toggle all these rows
             else {
-                var plusDetected = $('td img.plusMinus', domElem).attr('src').indexOf('plus') >= 0;
+                var isExpanded = $(domElem).hasClass('subDataTable') && $(domElem).hasClass('expanded');
 
                 $(domElem).siblings().each(function () {
                     var parents = $(this).prop('parent').split(' ');
                     if (parents) {
                         if (parents.indexOf(idSubTable) >= 0
                             || parents.indexOf('subDataTable_' + idSubTable) >= 0) {
-                            if (plusDetected) {
+                            if (!isExpanded) {
                                 $(this).css('display', '').removeClass('hidden');
 
-                                //unroll everything and display '-' sign
-                                //if the row is already opened
+                                // unroll everything if the row is already opened
                                 var NextStyle = $(this).next().attr('class');
                                 var CurrentStyle = $(this).attr('class');
 
                                 var currentRowLevel = getLevelFromClass(CurrentStyle);
                                 var nextRowLevel = getLevelFromClass(NextStyle);
 
-                                if (currentRowLevel < nextRowLevel)
-                                    setImageMinus(this);
+                                if (currentRowLevel < nextRowLevel) {
+                                    $(this).addClass('expanded');
+                                }
                             }
                             else {
                                 $(this).css('display', 'none').addClass('hidden');
@@ -272,22 +257,11 @@
                     }
                 });
 
-                var table = $(domElem);
-                if (!table.hasClass('dataTable')) {
-                    table = table.closest('.dataTable');
-                }
-
                 self.$element.trigger('piwik:actionsSubTableToggled');
             }
 
             // toggle the +/- image
-            var plusDetected = $('td img.plusMinus', domElem).attr('src').indexOf('plus') >= 0;
-            if (plusDetected) {
-                setImageMinus(domElem);
-            }
-            else {
-                setImagePlus(domElem);
-            }
+            $(domElem).toggleClass('expanded');
         },
 
         //called when the full table actions is loaded
@@ -309,7 +283,7 @@
 
             content.trigger('piwik:dataTableLoaded');
 
-            piwikHelper.compileAngularComponents(content);
+            piwikHelper.compileVueEntryComponents(content);
 
             piwikHelper.lazyScrollTo(content[0], 400);
 

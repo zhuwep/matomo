@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <result>
 	<website>Piwik test</website>
-	<prettyDate>August 9 – 16, 2012</prettyDate>
+	<prettyDate>August 9 – 16, 2012</prettyDate>
 	<metadata>
 		<category>Visitors</category>
 		<subcategory>Overview</subcategory>
 		<name>Visits Summary</name>
 		<module>VisitsSummary</module>
 		<action>get</action>
+		<documentation>This report provides a very general overview of how your visitors behave.</documentation>
 		<metrics>
 			<nb_uniq_visitors>Unique visitors</nb_uniq_visitors>
 			<nb_visits>Visits</nb_visits>
@@ -29,6 +30,16 @@
 			<nb_actions_per_visit>Actions per Visit</nb_actions_per_visit>
 			<avg_time_on_site>Avg. Visit Duration (in seconds)</avg_time_on_site>
 		</processedMetrics>
+		<metricTypes>
+			<nb_uniq_visitors>number</nb_uniq_visitors>
+			<nb_visits>number</nb_visits>
+			<nb_users>number</nb_users>
+			<nb_actions>number</nb_actions>
+			<max_actions>number</max_actions>
+			<bounce_rate>percent</bounce_rate>
+			<nb_actions_per_visit>number</nb_actions_per_visit>
+			<avg_time_on_site>duration_s</avg_time_on_site>
+		</metricTypes>
 		<imageGraphUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=VisitsSummary&amp;apiAction=get&amp;period=day&amp;date=2012-08-09,2012-08-16</imageGraphUrl>
 		<imageGraphEvolutionUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=VisitsSummary&amp;apiAction=get&amp;period=day&amp;date=2012-08-09,2012-08-16</imageGraphEvolutionUrl>
 		<uniqueId>VisitsSummary_get</uniqueId>
@@ -76,7 +87,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-09</compareDate>
 					<comparePeriodPretty>Thursday, August 9, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -101,7 +112,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12</compareDate>
 					<comparePeriodPretty>Sunday, August 12, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -138,7 +149,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-10</compareDate>
 					<comparePeriodPretty>Friday, August 10, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -163,7 +174,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13</compareDate>
 					<comparePeriodPretty>Monday, August 13, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -200,7 +211,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-11</compareDate>
 					<comparePeriodPretty>Saturday, August 11, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -225,7 +236,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-14</compareDate>
 					<comparePeriodPretty>Tuesday, August 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -262,7 +273,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12</compareDate>
 					<comparePeriodPretty>Sunday, August 12, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -287,7 +298,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-15</compareDate>
 					<comparePeriodPretty>Wednesday, August 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -324,7 +335,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-13</compareDate>
 					<comparePeriodPretty>Monday, August 13, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -348,8 +359,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12,2012-08-15</compareDate>
-					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -386,7 +397,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-14</compareDate>
 					<comparePeriodPretty>Tuesday, August 14, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -410,8 +421,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12,2012-08-15</compareDate>
-					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -448,7 +459,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-15</compareDate>
 					<comparePeriodPretty>Wednesday, August 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -472,8 +483,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12,2012-08-15</compareDate>
-					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -510,7 +521,7 @@
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
 					<comparePeriodPretty>Thursday, August 16, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
+					<compareSeriesPretty>(August 9 – 16, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -534,8 +545,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>day</comparePeriod>
 					<compareDate>2012-08-12,2012-08-15</compareDate>
-					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>August 12 – 15, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(August 12 – 15, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>

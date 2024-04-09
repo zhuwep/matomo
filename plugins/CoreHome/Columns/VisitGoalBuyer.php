@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\CoreHome\Columns;
 use Piwik\Metrics\Formatter;
 use Piwik\Piwik;
 use Piwik\Plugin\Dimension\VisitDimension;
-use Piwik\Plugins\CoreHome\Segment;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\GoalManager;
 use Piwik\Tracker\Request;
@@ -47,7 +46,7 @@ class VisitGoalBuyer extends VisitDimension
     public function formatValue($value, $idSite, Formatter $formatter)
     {
         switch ($value) {
-            case 'none';
+            case 'none':
             case '0':
             case self::TYPE_BUYER_NONE:
                 return Piwik::translate('UserCountryMap_None');
@@ -95,7 +94,8 @@ class VisitGoalBuyer extends VisitDimension
         // Ecommerce buyer status
         $visitEcommerceStatus = $this->getBuyerType($request, $goalBuyer);
 
-        if ($visitEcommerceStatus != self::TYPE_BUYER_NONE
+        if (
+            $visitEcommerceStatus != self::TYPE_BUYER_NONE
             // only update if the value has changed (prevents overwriting the value in case a request has
             // updated it in the meantime)
             && $visitEcommerceStatus != $goalBuyer) {
@@ -131,7 +131,8 @@ class VisitGoalBuyer extends VisitDimension
         }
 
         // request is Add to Cart
-        if ($existingType == self::TYPE_BUYER_ORDERED
+        if (
+            $existingType == self::TYPE_BUYER_ORDERED
             || $existingType == self::TYPE_BUYER_ORDERED_AND_OPEN_CART
         ) {
             return self::TYPE_BUYER_ORDERED_AND_OPEN_CART;
@@ -139,5 +140,4 @@ class VisitGoalBuyer extends VisitDimension
 
         return self::TYPE_BUYER_OPEN_CART;
     }
-
 }

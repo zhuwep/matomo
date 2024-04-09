@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,8 +13,6 @@ use Piwik\Piwik;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugins\CoreVisualizations\Visualizations\HtmlTable;
 use Piwik\Plugins\Referrers\Columns\Website;
-use Piwik\Report\ReportWidgetFactory;
-use Piwik\Widget\WidgetsList;
 
 class GetWebsites extends Base
 {
@@ -43,7 +41,6 @@ class GetWebsites extends Base
     public function configureView(ViewDataTable $view)
     {
         $view->config->show_exclude_low_population = false;
-        $view->config->addTranslation('label', $this->dimension->getName());
 
         $view->requestConfig->filter_limit = 25;
 
@@ -53,5 +50,4 @@ class GetWebsites extends Base
 
         $view->config->show_pivot_by_subtable = false;
     }
-
 }

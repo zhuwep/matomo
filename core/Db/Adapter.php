@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@
 namespace Piwik\Db;
 
 use Zend_Db_Table;
+use Piwik\Piwik;
 
 /**
  */
@@ -22,10 +23,10 @@ class Adapter
      * @param bool $connect
      * @return AdapterInterface
      */
-    public static function factory($adapterName, & $dbInfos, $connect = true)
+    public static function factory($adapterName, &$dbInfos, $connect = true)
     {
         if ($connect) {
-            if ($dbInfos['port'][0] == '/') {
+            if (isset($dbInfos['port']) && is_string($dbInfos['port']) && $dbInfos['port'][0] === '/') {
                 $dbInfos['unix_socket'] = $dbInfos['port'];
                 unset($dbInfos['host']);
                 unset($dbInfos['port']);
@@ -45,14 +46,24 @@ class Adapter
             $infos[$key] = $val;
         }
 
-        $adapter   = new $className($infos);
+        $adapter = new $className($infos);
 
         if ($connect) {
-            $adapter->getConnection();
+            try {
+                $adapter->getConnection();
 
-            Zend_Db_Table::setDefaultAdapter($adapter);
-            // we don't want the connection information to appear in the logs
-            $adapter->resetConfig();
+                Zend_Db_Table::setDefaultAdapter($adapter);
+                // we don't want the connection information to appear in the logs
+                $adapter->resetConfig();
+            } catch(\Exception $e) {
+                // we don't want certain exceptions to leak information
+                $msg = self::overriddenExceptionMessage($e->getMessage());
+                if ('' !== $msg) {
+                    throw new \Exception($msg);
+                }
+
+                throw $e;
+            }
         }
 
         return $adapter;
@@ -99,13 +110,6 @@ class Adapter
             'Mysqli',
 
             // other adapters supported by Zend_Db
-//			'Pdo_Pgsql',
-//			'Pdo_Mssql',
-//			'Sqlsrv',
-//			'Pdo_Ibm',
-//			'Db2',
-//			'Pdo_Oci',
-//			'Oracle',
         );
 
         $adapters = array();
@@ -128,5 +132,29 @@ class Adapter
     public static function isRecommendedAdapter($adapterName)
     {
         return strtolower($adapterName) === 'pdo/mysql';
+    }
+
+    /**
+     * Intercepts certain exception messages and replaces leaky ones with ones that don't reveal too much info
+     * @param string $message
+     * @return string
+     */
+    public static function overriddenExceptionMessage($message)
+    {
+        $safeMessageMap = array(
+            // add any exception search terms and their replacement message here
+            '[2006]'                        => Piwik::translate('General_ExceptionDatabaseUnavailable'),
+            'MySQL server has gone away'    => Piwik::translate('General_ExceptionDatabaseUnavailable'),
+            '[1698]'                        => Piwik::translate('General_ExceptionDatabaseAccess'),
+            'Access denied'                 => Piwik::translate('General_ExceptionDatabaseAccess')
+        );
+
+        foreach ($safeMessageMap as $search_term => $safeMessage) {
+            if (strpos($message, $search_term) !== false) {
+                return $safeMessage;
+            }
+        }
+
+        return '';
     }
 }

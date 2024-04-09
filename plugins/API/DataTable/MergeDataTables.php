@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,9 +13,18 @@ use Piwik\DataTable;
 
 class MergeDataTables
 {
+    /**
+     * @var bool
+     */
+    private $copyExtraProcessedMetrics;
+
+    public function __construct(bool $copyExtraProcessedMetrics = false)
+    {
+        $this->copyExtraProcessedMetrics = $copyExtraProcessedMetrics;
+    }
 
     /**
-     * Merge the columns of two data tables.
+     * Merge the columns of two data tables. Only takes into consideration the first row of each table.
      * Manipulates the first table.
      *
      * @param DataTable|DataTable\Map $table1 The table to eventually filter.
@@ -25,16 +34,26 @@ class MergeDataTables
     {
         // handle table arrays
         if ($table1 instanceof DataTable\Map && $table2 instanceof DataTable\Map) {
-            $subTables2 = $table2->getDataTables();
-            foreach ($table1->getDataTables() as $index => $subTable1) {
-                if (!array_key_exists($index, $subTables2)) {
-                    // occurs when archiving starts on dayN and continues into dayN+1, see https://github.com/piwik/piwik/issues/5168#issuecomment-50959925
-                    continue;
+            $subTables1 = $table1->getDataTables();
+            foreach ($table2->getDataTables() as $index => $subTable2) {
+                if (!array_key_exists($index, $subTables1)) {
+                    $subTable1 = $this->makeNewDataTable($subTable2);
+                    $table1->addTable($subTable1, $index);
+                } else {
+                    $subTable1 = $subTables1[$index];
                 }
-                $subTable2 = $subTables2[$index];
                 $this->mergeDataTables($subTable1, $subTable2);
             }
             return;
+        }
+
+        if ($this->copyExtraProcessedMetrics) {
+            $extraProcessedMetricsTable1 = $table1->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME) ?: [];
+            $extraProcessedMetricsTable2 = $table2->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME) ?: [];
+            $table1->setMetadata(
+                DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME,
+                array_merge($extraProcessedMetricsTable1, $extraProcessedMetricsTable2)
+            );
         }
 
         $firstRow2 = $table2->getFirstRow();
@@ -52,4 +71,22 @@ class MergeDataTables
         }
     }
 
+    private function makeNewDataTable(DataTable\DataTableInterface $subTable2)
+    {
+        if ($subTable2 instanceof DataTable\Map) {
+            $result = new DataTable\Map();
+            $result->setKeyName($subTable2->getKeyName());
+            return $result;
+        } else if ($subTable2 instanceof DataTable\Simple) {
+            $result = new DataTable\Simple();
+            $result->setAllTableMetadata($subTable2->getAllTableMetadata());
+            return $result;
+        } else if ($subTable2 instanceof DataTable) {
+            $result = new DataTable();
+            $result->setAllTableMetadata($subTable2->getAllTableMetadata());
+            return $result;
+        } else {
+            throw new \Exception("Unknown datatable type: " . get_class($subTable2));
+        }
+    }
 }

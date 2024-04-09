@@ -47,9 +47,9 @@ define("PARTIAL_BYTE_START", 1204);
 define("PARTIAL_BYTE_END", 14724);
 
 // If the static file server has not been requested, the standard unit test case class is defined
-class ServeStaticFileTest extends \PHPUnit_Framework_TestCase
+class ServeStaticFileTest extends \PHPUnit\Framework\TestCase
 {
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         if(!chmod(TEST_FILE_LOCATION, 0644)) {
@@ -159,7 +159,7 @@ class ServeStaticFileTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(200, $responseInfo["http_code"]);
 
         // Tests content type
-        $this->assertContains(TEST_FILE_CONTENT_TYPE, $responseInfo["content_type"]);
+        self::assertStringContainsString(TEST_FILE_CONTENT_TYPE, $responseInfo["content_type"]);
 
         // Tests no compression has been applied
         $this->assertNull($this->getContentEncodingValue($fullResponse));
@@ -168,8 +168,10 @@ class ServeStaticFileTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(filesize(TEST_FILE_LOCATION), $responseInfo["size_download"]);
 
         // Tests if returned modified date is correctly set
-        $this->assertEquals(gmdate('D, d M Y H:i:s', filemtime(TEST_FILE_LOCATION)) . ' GMT',
-            $this->getLastModifiedValue($fullResponse));
+        $this->assertEquals(
+            gmdate('D, d M Y H:i:s', filemtime(TEST_FILE_LOCATION)) . ' GMT',
+            $this->getLastModifiedValue($fullResponse)
+        );
 
         // Tests if cache control headers are correctly set
         $this->assertEquals("public, must-revalidate", $this->getCacheControlValue($fullResponse));
@@ -422,8 +424,11 @@ class ServeStaticFileTest extends \PHPUnit_Framework_TestCase
         // check $partialResponse
         $this->assertEquals(PARTIAL_BYTE_END - PARTIAL_BYTE_START, $responseInfo["size_download"]);
 
-        $expectedPartialContents = substr(file_get_contents(TEST_FILE_LOCATION), PARTIAL_BYTE_START,
-            PARTIAL_BYTE_END - PARTIAL_BYTE_START);
+        $expectedPartialContents = substr(
+            file_get_contents(TEST_FILE_LOCATION),
+            PARTIAL_BYTE_START,
+            PARTIAL_BYTE_END - PARTIAL_BYTE_START
+        );
         $this->assertEquals($expectedPartialContents, $partialResponse);
     }
 
@@ -450,8 +455,11 @@ class ServeStaticFileTest extends \PHPUnit_Framework_TestCase
         $this->assertFileNotExists($this->getCompressedFileLocation() . ".gz");
 
         // check $partialResponse
-        $expectedPartialContents = substr(file_get_contents(TEST_FILE_LOCATION), PARTIAL_BYTE_START,
-            PARTIAL_BYTE_END - PARTIAL_BYTE_START);
+        $expectedPartialContents = substr(
+            file_get_contents(TEST_FILE_LOCATION),
+            PARTIAL_BYTE_START,
+            PARTIAL_BYTE_END - PARTIAL_BYTE_START
+        );
         $this->assertEquals($expectedPartialContents, $partialResponse);
 
         $this->removeCompressedFiles();

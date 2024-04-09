@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
  */
 namespace Piwik\Plugins\MobileMessaging;
 
-use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\Plugin;
 use Piwik\Piwik;
@@ -118,7 +117,8 @@ abstract class SMSProvider
         $providers = self::findAvailableSmsProviders();
 
         if (!array_key_exists($provider, $providers)) {
-            throw new \Exception(Piwik::translate('MobileMessaging_Exception_UnknownProvider',
+            throw new \Exception(Piwik::translate(
+                'MobileMessaging_Exception_UnknownProvider',
                 array($provider, implode(', ', array_keys($providers)))
             ));
         }
@@ -161,7 +161,7 @@ abstract class SMSProvider
     {
         $GSMCharsetAsString = implode(array_keys(GSMCharset::$GSMCharset));
 
-        foreach (self::mb_str_split($string) as $char) {
+        foreach (self::mbStrSplit($string) as $char) {
             if (mb_strpos($GSMCharsetAsString, $char) === false) {
                 return true;
             }
@@ -188,7 +188,9 @@ abstract class SMSProvider
         $maxCharsAllowed = self::maxCharsAllowed($maximumNumberOfConcatenatedSMS, $smsContentContainsUCS2Chars);
         $sizeOfSMSContent = self::sizeOfSMSContent($string, $smsContentContainsUCS2Chars);
 
-        if ($sizeOfSMSContent <= $maxCharsAllowed) return $string;
+        if ($sizeOfSMSContent <= $maxCharsAllowed) {
+            return $string;
+        }
 
         $smsContentContainsUCS2Chars = $smsContentContainsUCS2Chars || self::containsUCS2Characters($appendedString);
         $maxCharsAllowed = self::maxCharsAllowed($maximumNumberOfConcatenatedSMS, $smsContentContainsUCS2Chars);
@@ -198,7 +200,7 @@ abstract class SMSProvider
 
         $subStrToTruncate = '';
         $subStrSize = 0;
-        $reversedStringChars = array_reverse(self::mb_str_split($string));
+        $reversedStringChars = array_reverse(self::mbStrSplit($string));
         for ($i = 0; $subStrSize < $sizeToTruncate; $i++) {
             $subStrToTruncate = $reversedStringChars[$i] . $subStrToTruncate;
             $subStrSize = self::sizeOfSMSContent($subStrToTruncate, $smsContentContainsUCS2Chars);
@@ -207,17 +209,19 @@ abstract class SMSProvider
         return preg_replace('/' . preg_quote($subStrToTruncate, '/') . '$/', $appendedString, $string);
     }
 
-    private static function mb_str_split($string)
+    private static function mbStrSplit($string)
     {
         return preg_split('//u', $string, -1, PREG_SPLIT_NO_EMPTY);
     }
 
     private static function sizeOfSMSContent($smsContent, $containsUCS2Chars)
     {
-        if ($containsUCS2Chars) return Common::mb_strlen($smsContent);
+        if ($containsUCS2Chars) {
+            return mb_strlen($smsContent);
+        }
 
         $sizeOfSMSContent = 0;
-        foreach (self::mb_str_split($smsContent) as $char) {
+        foreach (self::mbStrSplit($smsContent) as $char) {
             $sizeOfSMSContent += GSMCharset::$GSMCharset[$char];
         }
         return $sizeOfSMSContent;
@@ -234,5 +238,4 @@ abstract class SMSProvider
             $maxCharsInOneUniqueSMS :
             $maxCharsInOneConcatenatedSMS * $maximumNumberOfConcatenatedSMS;
     }
-
 }

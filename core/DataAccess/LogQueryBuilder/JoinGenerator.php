@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -41,7 +41,7 @@ class JoinGenerator
         $this->tables = $tables;
         $this->addMissingTablesNeededForJoins();
     }
-    
+
     private function addMissingTablesNeededForJoins()
     {
         foreach ($this->tables as $index => $table) {
@@ -104,7 +104,6 @@ class JoinGenerator
                             throw new Exception($message);
                         }
                     }
-
                 }
             }
         }
@@ -192,7 +191,8 @@ class JoinGenerator
                 }
 
                 $joinName = 'LEFT JOIN';
-                if ($i > 0
+                if (
+                    $i > 0
                     && $this->tables[$i - 1]
                     && is_string($this->tables[$i - 1])
                     && strpos($this->tables[$i - 1], LogAggregator::LOG_TABLE_SEGMENT_TEMPORARY_PREFIX) === 0) {
@@ -237,10 +237,20 @@ class JoinGenerator
         foreach ($availableLogTables as $availableLogTable) {
             if ($logTable->getColumnToJoinOnIdVisit() && $availableLogTable->getColumnToJoinOnIdVisit()) {
 
-                $join = sprintf("%s.%s = %s.%s", $table, $logTable->getColumnToJoinOnIdVisit(),
-                                                 $availableLogTable->getName(), $availableLogTable->getColumnToJoinOnIdVisit());
-                $alternativeJoin = sprintf("%s.%s = %s.%s", $availableLogTable->getName(), $availableLogTable->getColumnToJoinOnIdVisit(),
-                                                            $table, $logTable->getColumnToJoinOnIdVisit());
+                $join = sprintf(
+                    "%s.%s = %s.%s",
+                    $table,
+                    $logTable->getColumnToJoinOnIdVisit(),
+                    $availableLogTable->getName(),
+                    $availableLogTable->getColumnToJoinOnIdVisit()
+                );
+                $alternativeJoin = sprintf(
+                    "%s.%s = %s.%s",
+                    $availableLogTable->getName(),
+                    $availableLogTable->getColumnToJoinOnIdVisit(),
+                    $table,
+                    $logTable->getColumnToJoinOnIdVisit()
+                );
 
                 if ($availableLogTable->shouldJoinWithSubSelect()) {
                     $this->joinWithSubSelect = true;
@@ -265,13 +275,21 @@ class JoinGenerator
                 }
             }
 
+            $otherJoins = $availableLogTable->getWaysToJoinToOtherLogTables();
+            foreach ($otherJoins as $joinTable => $column) {
+                if ($table == $joinTable) {
+                    $join = sprintf("`%s`.`%s` = `%s`.`%s`", $table, $column, $availableLogTable->getName(), $column);
+                    break;
+                }
+            }
         }
 
         if (!isset($join)) {
             throw new Exception("Table '$table' can't be joined for segmentation");
         }
 
-        if ($this->tables->hasJoinedTableManually($table, $join)
+        if (
+            $this->tables->hasJoinedTableManually($table, $join)
             || $this->tables->hasJoinedTableManually($table, $alternativeJoin)) {
             // already joined, no need to join it again
             return null;
@@ -304,13 +322,24 @@ class JoinGenerator
         $logTable = $this->tables->getLogTable($tableName);
         $logTableToJoin = $this->tables->getLogTable($tableNameToJoin);
 
-        $nonVisitJoin = sprintf("%s.%s = %s.%s", $logTableToJoin->getName(), $logTableToJoin->getColumnToJoinOnIdAction(),
-                                                 $tableName, $logTable->getColumnToJoinOnIdAction());
+        $nonVisitJoin = sprintf(
+            "%s.%s = %s.%s",
+            $logTableToJoin->getName(),
+            $logTableToJoin->getColumnToJoinOnIdAction(),
+            $tableName,
+            $logTable->getColumnToJoinOnIdAction()
+        );
 
-        $altNonVisitJoin = sprintf("%s.%s = %s.%s", $tableName, $logTable->getColumnToJoinOnIdAction(),
-                                                    $logTableToJoin->getName(), $logTableToJoin->getColumnToJoinOnIdAction());
+        $altNonVisitJoin = sprintf(
+            "%s.%s = %s.%s",
+            $tableName,
+            $logTable->getColumnToJoinOnIdAction(),
+            $logTableToJoin->getName(),
+            $logTableToJoin->getColumnToJoinOnIdAction()
+        );
 
-        if ($index > 0
+        if (
+            $index > 0
             && $this->tables->hasAddedTableManually($tableName)
             && !$this->tables->hasJoinedTableManually($tableName, $nonVisitJoin)
             && !$this->tables->hasJoinedTableManually($tableName, $altNonVisitJoin)) {

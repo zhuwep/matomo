@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,8 +8,6 @@
 
 namespace Piwik\Tests\Integration\Settings\Storage\Backend;
 
-use Piwik\Config;
-use Piwik\Db;
 use Piwik\Settings\Storage\Backend\PluginSettingsTable;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -20,7 +18,6 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class PluginSettingsTableTest extends IntegrationTestCase
 {
-
     /**
      * @var PluginSettingsTable
      */
@@ -46,7 +43,7 @@ class PluginSettingsTableTest extends IntegrationTestCase
      */
     private $allBackends = array();
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -62,30 +59,27 @@ class PluginSettingsTableTest extends IntegrationTestCase
         return new PluginSettingsTable($plugin, $login);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage No plugin name given
-     */
     public function test_construct_shouldThrowAnException_IfPluginNameIsEmpty()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No plugin name given');
+
         $this->createSettings('', '');
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Invalid user login name
-     */
     public function test_construct_shouldThrowAnException_IfUserLoginFalse()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Invalid user login name');
+
         $this->createSettings('MyPlugin', false);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Invalid user login name
-     */
     public function test_construct_shouldThrowAnException_IfUserLoginNull()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Invalid user login name');
+
         $this->createSettings('MyPlugin', null);
     }
 
@@ -263,12 +257,11 @@ class PluginSettingsTableTest extends IntegrationTestCase
         }
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage No userLogin specified
-     */
     public function test_removeAllUserSettingsForUser_shouldThrowAnExceptionIfLoginIsEmpty()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No userLogin specified');
+
         PluginSettingsTable::removeAllUserSettingsForUser('');
     }
 
@@ -301,6 +294,6 @@ class PluginSettingsTableTest extends IntegrationTestCase
 
     private function getExampleValues()
     {
-        return array('Mysetting3' => 'value3', 'Mysetting4' . rand(4,99) => 'val' . rand(0, 10));
+        return array('Mysetting3' => 'value3', 'Mysetting4' . rand(4, 99) => 'val' . rand(0, 10));
     }
 }

@@ -1,10 +1,12 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+
 namespace Piwik\Tests\Framework;
 
 use Piwik\Access;
@@ -13,8 +15,9 @@ use Piwik\Archive;
 use Piwik\ArchiveProcessor\PluginsArchiver;
 use Piwik\Auth;
 use Piwik\Auth\Password;
-use Piwik\Cache\Backend\File;
+use Matomo\Cache\Backend\File;
 use Piwik\Cache as PiwikCache;
+use Piwik\CliMulti\CliPhp;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
@@ -23,15 +26,14 @@ use Piwik\DataTable\Manager as DataTableManager;
 use Piwik\Date;
 use Piwik\Db;
 use Piwik\DbHelper;
+use Piwik\EventDispatcher;
 use Piwik\FrontController;
-use Piwik\Ini\IniReader;
+use Matomo\Ini\IniReader;
 use Piwik\Log;
 use Piwik\NumberFormatter;
 use Piwik\Option;
-use Piwik\Piwik;
 use Piwik\Plugin;
 use Piwik\Plugin\Manager;
-use Piwik\Plugins\API\ProcessedReport;
 use Piwik\Plugins\LanguagesManager\API as APILanguagesManager;
 use Piwik\Plugins\MobileMessaging\MobileMessaging;
 use Piwik\Plugins\PrivacyManager\DoNotTrackHeaderChecker;
@@ -40,23 +42,20 @@ use Piwik\Plugins\ScheduledReports\API as APIScheduledReports;
 use Piwik\Plugins\ScheduledReports\ScheduledReports;
 use Piwik\Plugins\SitesManager\API as APISitesManager;
 use Piwik\Plugins\UserCountry\LocationProvider;
-use Piwik\Plugins\UsersManager\API as APIUsersManager;
 use Piwik\Plugins\UsersManager\UsersManager;
 use Piwik\ReportRenderer;
+use Piwik\Session\SaveHandler\DbTable;
 use Piwik\SettingsPiwik;
 use Piwik\SettingsServer;
 use Piwik\Singleton;
 use Piwik\Site;
 use Piwik\Tests\Framework\Mock\FakeAccess;
+use Piwik\Tests\Framework\Mock\File as MockFileMethods;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
 use Piwik\Tracker;
 use Piwik\Tracker\Cache;
-use Piwik\Translate;
-use Piwik\Url;
-use PHPUnit_Framework_Assert;
-use Piwik\Tests\Framework\TestingEnvironmentVariables;
-use PiwikTracker;
-use Piwik_LocalTracker;
+use MatomoTracker;
+use Matomo_LocalTracker;
 use Piwik\Updater;
 use Exception;
 use ReflectionClass;
@@ -76,32 +75,27 @@ use ReflectionClass;
  *                merging some together.
  * @since 2.8.0
  */
-class Fixture extends \PHPUnit_Framework_Assert
+class Fixture extends \PHPUnit\Framework\Assert
 {
     const IMAGES_GENERATED_ONLY_FOR_OS = 'linux';
-    const IMAGES_GENERATED_FOR_PHP = '5.6';
-    const IMAGES_GENERATED_FOR_GD = '2.1.0';
+    const IMAGES_GENERATED_FOR_PHP = '7.2';
+    const IMAGES_GENERATED_FOR_GD = '2.3.3';
     const DEFAULT_SITE_NAME = 'Piwik test';
 
     const ADMIN_USER_LOGIN = 'superUserLogin';
-    const ADMIN_USER_PASSWORD = 'superUserPass';
+    const ADMIN_USER_PASSWORD = 'pas3!"§$%&/()=?\'ㄨ<|-_#*+~>word';
+    const ADMIN_USER_TOKEN = 'c4ca4238a0b923820dcc509a6f75849b';
+
+    const VIEW_USER_LOGIN = 'viewUserLogin';
+    const VIEW_USER_PASSWORD = 'viewUserPass';
+    const VIEW_USER_TOKEN = 'a4ca4238a0b923820dcc509a6f75849f';
 
     const PERSIST_FIXTURE_DATA_ENV = 'PERSIST_FIXTURE_DATA';
 
     public $dbName = false;
 
-    /**
-     * @deprecated has no effect now.
-     */
-    public $createConfig = true;
-
     public $dropDatabaseInSetUp = true;
     public $dropDatabaseInTearDown = true;
-
-    /**
-     * @deprecated
-     */
-    public $loadTranslations = true;
 
     public $createSuperUser = true;
     public $removeExistingSuperUser = true;
@@ -112,8 +106,8 @@ class Fixture extends \PHPUnit_Framework_Assert
     public $printToScreen = false;
 
     public $testCaseClass = false;
-    public $extraPluginsToLoad = array();
-    public $extraDiEnvironments = array();
+    public $extraPluginsToLoad = [];
+    public $extraDiEnvironments = [];
 
     public $testEnvironment = null;
 
@@ -123,9 +117,9 @@ class Fixture extends \PHPUnit_Framework_Assert
      *
      * @var array
      */
-    public $extraDefinitions = array();
+    public $extraDefinitions = [];
 
-    public $extraTestEnvVars = array();
+    public $extraTestEnvVars = [];
 
     /**
      * @var Environment
@@ -137,15 +131,40 @@ class Fixture extends \PHPUnit_Framework_Assert
      */
     protected static function getPythonBinary()
     {
-        if (SettingsServer::isWindows()) {
-            return "C:\Python27\python.exe";
+        $matomoPythonPath = getenv('MATOMO_TEST_PYTHON_PATH');
+        if ($matomoPythonPath) {
+            return $matomoPythonPath;
         }
 
-        if (SystemTestCase::isTravisCI()) {
-            return 'python2.7';
+        if (SettingsServer::isWindows()) { // just a guess really
+            return "C:\Python35\python.exe";
+        }
+
+        if (self::isExecutableExists('python3')) {
+            return 'python3';
         }
 
         return 'python';
+    }
+
+    public static function getCliCommandBase()
+    {
+        $cliPhp = new CliPhp();
+        $php = $cliPhp->findPhpBinary();
+
+        $command = $php . ' ' . PIWIK_INCLUDE_PATH . '/tests/PHPUnit/proxy/console ';
+
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $command .= '--matomo-domain=' . $_SERVER['HTTP_HOST'];
+        }
+
+        return $command;
+    }
+
+    private static function isExecutableExists(string $command)
+    {
+        $out = `which $command`;
+        return !empty($out);
     }
 
     public static function getTestRootUrl()
@@ -164,13 +183,13 @@ class Fixture extends \PHPUnit_Framework_Assert
     }
 
     /** Adds data to Piwik. Creates sites, tracks visits, imports log files, etc. */
-    public function setUp()
+    public function setUp(): void
     {
         // empty
     }
 
     /** Does any clean up. Most of the time there will be no need to clean up. */
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -232,7 +251,8 @@ class Fixture extends \PHPUnit_Framework_Assert
         try {
             static::connectWithoutDatabase();
 
-            if ($this->dropDatabaseInSetUp
+            if (
+                $this->dropDatabaseInSetUp
                 || $this->resetPersistedFixture
             ) {
                 $this->dropDatabase();
@@ -243,7 +263,6 @@ class Fixture extends \PHPUnit_Framework_Assert
             Tracker::disconnectCachedDbConnection();
 
             // reconnect once we're sure the database exists
-            self::getConfig()->database['dbname'] = $this->dbName;
             Db::createDatabaseObject();
 
             Db::get()->query("SET wait_timeout=28800;");
@@ -252,7 +271,6 @@ class Fixture extends \PHPUnit_Framework_Assert
             DbHelper::recordInstallVersion();
 
             self::getPluginManager()->unloadPlugins();
-
         } catch (Exception $e) {
             static::fail("TEST INITIALIZATION FAILED: " . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
@@ -275,7 +293,7 @@ class Fixture extends \PHPUnit_Framework_Assert
         self::updateDatabase();
         self::installAndActivatePlugins($testEnvironment);
 
-        $_GET = $_REQUEST = array();
+        $_GET = $_REQUEST = [];
         $_SERVER['HTTP_REFERER'] = '';
 
         FakeAccess::$superUserLogin = 'superUserLogin';
@@ -308,7 +326,11 @@ class Fixture extends \PHPUnit_Framework_Assert
 
         PiwikCache::getTransientCache()->flushAll();
 
-        if ($this->overwriteExisting
+        // In some cases the Factory might be filled with settings that contain an invalid database connection
+        StaticContainer::getContainer()->set('Piwik\Settings\Storage\Factory', new \Piwik\Settings\Storage\Factory());
+
+        if (
+            $this->overwriteExisting
             || !$this->isFixtureSetUp()
         ) {
             $this->setUp();
@@ -352,8 +374,8 @@ class Fixture extends \PHPUnit_Framework_Assert
 
     public function performTearDown()
     {
-        // Note: avoid run SQL in the *tearDown() metohds because it randomly fails on Travis CI
-        // with error Error while sending QUERY packet. PID=XX
+        // Note: avoid run SQL in the *tearDown() methods because it randomly fails on CI
+        // with error "Error while sending QUERY packet. PID=XX"
         $this->tearDown();
 
         if ($this->dropDatabaseInTearDown) {
@@ -362,17 +384,22 @@ class Fixture extends \PHPUnit_Framework_Assert
             $this->dropDatabase();
         }
 
-        $this->clearInMemoryCaches();
+        self::clearInMemoryCaches();
 
+        Db::destroyDatabaseObject();
         Log::unsetInstance();
 
         $this->destroyEnvironment();
     }
 
-    public function clearInMemoryCaches()
+    public static function clearInMemoryCaches($resetTranslations = true)
     {
+        DbTable::$wasSessionToLargeToRead = false;
         Date::$now = null;
         FrontController::$requestId = null;
+        Cache::$cache = null;
+        Common::$isCliMode = null;
+        MockFileMethods::reset();
         Archive::clearStaticCache();
         DataTableManager::getInstance()->deleteAll();
         Option::clearCache();
@@ -383,23 +410,38 @@ class Fixture extends \PHPUnit_Framework_Assert
         PiwikCache::getEagerCache()->flushAll();
         PiwikCache::getLazyCache()->flushAll();
         ArchiveTableCreator::clear();
-        \Piwik\Plugins\ScheduledReports\API::$cache = array();
+        EventDispatcher::getInstance()->clearCache();
+        \Piwik\Plugins\ScheduledReports\API::$cache = [];
         Singleton::clearAll();
-        PluginsArchiver::$archivers = array();
+        PluginsArchiver::$archivers = [];
+        \Piwik\Notification\Manager::cancelAllNotifications();
 
         Plugin\API::unsetAllInstances();
-        $_GET = $_REQUEST = array();
-        Translate::reset();
+        $_GET = $_REQUEST = [];
+        if ($resetTranslations) {
+            self::resetTranslations();
+        }
 
-        self::getConfig()->Plugins; // make sure Plugins exists in a config object for next tests that use Plugin\Manager
+        self::getConfig()->Plugins; // make sure Plugins exists in config object for next tests that use Plugin\Manager
         // since Plugin\Manager uses getFromGlobalConfig which doesn't init the config object
     }
 
-    protected static function resetPluginsInstalledConfig()
+    public static function resetTranslations()
+    {
+        StaticContainer::get('Piwik\Translation\Translator')->reset();
+    }
+
+    public static function loadAllTranslations()
+    {
+        StaticContainer::get('Piwik\Translation\Translator')->addDirectory(PIWIK_INCLUDE_PATH . '/lang');
+        Manager::getInstance()->loadPluginTranslations();
+    }
+
+    protected static function resetPluginsInstalledConfig($plugins = [])
     {
         $config = self::getConfig();
         $installed = $config->PluginsInstalled;
-        $installed['PluginsInstalled'] = array();
+        $installed['PluginsInstalled'] = $plugins;
         $config->PluginsInstalled = $installed;
     }
 
@@ -416,8 +458,11 @@ class Fixture extends \PHPUnit_Framework_Assert
      * @param bool|false $testCaseClass Ignored.
      * @param array $extraPluginsToLoad Ignoerd.
      */
-    public static function loadAllPlugins(TestingEnvironmentVariables $testEnvironment = null, $testCaseClass = false, $extraPluginsToLoad = array())
-    {
+    public static function loadAllPlugins(
+        TestingEnvironmentVariables $testEnvironment = null,
+        $testCaseClass = false,
+        $extraPluginsToLoad = []
+    ) {
         DbHelper::createTables();
         DbHelper::recordInstallVersion();
         self::getPluginManager()->loadActivatedPlugins();
@@ -429,12 +474,12 @@ class Fixture extends \PHPUnit_Framework_Assert
 
         // Install plugins
         $messages = $pluginsManager->installLoadedPlugins();
-        if(!empty($messages)) {
+        if (!empty($messages)) {
             Log::info("Plugin loading messages: %s", implode(" --- ", $messages));
         }
 
         // Activate them
-        foreach($pluginsManager->getLoadedPlugins() as $plugin) {
+        foreach ($pluginsManager->getLoadedPlugins() as $plugin) {
             $name = $plugin->getPluginName();
             if (!$pluginsManager->isPluginActivated($name)) {
                 $pluginsManager->activatePlugin($name);
@@ -477,35 +522,47 @@ class Fixture extends \PHPUnit_Framework_Assert
      * Creates a website, then sets its creation date to a day earlier than specified dateTime
      * Useful to create a website now, but force data to be archived back in the past.
      *
-     * @param string $dateTime eg '2010-01-01 12:34:56'
-     * @param int $ecommerce
-     * @param string $siteName
-     *
+     * @param string      $dateTime eg '2010-01-01 12:34:56'
+     * @param int         $ecommerce
+     * @param bool        $siteName
      * @param bool|string $siteUrl
-     * @param int $siteSearch
+     * @param int         $siteSearch
      * @param null|string $searchKeywordParameters
      * @param null|string $searchCategoryParameters
      * @param null|string $timezone
-     * @param null|string $type eg 'website' or 'mobileapp'
-     * @param null|string $settings eg 'website' or 'mobileapp'
-     * @param int $excludeUnknownUrls
+     * @param null|string $type     eg 'website' or 'mobileapp'
+     * @param int         $excludeUnknownUrls
+     * @param null|string $excludedParameters
+     * @param null        $excludedReferrers
      * @return int    idSite of website created
+     * @throws Exception
      */
-    public static function createWebsite($dateTime, $ecommerce = 0, $siteName = false, $siteUrl = false,
-                                         $siteSearch = 1, $searchKeywordParameters = null,
-                                         $searchCategoryParameters = null, $timezone = null, $type = null,
-                                         $excludeUnknownUrls = 0)
-    {
-        if($siteName === false) {
+    public static function createWebsite(
+        $dateTime,
+        $ecommerce = 0,
+        $siteName = false,
+        $siteUrl = false,
+        $siteSearch = 1,
+        $searchKeywordParameters = null,
+        $searchCategoryParameters = null,
+        $timezone = null,
+        $type = null,
+        $excludeUnknownUrls = 0,
+        $excludedParameters = null,
+        $excludedReferrers = null
+    ) {
+        if ($siteName === false) {
             $siteName = self::DEFAULT_SITE_NAME;
         }
         $idSite = APISitesManager::getInstance()->addSite(
             $siteName,
             $siteUrl === false ? "http://piwik.net/" : $siteUrl,
             $ecommerce,
-            $siteSearch, $searchKeywordParameters, $searchCategoryParameters,
+            $siteSearch,
+            $searchKeywordParameters,
+            $searchCategoryParameters,
             $ips = null,
-            $excludedQueryParameters = null,
+            $excludedParameters,
             $timezone,
             $currency = null,
             $group = null,
@@ -514,12 +571,14 @@ class Fixture extends \PHPUnit_Framework_Assert
             $keepURLFragments = null,
             $type,
             $settings = null,
-            $excludeUnknownUrls
+            $excludeUnknownUrls,
+            $excludedReferrers
         );
 
         // Manually set the website creation date to a day earlier than the earliest day we record stats for
-        Db::get()->update(Common::prefixTable("site"),
-            array('ts_created' => Date::factory($dateTime)->subDay(1)->getDatetime()),
+        Db::get()->update(
+            Common::prefixTable("site"),
+            ['ts_created' => Date::factory($dateTime)->subDay(1)->getDatetime()],
             "idsite = $idSite"
         );
 
@@ -542,8 +601,8 @@ class Fixture extends \PHPUnit_Framework_Assert
         $piwikUri = $config->tests['request_uri'];
         $piwikPort = $config->tests['port'];
 
-        if($piwikUri == '@REQUEST_URI@') {
-            throw new Exception("Piwik is mis-configured. Remove (or fix) the 'request_uri' entry below [tests] section in your config.ini.php. ");
+        if ($piwikUri == '@REQUEST_URI@') {
+            throw new Exception("Matomo is mis-configured. Remove (or fix) the 'request_uri' entry below [tests] section in your config.ini.php. ");
         }
 
         if (!empty($piwikPort)) {
@@ -566,11 +625,11 @@ class Fixture extends \PHPUnit_Framework_Assert
         }
 
         // in case force_ssl=1, or assume_secure_protocol=1, is set in tests
-        // we don't want to require Travis CI or devs to setup HTTPS on their local machine
+        // we don't want to require our CI or devs to setup HTTPS on their local machine
         $piwikUrl = str_replace("https://", "http://", $piwikUrl);
 
         // append REQUEST_URI (eg. when Piwik runs at http://localhost/piwik/)
-        if($piwikUri != '/') {
+        if ($piwikUri != '/') {
             $piwikUrl .= $piwikUri;
         }
 
@@ -589,22 +648,22 @@ class Fixture extends \PHPUnit_Framework_Assert
     }
 
     /**
-     * Returns a PiwikTracker object that you can then use to track pages or goals.
+     * Returns a MatomoTracker object that you can then use to track pages or goals.
      *
      * @param int     $idSite
      * @param string  $dateTime
      * @param boolean $defaultInit If set to true, the tracker object will have default IP, user agent, time, resolution, etc.
      * @param bool    $useLocal
      *
-     * @return PiwikTracker
+     * @return MatomoTracker
      */
     public static function getTracker($idSite, $dateTime, $defaultInit = true, $useLocal = false)
     {
         if ($useLocal) {
             require_once PIWIK_INCLUDE_PATH . '/tests/LocalTracker.php';
-            $t = new Piwik_LocalTracker($idSite, self::getTrackerUrl());
+            $t = new Matomo_LocalTracker($idSite, self::getTrackerUrl());
         } else {
-            $t = new PiwikTracker($idSite, self::getTrackerUrl());
+            $t = new MatomoTracker($idSite, self::getTrackerUrl());
         }
         $t->setForceVisitDateTime($dateTime);
 
@@ -618,7 +677,7 @@ class Fixture extends \PHPUnit_Framework_Assert
             $t->setLocalTime('12:34:06');
             $t->setResolution(1024, 768);
             $t->setBrowserHasCookies(true);
-            $t->setPlugins($flash = true, $java = true, $director = false);
+            $t->setPlugins($flash = true, $java = true);
         }
         return $t;
     }
@@ -634,14 +693,13 @@ class Fixture extends \PHPUnit_Framework_Assert
         $trans_gif_64 = "R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
         $expectedResponse = base64_decode($trans_gif_64);
 
-        $url = "\n =========================== \n URL was: " . PiwikTracker::$DEBUG_LAST_REQUESTED_URL;
+        $url = "\n =========================== \n URL was: " . MatomoTracker::$DEBUG_LAST_REQUESTED_URL;
         self::assertEquals($expectedResponse, $response, "Expected GIF beacon, got: <br/>\n"
             . var_export($response, true)
             . "\n If you are stuck, you can enable [Tracker] debug=1; in config.ini.php to get more debug info."
             . "\n\n Also, please try to restart your webserver, and run the test again, this may help!"
             . base64_encode($response)
-            . $url
-        );
+            . $url);
     }
 
     public static function checkTrackingFailureResponse($response)
@@ -649,10 +707,10 @@ class Fixture extends \PHPUnit_Framework_Assert
         $trans_gif_64 = "R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
         $expectedResponse = base64_decode($trans_gif_64);
 
-        self::assertContains($expectedResponse, $response);
-        self::assertContains('This resource is part of Matomo.', $response);
-        self::assertNotContains('Error', $response);
-        self::assertNotContains('Fatal', $response);
+        self::assertStringContainsString($expectedResponse, $response);
+        self::assertStringContainsString('This resource is part of Matomo.', $response);
+        self::assertStringNotContainsString('Error', $response);
+        self::assertStringNotContainsString('Fatal', $response);
     }
 
     /**
@@ -661,13 +719,14 @@ class Fixture extends \PHPUnit_Framework_Assert
      *
      * @param $response
      */
-    public static function checkBulkTrackingResponse($response) {
+    public static function checkBulkTrackingResponse($response)
+    {
         $data = json_decode($response, true);
         if (!is_array($data) || empty($response)) {
-            throw new Exception("Bulk tracking response (".$response.") is not an array: " . var_export($data, true) . "\n");
+            throw new Exception("Bulk tracking response (" . $response . ") is not an array: " . var_export($data, true) . "\n");
         }
-        if(!isset($data['status'])) {
-            throw new Exception("Returned data didn't have a status: " . var_export($data,true));
+        if (!isset($data['status'])) {
+            throw new Exception("Returned data didn't have a status: " . var_export($data, true));
         }
 
         self::assertArrayHasKey('status', $data);
@@ -676,12 +735,12 @@ class Fixture extends \PHPUnit_Framework_Assert
 
     public static function makeLocation($city, $region, $country, $lat = null, $long = null, $isp = null)
     {
-        return array(LocationProvider::CITY_NAME_KEY    => $city,
+        return [LocationProvider::CITY_NAME_KEY    => $city,
                      LocationProvider::REGION_CODE_KEY  => $region,
                      LocationProvider::COUNTRY_CODE_KEY => $country,
                      LocationProvider::LATITUDE_KEY     => $lat,
                      LocationProvider::LONGITUDE_KEY    => $long,
-                     LocationProvider::ISP_KEY          => $isp);
+                     LocationProvider::ISP_KEY          => $isp];
     }
 
     /**
@@ -695,7 +754,9 @@ class Fixture extends \PHPUnit_Framework_Assert
         $model = new \Piwik\Plugins\UsersManager\Model();
         $user  = $model->getUser(self::ADMIN_USER_LOGIN);
 
-        return $user['token_auth'];
+        if (!empty($user)) {
+            return self::ADMIN_USER_TOKEN;
+        }
     }
 
     public static function createSuperUser($removeExisting = true)
@@ -704,7 +765,6 @@ class Fixture extends \PHPUnit_Framework_Assert
 
         $login    = self::ADMIN_USER_LOGIN;
         $password = $passwordHelper->hash(UsersManager::getPasswordHash(self::ADMIN_USER_PASSWORD));
-        $token    = APIUsersManager::getInstance()->createTokenAuth($login);
 
         $model = new \Piwik\Plugins\UsersManager\Model();
         $user  = $model->getUser($login);
@@ -713,19 +773,26 @@ class Fixture extends \PHPUnit_Framework_Assert
             $model->deleteUserOnly($login);
         }
 
-        if (!empty($user) && !$removeExisting) {
-            $token = $user['token_auth'];
-        }
         if (empty($user) || $removeExisting) {
-            $model->addUser($login, $password, 'hello@example.org', $login, $token, Date::now()->getDatetime());
+            $model->addUser($login, $password, 'hello@example.org', Date::now()->getDatetime());
         } else {
-            $model->updateUser($login, $password, 'hello@example.org', $login, $token);
+            $model->updateUser($login, $password, 'hello@example.org');
+        }
+        try {
+            if (!$model->getUserByTokenAuth(self::ADMIN_USER_TOKEN)) {
+                $model->addTokenAuth($login, self::ADMIN_USER_TOKEN, 'Admin user token', Date::now()->getDatetime());
+            }
+        } catch (Exception $e) {
+            // duplicate entry errors are expected
+            if (strpos($e->getMessage(), 'Duplicate entry') === false) {
+                throw $e;
+            }
         }
 
         $setSuperUser = empty($user) || !empty($user['superuser_access']);
         $model->setSuperUserAccess($login, $setSuperUser);
 
-        return $model->getUserByTokenAuth($token);
+        return $model->getUser($login);
     }
 
     /**
@@ -745,7 +812,7 @@ class Fixture extends \PHPUnit_Framework_Assert
         // retrieve available reports
         $availableReportMetadata = APIScheduledReports::getReportMetadata($idSite, ScheduledReports::EMAIL_TYPE);
 
-        $availableReportIds = array();
+        $availableReportIds = [];
         foreach ($availableReportMetadata as $reportMetadata) {
             $availableReportIds[] = $reportMetadata['uniqueId'];
         }
@@ -754,13 +821,13 @@ class Fixture extends \PHPUnit_Framework_Assert
         // set-up mail report
         APIScheduledReports::getInstance()->addReport(
             $idSite,
-            'Mail Test report',
+            'Mail Test report with <long> déscription and some 🚀 $peciäl characters $%&-~°^\'"@#*ß§²³',
             'day', // overridden in getApiForTestingScheduledReports()
             0,
             ScheduledReports::EMAIL_TYPE,
             ReportRenderer::HTML_FORMAT, // overridden in getApiForTestingScheduledReports()
             $availableReportIds,
-            array(ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY)
+            [ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_ONLY]
         );
 
         // set-up sms report for one website
@@ -771,8 +838,8 @@ class Fixture extends \PHPUnit_Framework_Assert
             0,
             MobileMessaging::MOBILE_TYPE,
             MobileMessaging::SMS_FORMAT,
-            array("MultiSites_getOne"),
-            array("phoneNumbers" => array())
+            ["MultiSites_getOne"],
+            ["phoneNumbers" => []]
         );
 
         // set-up sms report for all websites
@@ -783,8 +850,8 @@ class Fixture extends \PHPUnit_Framework_Assert
             0,
             MobileMessaging::MOBILE_TYPE,
             MobileMessaging::SMS_FORMAT,
-            array("MultiSites_getAll"),
-            array("phoneNumbers" => array())
+            ["MultiSites_getAll"],
+            ["phoneNumbers" => []]
         );
 
         if (self::canImagesBeIncludedInScheduledReports()) {
@@ -797,7 +864,7 @@ class Fixture extends \PHPUnit_Framework_Assert
                 ScheduledReports::EMAIL_TYPE,
                 ReportRenderer::HTML_FORMAT, // overridden in getApiForTestingScheduledReports()
                 $availableReportIds,
-                array(ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_AND_GRAPHS)
+                [ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_TABLES_AND_GRAPHS]
             );
 
             // set-up mail report with one row evolution based png graph
@@ -808,11 +875,11 @@ class Fixture extends \PHPUnit_Framework_Assert
                 0,
                 ScheduledReports::EMAIL_TYPE,
                 ReportRenderer::HTML_FORMAT,
-                array('Actions_getPageTitles'),
-                array(
+                ['Actions_getPageTitles'],
+                [
                      ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_GRAPHS_ONLY,
                      ScheduledReports::EVOLUTION_GRAPH_PARAMETER => 'true',
-                ),
+                ],
                 false
             );
             APIScheduledReports::getInstance()->addReport(
@@ -822,11 +889,11 @@ class Fixture extends \PHPUnit_Framework_Assert
                 0,
                 ScheduledReports::EMAIL_TYPE,
                 ReportRenderer::HTML_FORMAT,
-                array('Actions_getPageTitles'),
-                array(
+                ['Actions_getPageTitles'],
+                [
                     ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_GRAPHS_ONLY,
                     ScheduledReports::EVOLUTION_GRAPH_PARAMETER => 'true',
-                ),
+                ],
                 false,
                 'prev',
                 10
@@ -838,11 +905,11 @@ class Fixture extends \PHPUnit_Framework_Assert
                 0,
                 ScheduledReports::EMAIL_TYPE,
                 ReportRenderer::HTML_FORMAT,
-                array('Actions_getPageTitles'),
-                array(
+                ['Actions_getPageTitles'],
+                [
                     ScheduledReports::DISPLAY_FORMAT_PARAMETER => ScheduledReports::DISPLAY_FORMAT_GRAPHS_ONLY,
                     ScheduledReports::EVOLUTION_GRAPH_PARAMETER => 'true',
-                ),
+                ],
                 false,
                 'each'
             );
@@ -854,15 +921,15 @@ class Fixture extends \PHPUnit_Framework_Assert
      */
     public static function canImagesBeIncludedInScheduledReports()
     {
-        if(!function_exists('gd_info')) {
+        if (!function_exists('gd_info')) {
             echo "GD is not installed so cannot run these tests. please enable GD in PHP!\n";
             return false;
         }
         $gdInfo = gd_info();
         return
             stristr(php_uname(), self::IMAGES_GENERATED_ONLY_FOR_OS) &&
-            strpos( phpversion(), self::IMAGES_GENERATED_FOR_PHP) !== false &&
-            strpos( $gdInfo['GD Version'], self::IMAGES_GENERATED_FOR_GD) !== false;
+            strpos(phpversion(), self::IMAGES_GENERATED_FOR_PHP) !== false &&
+            strpos($gdInfo['GD Version'], self::IMAGES_GENERATED_FOR_GD) !== false;
     }
 
     public static function executeLogImporter($logFile, $options, $allowFailure = false)
@@ -878,28 +945,29 @@ class Fixture extends \PHPUnit_Framework_Assert
 
         foreach ($options as $name => $values) {
             if (!is_array($values)) {
-                $values = array($values);
+                $values = [$values];
             }
 
             foreach ($values as $value) {
                 $cmd .= $name;
                 if ($value !== false) {
-                    $cmd .= '="' . $value . '"';
+                    $cmd .= '=' . escapeshellarg($value);
                 }
                 $cmd .= ' ';
             }
         }
 
-        $cmd .= '"' . $logFile . '" 2>&1';
+        $cmd .= escapeshellarg($logFile) . ' 2>&1';
 
-        // on travis ci make sure log importer won't hang forever, otherwise the output will never be printed
+        // on our ci make sure log importer won't hang forever, otherwise the output will never be printed
         // and no one will know why the build fails.
-        if (SystemTestCase::isTravisCI()) {
+        if (SystemTestCase::isCIEnvironment()) {
             $cmd = "timeout 10m $cmd";
         }
 
         exec($cmd, $output, $result);
-        if ($result !== 0
+        if (
+            $result !== 0
             && !$allowFailure
         ) {
             throw new Exception("log importer failed: " . implode("\n", $output) . "\n\ncommand used: $cmd");
@@ -910,12 +978,12 @@ class Fixture extends \PHPUnit_Framework_Assert
 
     public static function siteCreated($idSite)
     {
-        return Db::fetchOne("SELECT COUNT(*) FROM " . Common::prefixTable('site') . " WHERE idsite = ?", array($idSite)) != 0;
+        return Db::fetchOne("SELECT COUNT(*) FROM " . Common::prefixTable('site') . " WHERE idsite = ?", [$idSite]) != 0;
     }
 
     public static function goalExists($idSite, $idGoal)
     {
-        return Db::fetchOne("SELECT COUNT(*) FROM " . Common::prefixTable('goal') . " WHERE idgoal = ? AND idsite = ?", array($idGoal, $idSite)) != 0;
+        return Db::fetchOne("SELECT COUNT(*) FROM " . Common::prefixTable('goal') . " WHERE idgoal = ? AND idsite = ?", [$idGoal, $idSite]) != 0;
     }
 
     /**
@@ -932,13 +1000,6 @@ class Fixture extends \PHPUnit_Framework_Assert
         $dbConfig['dbname'] = $oldDbName;
     }
 
-    /**
-     * @deprecated
-     */
-    public static function createAccessInstance()
-    {
-    }
-
     public function dropDatabase($dbName = null)
     {
         $dbName = $dbName ?: $this->dbName ?: self::getConfig()->database_tests['dbname'];
@@ -948,8 +1009,9 @@ class Fixture extends \PHPUnit_Framework_Assert
         $iniReader = new IniReader();
         $config = $iniReader->readFile(PIWIK_INCLUDE_PATH . '/config/config.ini.php');
         $originalDbName = $config['database']['dbname'];
-        if ($dbName == $originalDbName
-            && $dbName != 'piwik_tests'
+        if (
+            $dbName == $originalDbName
+            && $dbName != 'piwik_tests' && $dbName != 'matomo_tests'
         ) { // santity check
             throw new \Exception("Trying to drop original database '$originalDbName'. Something's wrong w/ the tests.");
         }
@@ -966,17 +1028,6 @@ class Fixture extends \PHPUnit_Framework_Assert
         if ($this->printToScreen) {
             echo $message . "\n";
         }
-    }
-
-    /**
-     * @param $type
-     * @param bool $sanitize
-     * @deprecated Use XssTesting
-     */
-    public static function makeXssContent($type, $sanitize = false)
-    {
-        $xssTesting = new XssTesting();
-        return $xssTesting->forTwig($type, $sanitize);
     }
 
     public static function updateDatabase($force = false)
@@ -997,7 +1048,8 @@ class Fixture extends \PHPUnit_Framework_Assert
         }
 
         $result = $updater->updateComponents($componentsWithUpdateFile);
-        if (!empty($result['coreError'])
+        if (
+            !empty($result['coreError'])
             || !empty($result['warnings'])
             || !empty($result['errors'])
         ) {
@@ -1014,7 +1066,7 @@ class Fixture extends \PHPUnit_Framework_Assert
      */
     public function provideContainerConfig()
     {
-        return array();
+        return [];
     }
 
     public function createEnvironmentInstance()

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,7 @@
 
 namespace Piwik\Tests\Framework\TestRequest;
 
-use \Exception;
+use Exception;
 
 /**
  * Holds the specification for a set of API tests.
@@ -46,7 +46,7 @@ class ApiTestConfig
      *
      * @var string
      */
-    public $date;
+    public $date = '';
 
     /**
      * One or more periods to test for. Multiple periods will result in multiple API calls and
@@ -120,7 +120,7 @@ class ApiTestConfig
      * returns the super table of the API method being tested. If set, TestRequest\Collection will look for the
      * first valid idSubtable value to use in the test request. Since these values are assigned dynamically,
      * there's no other way to set idSubtable.
-     * 
+     *
      * @var string|bool eg, `"Referrers.getWebsites"`
      */
     public $supertableApi = false;

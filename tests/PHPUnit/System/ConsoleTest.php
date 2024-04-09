@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,14 +8,13 @@
 
 namespace Piwik\Tests\System;
 
+use Piwik\CliMulti\CliPhp;
 use Piwik\Container\StaticContainer;
 use Piwik\Plugin\ConsoleCommand;
 use Piwik\Plugins\Monolog\Handler\FailureLogMessageDetector;
-use Psr\Log\LoggerInterface;
-use Monolog\Logger;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
+use Piwik\Tests\Framework\Fixture;
+use Piwik\Log\LoggerInterface;
+use Piwik\Log\Logger;
 use Piwik\Tests\Framework\TestCase\ConsoleCommandTestCase;
 
 class TestCommandWithWarning extends ConsoleCommand
@@ -27,9 +26,10 @@ class TestCommandWithWarning extends ConsoleCommand
         $this->setName('test-command-with-warning');
     }
 
-    public function execute(InputInterface $input, OutputInterface $output)
+    public function doExecute(): int
     {
         StaticContainer::get(LoggerInterface::class)->warning('warn');
+        return self::SUCCESS;
     }
 }
 
@@ -40,20 +40,76 @@ class TestCommandWithError extends ConsoleCommand
         parent::configure();
 
         $this->setName('test-command-with-error');
-        $this->addOption('no-error', null, InputOption::VALUE_NONE);
+        $this->addNoValueOption('no-error');
     }
 
-    public function execute(InputInterface $input, OutputInterface $output)
+    public function doExecute(): int
     {
-        if (!$input->getOption('no-error')) {
+        if (!$this->getInput()->getOption('no-error')) {
             StaticContainer::get(LoggerInterface::class)->error('error');
+        }
+        return self::SUCCESS;
+    }
+}
+
+class TestCommandWithFatalError extends ConsoleCommand
+{
+    public function configure()
+    {
+        parent::configure();
+
+        $this->setName('test-command-with-fatal-error');
+    }
+
+    public function doExecute(): int
+    {
+        try {
+            \Piwik\ErrorHandler::pushFatalErrorBreadcrumb(static::class);
+
+            $this->executeImpl();
+        } finally {
+            \Piwik\ErrorHandler::popFatalErrorBreadcrumb();
+        }
+
+        return self::SUCCESS;
+    }
+
+    public function executeImpl()
+    {
+        try {
+            \Piwik\ErrorHandler::pushFatalErrorBreadcrumb(static::class, []);
+
+            $val = "";
+            while (true) {
+                $val .= str_repeat("*", 1024 * 1024 * 1024);
+            }
+        } finally {
+            \Piwik\ErrorHandler::popFatalErrorBreadcrumb();
         }
     }
 }
 
+class TestCommandWithException extends ConsoleCommand
+{
+    public function configure()
+    {
+        parent::configure();
+
+        $this->setName('test-command-with-exception');
+    }
+
+    public function doExecute(): int
+    {
+        throw new \Exception('test error');
+    }
+}
+
+/**
+ * @group ConsoleTest
+ */
 class ConsoleTest extends ConsoleCommandTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->application->addCommands([
@@ -89,12 +145,100 @@ class ConsoleTest extends ConsoleCommandTestCase
         $this->assertEquals(0, $exitCode);
     }
 
+    public function test_Console_handlesFatalErrorsCorrectly()
+    {
+        $cliPhp = new CliPhp();
+        $php = $cliPhp->findPhpBinary();
+        $command = $php . " -i | grep 'memory_limit => -1'";
+
+        $output = shell_exec($command);
+
+        if ($output == "memory_limit => -1 => -1\n") {
+            $this->markTestSkipped("no memory limit in php-cli");
+        }
+
+        $command = Fixture::getCliCommandBase();
+        $command .= ' test-command-with-fatal-error';
+        $command .= ' 2>&1';
+
+        $output = shell_exec($command);
+        $output = $this->normalizeOutput($output);
+
+        $expected = <<<END
+
+Fatal error: Allowed memory size of X bytes exhausted (tried to allocate X bytes) in /tests/PHPUnit/System/ConsoleTest.php on line 84
+*** IN SAFEMODE ***
+Matomo encountered an error: Allowed memory size of X bytes exhausted (tried to allocate X bytes) (which lead to: Error: array (
+  'type' => 1,
+  'message' => 'Allowed memory size of X bytes exhausted (tried to allocate X bytes)',
+  'file' => '/tests/PHPUnit/System/ConsoleTest.php',
+  'line' => %d,
+  'backtrace' => ' on /tests/PHPUnit/System/ConsoleTest.php(%d)
+#0 /tests/PHPUnit/System/ConsoleTest.php(%d): Piwik\\\\Tests\\\\System\\\\TestCommandWithFatalError->executeImpl()
+#1 /core/Plugin/ConsoleCommand.php(%d): Piwik\\\\Tests\\\\System\\\\TestCommandWithFatalError->doExecute()
+',
+))
+END;
+
+        if (PHP_MAJOR_VERSION < 8) {
+            $expected = "#!/usr/bin/env php\n" . $expected;
+        }
+
+        $this->assertStringMatchesFormat($expected, $output);
+    }
+
+    public function test_Console_handlesExceptionsCorrectly()
+    {
+        $command = Fixture::getCliCommandBase();
+        $command .= ' test-command-with-exception';
+        $command .= ' 2>&1';
+
+        $output = shell_exec($command);
+        $output = $this->normalizeOutput($output);
+
+        $expected = <<<END
+*** IN SAFEMODE ***
+
+In ConsoleTest.php line %d:
+              \n  test error  \n              \n
+test-command-with-exception
+
+
+END;
+
+        if (PHP_MAJOR_VERSION < 8) {
+            $expected = "#!/usr/bin/env php\n" . $expected;
+        }
+
+        $this->assertStringMatchesFormat($expected, $output);
+    }
+
     public static function provideContainerConfigBeforeClass()
     {
         return [
-            'log.handlers' => [\DI\get(FailureLogMessageDetector::class)],
-            LoggerInterface::class => \DI\object(Logger::class)
-                ->constructor('piwik', \DI\get('log.handlers'), \DI\get('log.processors')),
+            'log.handlers' => [\Piwik\DI::get(FailureLogMessageDetector::class)],
+            LoggerInterface::class => \Piwik\DI::create(Logger::class)
+                ->constructor('piwik', \Piwik\DI::get('log.handlers'), \Piwik\DI::get('log.processors')),
+
+            'observers.global' => \Piwik\DI::add([
+                ['Console.filterCommands', \Piwik\DI::value(function (&$commands) {
+                    $commands[] = TestCommandWithFatalError::class;
+                    $commands[] = TestCommandWithException::class;
+                })],
+
+                ['Request.dispatch', \Piwik\DI::value(function ($module, $action) {
+                    if ($module === 'CorePluginsAdmin' && $action === 'safemode') {
+                        print "*** IN SAFEMODE ***\n"; // will appear in output
+                    }
+                })],
+            ]),
         ];
+    }
+
+    private function normalizeOutput($output)
+    {
+        $output = str_replace(PIWIK_INCLUDE_PATH, '', $output);
+        $output = preg_replace('/[0-9]+ bytes/', 'X bytes', $output);
+        return $output;
     }
 }

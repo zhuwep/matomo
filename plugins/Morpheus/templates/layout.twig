@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html id="ng-app" {% if language is defined %}lang="{{ language }}"{% endif %} ng-app="piwikApp">
+<html id="ng-app" {% if language is defined %}lang="{{ language }}"{% endif %}>
     <head>
         {% block head %}
             <meta charset="utf-8">
@@ -26,14 +26,14 @@
             {% include "_jsGlobalVariables.twig" %}
             {% include "_jsCssIncludes.twig" %}
 
-            {%- if not isCustomLogo %}<link rel="manifest" href="plugins/CoreHome/javascripts/manifest.json">{% endif %}
+            {%- if not isCustomLogo %}<link rel="manifest" href="plugins/CoreHome/javascripts/manifest.json" crossorigin="use-credentials">{% endif %}
 
         {% endblock %}
     </head>
-    <body id="{{ bodyId|default('') }}" ng-app="app" class="{{ bodyClass|default('') }}">
+    <body id="{{ bodyId|default('') }}" class="{{ bodyClass|default('') }}">
+        {{ postEvent('Template.bodyTop' ) }}
 
     {% block body %}
-
         {% include "_iframeBuster.twig" %}
         {% include "@CoreHome/_javaScriptDisabled.twig" %}
 
@@ -41,8 +41,6 @@
             {% block root %}
             {% endblock %}
         </div>
-
-        <div piwik-popover-handler></div>
 
         {% include "@CoreHome/_shortcuts.twig" %}
 
@@ -53,5 +51,7 @@
         </div>
 
         {% include "@CoreHome/_adblockDetect.twig" %}
+
+        {{ postEvent('Template.bodyBottom' ) }}
     </body>
 </html>

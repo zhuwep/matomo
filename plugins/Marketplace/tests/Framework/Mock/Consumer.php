@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,11 +8,11 @@
 
 namespace Piwik\Plugins\Marketplace\tests\Framework\Mock;
 
-use \Piwik\Plugins\Marketplace\Consumer as ActualConsumer;
+use Piwik\Plugins\Marketplace\Consumer as ActualConsumer;
 use Piwik\Plugins\Marketplace\Input\PurchaseType;
 
-class Consumer {
-
+class Consumer
+{
     public static function build($service)
     {
         $client = Client::build($service);
@@ -87,5 +87,4 @@ class Consumer {
         });
         return static::build($service);
     }
-
 }

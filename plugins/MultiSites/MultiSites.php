@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,13 +13,12 @@ use Piwik\Piwik;
 class MultiSites extends \Piwik\Plugin
 {
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
         return array(
             'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
-            'AssetManager.getJavaScriptFiles' => 'getJsFiles',
             'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Metrics.getDefaultMetricTranslations'  => 'addMetricTranslations',
             'API.getPagesComparisonsDisabledFor'     => 'getPagesComparisonsDisabledFor',
@@ -72,19 +71,16 @@ class MultiSites extends \Piwik\Plugin
         $translations[] = 'General_Faq';
         $translations[] = 'Feedback_CommunityHelp';
         $translations[] = 'Feedback_ProfessionalHelp';
-    }
-
-    public function getJsFiles(&$jsFiles)
-    {
-        $jsFiles[] = "plugins/MultiSites/angularjs/dashboard/dashboard-model.service.js";
-        $jsFiles[] = "plugins/MultiSites/angularjs/dashboard/dashboard.controller.js";
-        $jsFiles[] = "plugins/MultiSites/angularjs/dashboard/dashboard.directive.js";
-        $jsFiles[] = "plugins/MultiSites/angularjs/site/site.controller.js";
-        $jsFiles[] = "plugins/MultiSites/angularjs/site/site.directive.js";
+        $translations[] = 'MultiSites_EvolutionComparisonIncomplete';
+        $translations[] = 'MultiSites_EvolutionComparisonProportional';
+        $translations[] = 'MultiSites_EvolutionComparisonDay';
+        $translations[] = 'MultiSites_EvolutionComparisonWeek';
+        $translations[] = 'MultiSites_EvolutionComparisonMonth';
+        $translations[] = 'MultiSites_EvolutionComparisonYear';
     }
 
     public function getStylesheetFiles(&$stylesheets)
     {
-        $stylesheets[] = "plugins/MultiSites/angularjs/dashboard/dashboard.directive.less";
+        $stylesheets[] = "plugins/MultiSites/vue/src/Dashboard/Dashboard.less";
     }
 }

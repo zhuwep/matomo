@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,6 @@ use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Period;
 use Piwik\Period\Range;
-use Piwik\Piwik;
 use Piwik\Scheduler\Scheduler;
 use Piwik\Site;
 use Piwik\Url;
@@ -32,7 +31,7 @@ class ImageGraph extends \Piwik\Plugin
     );
 
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
@@ -56,10 +55,10 @@ class ImageGraph extends \Piwik\Plugin
         $idSite = $info['idSite'];
 
         // If only one website is selected, we add the Graph URL
-        if (empty($idSite)) {
+        if (empty($idSite) || !is_numeric($idSite)) {
             return;
         }
-        
+
         // in case API.getReportMetadata was not called with date/period we use sane defaults
         if (empty($info['period'])) {
             $info['period'] = 'day';
@@ -87,21 +86,21 @@ class ImageGraph extends \Piwik\Plugin
             } else if ($info['period'] == 'day' || !Config::getInstance()->General['graphs_show_evolution_within_selected_period']) {
                 // for period=day, always show the last n days
                 // if graphs_show_evolution_within_selected_period=false, show the last n periods
-				$periodForMultiplePeriodGraph = $periodForSinglePeriodGraph;
-				$dateForMultiplePeriodGraph = Range::getRelativeToEndDate(
-					$periodForSinglePeriodGraph,
-					'last' . self::getDefaultGraphEvolutionLastPeriods(),
-					$dateForSinglePeriodGraph,
-					$piwikSite
-				);
-			} else {
+                $periodForMultiplePeriodGraph = $periodForSinglePeriodGraph;
+                $dateForMultiplePeriodGraph = Range::getRelativeToEndDate(
+                    $periodForSinglePeriodGraph,
+                    'last' . self::getDefaultGraphEvolutionLastPeriods(),
+                    $dateForSinglePeriodGraph,
+                    $piwikSite
+                );
+            } else {
                 // if graphs_show_evolution_within_selected_period=true, show the days within the period
                 // (except if the period is day, see above)
-				$periodForMultiplePeriodGraph = 'day';
-				$period = PeriodFactory::build($info['period'], $info['date']);
-				$start = $period->getDateStart()->toString();
-				$end = $period->getDateEnd()->toString();
-				$dateForMultiplePeriodGraph = $start . ',' . $end;
+                $periodForMultiplePeriodGraph = 'day';
+                $period = PeriodFactory::build($info['period'], $info['date']);
+                $start = $period->getDateStart()->toString();
+                $end = $period->getDateEnd()->toString();
+                $dateForMultiplePeriodGraph = $start . ',' . $end;
             }
         }
 
@@ -165,7 +164,8 @@ class ImageGraph extends \Piwik\Plugin
 
             $reportSupportsEvolution = !in_array($reportUniqueId, self::$REPORTS_DISABLED_EVOLUTION_GRAPH);
 
-            if ($reportSupportsEvolution
+            if (
+                $reportSupportsEvolution
                 && $reportWithDimensionsSupportsEvolution
             ) {
                 $parameters['period'] = $periodForMultiplePeriodGraph;

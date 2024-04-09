@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -22,7 +22,7 @@ class ActionsTest extends IntegrationTestCase
      */
     private $actionsAccess;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -38,7 +38,7 @@ class ActionsTest extends IntegrationTestCase
         $expectedActions = array(
             array('name' => 'action1')
         );
-        $actualActions = Db::fetchAll("SELECT name FROM ".Common::prefixTable('log_action'));
+        $actualActions = Db::fetchAll("SELECT name FROM " . Common::prefixTable('log_action'));
         $this->assertEquals($expectedActions, $actualActions);
     }
 
@@ -50,7 +50,7 @@ class ActionsTest extends IntegrationTestCase
             array('name' => 'action1'),
             array('name' => 'action3')
         );
-        $actualActions = Db::fetchAll("SELECT name FROM ".Common::prefixTable('log_action'));
+        $actualActions = Db::fetchAll("SELECT name FROM " . Common::prefixTable('log_action'));
         $this->assertEquals($expectedActions, $actualActions);
     }
 

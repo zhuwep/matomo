@@ -1,7 +1,7 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -81,7 +81,7 @@ Segmentation = (function($) {
         };
 
         segmentation.prototype.markComparedSegments = function() {
-            var comparisonService = piwikHelper.getAngularDependency('piwikComparisonsService');
+            var comparisonService = window.CoreHome.ComparisonsStoreInstance;
             var comparedSegments = comparisonService.getSegmentComparisons().map(function (comparison) {
                 return comparison.params.segment;
             });
@@ -102,7 +102,7 @@ Segmentation = (function($) {
             if( current != "")
             {
                 // this code is mad, and may drive you mad.
-                // the whole segmentation editor needs to be rewritten in AngularJS with clean code
+                // the whole segmentation editor needs to be rewritten in Vue with clean code
                 var selector = 'div.segmentList ul li[data-definition="'+current+'"]';
                 var foundItems = $(selector, this.target);
 
@@ -165,9 +165,9 @@ Segmentation = (function($) {
                 + ' data-definition=""><span class="segname" tabindex="4">' + self.translations['SegmentEditor_DefaultAllVisits']
                 + ' ' + self.translations['General_DefaultAppended']
                 + '</span>';
-            var comparisonService = piwikHelper.getAngularDependency('piwikComparisonsService');
+            var comparisonService = window.CoreHome.ComparisonsStoreInstance;
             if (comparisonService.isComparisonEnabled()
-                || comparisonService.isComparisonEnabled() === null // may not be initialized since this code is outside of angular
+                || comparisonService.isComparisonEnabled() === null // may not be initialized since this code is outside of Vue
             ) {
                 listHtml += '<span class="compareSegment allVisitsCompareSegment" title="' + _pk_translate('SegmentEditor_CompareThisSegment') + '"></span>';
             }
@@ -218,7 +218,7 @@ Segmentation = (function($) {
                         listHtml += '<span class="editSegment" title="'+ self.translations['General_Edit'].toLocaleLowerCase() +'"></span>';
                     }
                     if (comparisonService.isComparisonEnabled()
-                        || comparisonService.isComparisonEnabled() === null // may not be initialized since this code is outside of angular
+                        || comparisonService.isComparisonEnabled() === null // may not be initialized since this code is outside of Vue
                     ) {
                         listHtml += '<span class="compareSegment" title="' + _pk_translate('SegmentEditor_CompareThisSegment') + '"></span>';
                     }
@@ -288,21 +288,9 @@ Segmentation = (function($) {
 
         var getFormHtml = function() {
             var html = self.editorTemplate.find("> .segment-element").clone();
-            // set left margin to center form
-            var segmentsDropdown = $(html).find(".available_segments_select");
-            var segment, newOption;
-            newOption = '<option data-idsegment="" data-definition="" title="'
-                + self.translations['SegmentEditor_AddNewSegment']
-                + '">' + self.translations['SegmentEditor_AddNewSegment']
-                + '</option>';
-            segmentsDropdown.append(newOption);
-            for(var i = 0; i < self.availableSegments.length; i++)
-            {
-                segment = self.availableSegments[i];
-                newOption = '<option data-idsegment="'+segment.idsegment+'" data-definition="'+(segment.definition).replace(/"/g, '&quot;')+'" title="'+getSegmentTooltipEnrichedWithUsername(segment)+'">'+getSegmentName(segment)+'</option>';
-                segmentsDropdown.append(newOption);
-            }
-            $(html).find(".segment-content > h3").after('<div piwik-segment-generator add-initial-condition="true"></div>').show();
+            $(html).find(".segment-content > h3")
+              .after('<div class="segment-generator-container"></div>')
+              .show();
             return html;
         };
 
@@ -320,7 +308,7 @@ Segmentation = (function($) {
                 .html( getSegmentName(segment) )
                 .prop('title', getSegmentTooltipEnrichedWithUsername(segment));
 
-            $(self.form).find('.available_segments_select > option[data-idsegment="'+segment.idsegment+'"]').prop("selected",true);
+            $(self.form).find('.available_segments_select').val(segment.idsegment);
 
             $(self.form).find('.available_segments a.dropList')
                 .html( getSegmentName(segment) )
@@ -338,8 +326,7 @@ Segmentation = (function($) {
 
         function showAddNewSegmentForm(segment) {
             var parameters = {isAllowed: true};
-            var $rootScope = piwikHelper.getAngularDependency('$rootScope');
-            $rootScope.$emit('Segmentation.initAddSegment', parameters);
+            window.CoreHome.Matomo.postEvent('Segmentation.initAddSegment', parameters);
             if (parameters && !parameters.isAllowed) {
                 return;
             }
@@ -392,9 +379,6 @@ Segmentation = (function($) {
                         || $(e.target).hasClass("filterNoResults")) {
                         e.stopPropagation();
                     } else {
-                        if (self.jscroll) {
-                            self.jscroll.destroy();
-                        }
                         self.target.closest('.segmentEditorPanel').removeClass('expanded');
                     }
                 } else {
@@ -402,10 +386,6 @@ Segmentation = (function($) {
                     closeAllOpenLists();
                     self.target.closest('.segmentEditorPanel').addClass('expanded');
                     self.target.find('.segmentFilter').val(self.translations['General_Search']).trigger('keyup');
-                    self.jscroll = self.target.find(".segmentList").jScrollPane({
-                        autoReinitialise: true,
-                        showArrows:true
-                    }).data().jsp;
                 }
             });
 
@@ -422,7 +402,7 @@ Segmentation = (function($) {
                 e.stopPropagation();
                 e.preventDefault();
 
-                var comparisonService = piwikHelper.getAngularDependency('piwikComparisonsService');
+                var comparisonService = window.CoreHome.ComparisonsStoreInstance;
                 comparisonService.addSegmentComparison({
                     segment: $(e.target).closest('li').data('definition'),
                 });
@@ -434,16 +414,15 @@ Segmentation = (function($) {
 
             self.target.on("click", ".segmentList li", function (e) {
                 if ($(e.currentTarget).hasClass("grayed") !== true) {
-                    var idsegment = $(this).attr("data-idsegment");
-                    segmentDefinition = $(this).data("definition");
+                    var segmentDefinition = $(this).data("definition");
 
-                    if (!piwikHelper.isAngularRenderingThePage()) {
+                    if (!piwikHelper.isReportingPage()) {
                         // we update segment on location change success
                         self.setSegment(segmentDefinition);
                     }
 
                     self.markCurrentSegment();
-                    self.segmentSelectMethod( segmentDefinition );
+                    self.segmentSelectMethod(segmentDefinition);
                     toggleLoadingMessage(segmentDefinition.length);
                 }
             });
@@ -532,14 +511,10 @@ Segmentation = (function($) {
                 e.preventDefault();
             });
 
-            self.target.on('change', '.available_segments_select', function (e) {
-                var option = $(e.currentTarget).find('option:selected');
-                openEditFormGivenSegment(option);
-            });
 
             self.target.on('click', ".delete", function() {
                 var segmentName = $(self.form).find(".segment-content > h3 > span").text();
-                var segmentId = $(self.form).find(".available_segments_select option:selected").attr("data-idsegment");
+                var segmentId = $(self.form).find(".available_segments_select").val();
                 var params = {
                     "idsegment" : segmentId
                 };
@@ -617,9 +592,7 @@ Segmentation = (function($) {
         var addForm = function(mode, segment){
 
             self.target.find(".segment-element:visible").unbind().remove();
-            if (typeof self.form !== "undefined") {
-                closeForm();
-            }
+            closeForm();
             // remove any remaining forms
 
 
@@ -648,13 +621,13 @@ Segmentation = (function($) {
             }
 
             if (segment !== undefined && segment.definition != ""){
-                self.form.find('[piwik-segment-generator]').attr('segment-definition', segment.definition);
+                self.currentSegmentStr = segment.definition;
+                self.form.find('.segment-generator-container').attr('model-value', JSON.stringify(segment.definition));
             }
 
             makeDropList(".enable_all_users" , ".enable_all_users_select");
             makeDropList(".visible_to_website" , ".visible_to_website_select");
             makeDropList(".auto_archive" , ".auto_archive_select");
-            makeDropList(".available_segments" , ".available_segments_select");
             $(self.form).find(".saveAndApply").bind("click", function (e) {
                 e.preventDefault();
                 parseFormAndSave();
@@ -672,25 +645,58 @@ Segmentation = (function($) {
 
             self.target.closest('.segmentEditorPanel').addClass('editing');
 
-            piwikHelper.compileAngularComponents(self.target);
+            var segmentGeneratorContainer = $('.segment-generator-container', self.form)[0];
+
+            var createVueApp = window.CoreHome.createVueApp;
+            var SegmentGenerator = window.SegmentEditor.SegmentGenerator;
+
+            var app = createVueApp({
+              template: '<root :add-initial-condition="true" v-model="value" />',
+              components: {
+                root: SegmentGenerator,
+              },
+              watch: {
+                value: function () {
+                  self.currentSegmentStr = this.value;
+                },
+              },
+              data() {
+                return {
+                  value: self.currentSegmentStr,
+                };
+              },
+            });
+            app.mount(segmentGeneratorContainer);
+
+            segmentGeneratorContainer.addEventListener('matomoVueDestroy', function () {
+              app.unmount();
+            });
         };
 
         var closeForm = function () {
-            $(self.form).unbind().remove();
+            self.currentSegmentStr = '';
+
+            if (typeof self.form !== "undefined") {
+              $(self.form).find('.segment-generator-container')[0].dispatchEvent(
+                new CustomEvent('matomoVueDestroy'),
+              );
+
+              $(self.form).unbind().remove();
+            }
             self.target.closest('.segmentEditorPanel').removeClass('editing');
         };
 
-        function getSegmentGeneratorController()
-        {
-            return angular.element(self.form.find('.segment-generator')).scope().segmentGenerator;
-        }
-
         var parseFormAndSave = function(){
             var segmentName = $(self.form).find(".segment-content > h3 >span").text();
-            var segmentStr = getSegmentGeneratorController().getSegmentString();
-            var segmentId = $(self.form).find('.available_segments_select > option:selected').attr("data-idsegment");
+            var segmentStr = self.currentSegmentStr;
+            var segmentId = $(self.form).find(".available_segments_select").val() || "";
             var user = $(self.form).find(".enable_all_users_select option:selected").val();
-            var autoArchive = $(self.form).find(".auto_archive_select option:selected").val() || 0;
+            // if create realtime segments is disabled, the select field is not available, but we need to use autoArchive = 1
+            if ($(self.form).find(".auto_archive_select").length) {
+              var autoArchive = $(self.form).find(".auto_archive_select option:selected").val() || 0;
+            } else {
+              var autoArchive = 1;
+            }
             var params = {
                 "name": segmentName,
                 "definition": segmentStr,
@@ -751,27 +757,27 @@ Segmentation = (function($) {
         };
 
         var testSegment = function() {
-            var segmentStr = getSegmentGeneratorController().getSegmentString();
+            var segmentStr = self.currentSegmentStr;
             var encSegment = jQuery(jQuery('.segmentEditorPanel').get(0)).data('uiControlObject').uriEncodeSegmentDefinition(segmentStr);
 
-            var url = window.location.href;
-            //  URL might have format index.php?aparam=avalue#?anotherparam=anothervalue
-            // Need to strip off stuff before second ? as it mucks with updateParamValue
-            url = url.replace(/\?[\S]*\?/, '?');
-            // Show user the Visits Log so that they can easily refine their new segment if needed
-            url = broadcast.updateParamValue('viewDataTable=VisitorLog', url);
-            url = broadcast.updateParamValue('module=Live', url);
-            url = broadcast.updateParamValue('action=getLastVisitsDetails', url);
-            url = broadcast.updateParamValue('segment=' + encSegment, url);
-            url = broadcast.updateParamValue('inPopover=1', url);
+            var url = $.param({
+                date: piwik.currentDateString,
+                period: piwik.period,
+                idSite: piwik.idSite,
+                module: 'Live',
+                action: 'getLastVisitsDetails',
+                segment: encSegment,
+                inPopover: 1,
+            });
 
             Piwik_Popover.createPopupAndLoadUrl(url, _pk_translate('Live_VisitsLog'));
         };
 
         var makeDropList = function(spanId, selectId){
-            var select = $(self.form).find(selectId).hide();
+            var select = $(self.form).find(selectId);
+            select.hide().closest('.select-wrapper').children().hide();
             var dropList = $( '<a class="dropList dropdown">' )
-                .insertAfter( select )
+                .insertAfter( select.closest('.hide-select') )
                 .text( select.children(':selected').text() )
                 .autocomplete({
                     delay: 0,
@@ -841,7 +847,7 @@ Segmentation = (function($) {
                 this.content = this.target.find(".segmentationContainer");
             }
 
-            // assign content to object attribute to make it easil accesible through all widget methods
+            // assign content to object attribute to make it easily accessible through all widget methods
             this.markCurrentSegment();
             setTimeout(function () {
                 self.markComparedSegments();
@@ -852,26 +858,26 @@ Segmentation = (function($) {
             toggleLoadingMessage(segmentIsSet);
         };
 
-        if (piwikHelper.isAngularRenderingThePage()) {
-            angular.element(document).injector().invoke(function ($rootScope, $location) {
-                $rootScope.$on('$locationChangeSuccess', function () {
-                    var $search = $location.search();
+        if (piwikHelper.isReportingPage()) {
+          var watch = window.Vue.watch;
+          var MatomoUrl = window.CoreHome.MatomoUrl;
+          watch(
+            function () {
+              return MatomoUrl.url.value;
+            },
+            function () {
+              var segment = MatomoUrl.hashParsed.value.segment || '';
 
-                    var segment = '';
-                    if ('undefined' !== typeof $search.segment && null !== $search.segment) {
-                        segment = $search.segment
-                    }
-
-                    if (self.getSegment() != segment) {
-                        self.setSegment(segment);
-                        self.initHtml();
-                    } else {
-                        setTimeout(function () {
-                            self.markComparedSegments();
-                        });
-                    }
+              if (self.getSegment() != segment) {
+                self.setSegment(segment);
+                self.initHtml();
+              } else {
+                setTimeout(function () {
+                  self.markComparedSegments();
                 });
-            });
+              }
+            }
+          );
         }
 
         this.initHtml();
@@ -913,22 +919,16 @@ $(document).ready(function() {
         };
 
         this.changeSegment = function(segmentDefinition) {
-            if (piwikHelper.isAngularRenderingThePage()) {
-                angular.element(document).injector().invoke(function ($location, $rootScope) {
-                    var $search = $location.search();
-
-                    if (segmentDefinition !== $search.segment) {
-                        // eg when using back button the date might be actually already changed in the URL and we do not
-                        // want to change the URL again
-                        $search.segment = segmentDefinition.replace(/%$/, '%25').replace(/%([^\d].)/g, "%25$1");
-                        $location.search($search);
-                        setTimeout(function () {
-                            try {
-                                $rootScope.$apply();
-                            } catch (e) {}
-                        }, 1);
-                    }
-                });
+            if (piwikHelper.isReportingPage()) {
+                var MatomoUrl = window.CoreHome.MatomoUrl;
+                var segment = MatomoUrl.hashParsed.value.segment;
+                if (segmentDefinition !== segment) {
+                  // eg when using back button the date might be actually already changed in the URL and we do not
+                  // want to change the URL again
+                  MatomoUrl.updateHash(Object.assign({}, MatomoUrl.hashParsed.value, {
+                    segment: segmentDefinition.replace(/%$/, '%25').replace(/%([^\d].)/g, "%25$1"),
+                  }));
+                }
                 return false;
             } else {
                 return this.forceSegmentReload(segmentDefinition);
@@ -938,11 +938,11 @@ $(document).ready(function() {
         this.forceSegmentReload = function (segmentDefinition) {
             segmentDefinition = this.uriEncodeSegmentDefinition(segmentDefinition);
 
-            if (piwikHelper.isAngularRenderingThePage()) {
-                return broadcast.propagateNewPage('', true, 'addSegmentAsNew=&segment=' + segmentDefinition, ['compareSegments', 'comparePeriods']);
+            if (piwikHelper.isReportingPage()) {
+                return broadcast.propagateNewPage('', true, 'addSegmentAsNew=&segment=' + segmentDefinition, ['compareSegments', 'comparePeriods', 'compareDates']);
             } else {
                 // eg in case of exported dashboard
-                return broadcast.propagateNewPage('segment=' + segmentDefinition, true, 'addSegmentAsNew=&segment=' + segmentDefinition, ['compareSegments', 'comparePeriods']);
+                return broadcast.propagateNewPage('segment=' + segmentDefinition, true, 'addSegmentAsNew=&segment=' + segmentDefinition, ['compareSegments', 'comparePeriods', 'compareDates']);
             }
         };
 
@@ -1101,9 +1101,9 @@ $(document).ready(function() {
 
         this.onMouseUp = function(e) {
             if ($(e.target).closest('.segment-element').length === 0
+                && !$(e.target).is('.ui-menu-item-wrapper')
                 && !$(e.target).is('.segment-element')
                 && $(e.target).hasClass("ui-corner-all") == false
-                && $(e.target).hasClass("ddmetric") == false
                 && $(e.target).hasClass("ui-icon-closethick") == false
                 && $(e.target).hasClass("ui-button-text") == false
                 && $(".segment-element:visible", self.$element).length == 1
@@ -1126,7 +1126,7 @@ $(document).ready(function() {
 
         initTopControls();
 
-        piwikHelper.getAngularDependency('$rootScope').$emit('piwikSegmentationInited');
+        window.CoreHome.Matomo.postEvent('piwikSegmentationInited');
     };
 
     /**

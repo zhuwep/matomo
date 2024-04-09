@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -52,7 +52,8 @@ class WidgetMetadata
                 // widgets in containers with ByDimension layout have a special, unrecognized category/subcategory
                 // (eg, "Sales by Referrer Type"). we change it to the container's category/subcategory so the widget
                 // will appear in the dashboard manager.
-                if ($widgetConfig instanceof WidgetContainerConfig
+                if (
+                    $widgetConfig instanceof WidgetContainerConfig
                     && $widgetConfig->getLayout() == CoreHome::WIDGET_CONTAINER_LAYOUT_BY_DIMENSION
                 ) {
                     $metadataOverrides = [
@@ -124,7 +125,7 @@ class WidgetMetadata
             $item['layout'] = $widget->getLayout();
             $item['isContainer'] = true;
 
-            // we do not want to create categories to the inital categoryList. Otherwise we'd maybe display more pages
+            // we do not want to create categories to the initial categoryList. Otherwise we'd maybe display more pages
             // etc.
             $subCategoryList = new CategoryList();
             $this->createMissingCategoriesAndSubcategories($subCategoryList, $widget->getWidgetConfigs());
@@ -139,7 +140,8 @@ class WidgetMetadata
         return $item;
     }
 
-    private function sortWidgets($widgetA, $widgetB) {
+    private function sortWidgets($widgetA, $widgetB)
+    {
         $orderA = $widgetA['category']['order'];
         $orderB = $widgetB['category']['order'];
 
@@ -187,10 +189,12 @@ class WidgetMetadata
         }
 
         return array(
-            'id'    => (string) $category->getId(),
-            'name'  => $category->getDisplayName(),
-            'order' => $category->getOrder(),
-            'icon' => $category->getIcon(),
+            'id'     => (string) $category->getId(),
+            'name'   => $category->getDisplayName(),
+            'order'  => $category->getOrder(),
+            'icon'   => $category->getIcon(),
+            'help'   => Piwik::translate($category->getHelp()),
+            'widget' => $category->getWidget() ?: null,
         );
     }
 
@@ -208,6 +212,7 @@ class WidgetMetadata
             'id'    => (string) $subcategory->getId(),
             'name'  => Piwik::translate($subcategory->getName()),
             'order' => $subcategory->getOrder(),
+            'help' => Piwik::translate($subcategory->getHelp()),
         );
     }
 
@@ -315,5 +320,4 @@ class WidgetMetadata
 
         return $ca;
     }
-
 }

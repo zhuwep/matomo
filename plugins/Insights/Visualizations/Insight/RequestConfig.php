@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +10,6 @@
 namespace Piwik\Plugins\Insights\Visualizations\Insight;
 
 use Piwik\Plugins\Insights\InsightReport;
-use Piwik\Plugins\Insights\Visualizations\Insight;
 use Piwik\ViewDataTable\RequestConfig as VisualizationRequestConfig;
 
 class RequestConfig extends VisualizationRequestConfig
@@ -42,5 +41,4 @@ class RequestConfig extends VisualizationRequestConfig
         $this->addPropertiesThatShouldBeAvailableClientSide($properties);
         $this->addPropertiesThatCanBeOverwrittenByQueryParams($properties);
     }
-
 }

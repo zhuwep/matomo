@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,9 +17,9 @@ use Piwik\DataTable\Simple;
 /**
  * @group DataTableTest
  */
-class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
+class XMLTest extends \PHPUnit\Framework\TestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         Manager::getInstance()->deleteAll();
@@ -60,7 +60,7 @@ class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
     {
         $array = array('max_actions' => 14.0, 'nb_uniq_visitors' => 57.0, 'nb_visits' => 66.0, 'nb_actions' => 151.0, 'sum_visit_length' => 5118.0, 'bounce_count' => 44.0,);
 
-        $table = new Simple;
+        $table = new Simple();
         $table->addRowsFromArray($array);
         return $table;
     }
@@ -69,21 +69,21 @@ class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
     {
         $array = array('nb_visits' => 14.0);
 
-        $table = new Simple;
+        $table = new Simple();
         $table->addRowsFromArray($array);
         return $table;
     }
 
     protected function _getDataTableEmpty()
     {
-        $table = new DataTable;
+        $table = new DataTable();
         return $table;
     }
 
     protected function _getDataTableSimpleOneZeroRowTest()
     {
         $array = array('nb_visits' => 0);
-        $table = new Simple;
+        $table = new Simple();
         $table->addRowsFromArray($array);
         return $table;
     }
@@ -91,7 +91,7 @@ class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
     protected function _getDataTableSimpleOneFalseRowTest()
     {
         $array = array('is_excluded' => false);
-        $table = new Simple;
+        $table = new Simple();
         $table->addRowsFromArray($array);
         return $table;
     }
@@ -290,14 +290,14 @@ class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
     protected function _getDataTableSimpleMapTest()
     {
         $array1 = array('max_actions' => 14.0, 'nb_uniq_visitors' => 57.0,);
-        $table1 = new Simple;
+        $table1 = new Simple();
         $table1->addRowsFromArray($array1);
 
         $array2 = array('max_actions' => 140.0, 'nb_uniq_visitors' => 570.0,);
-        $table2 = new Simple;
+        $table2 = new Simple();
         $table2->addRowsFromArray($array2);
 
-        $table3 = new Simple;
+        $table3 = new Simple();
 
         $table = new DataTable\Map();
         $table->setKeyName('testKey');
@@ -311,13 +311,13 @@ class DataTable_Renderer_XMLTest extends \PHPUnit_Framework_TestCase
     protected function _getDataTableSimpleOneRowMapTest()
     {
         $array1 = array('nb_visits' => 14.0);
-        $table1 = new Simple;
+        $table1 = new Simple();
         $table1->addRowsFromArray($array1);
         $array2 = array('nb_visits' => 15.0);
-        $table2 = new Simple;
+        $table2 = new Simple();
         $table2->addRowsFromArray($array2);
 
-        $table3 = new Simple;
+        $table3 = new Simple();
 
         $table = new DataTable\Map();
         $table->setKeyName('testKey');

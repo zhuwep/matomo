@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,10 +10,8 @@ namespace Piwik\Tests\Core\DataTable\Filter;
 
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
-use Piwik\Plugins\Actions\Reports\GetOutlinks;
 use Piwik\Plugins\DevicePlugins\Reports\GetPlugin;
 use Piwik\Plugins\UserCountry\Reports\GetCity;
-use Piwik\Plugins\UserCountry\Reports\GetCountry;
 use Piwik\Plugins\VisitsSummary\Reports\Get;
 
 /**
@@ -22,7 +20,7 @@ use Piwik\Plugins\VisitsSummary\Reports\Get;
  * @group Filter
  * @group Core
  */
-class AddSegmentBySegmentValueTest extends \PHPUnit_Framework_TestCase
+class AddSegmentBySegmentValueTest extends \PHPUnit\Framework\TestCase
 {
     private $filter = 'AddSegmentBySegmentValue';
 
@@ -33,7 +31,7 @@ class AddSegmentBySegmentValueTest extends \PHPUnit_Framework_TestCase
 
     private $report;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

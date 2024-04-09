@@ -9,6 +9,7 @@
 namespace Piwik\Plugins\Tour\Engagement;
 
 use Piwik\Piwik;
+use Piwik\Url;
 
 class ChallengeChangeVisualisation extends Challenge
 {
@@ -29,8 +30,6 @@ class ChallengeChangeVisualisation extends Challenge
 
     public function getUrl()
     {
-        return 'https://matomo.org/docs/piwik-tour/#a-look-at-a-piwik-report';
+        return Url::addCampaignParametersToMatomoLink('https://matomo.org/faq/reports/graphs-and-visualisations-in-matomo/');
     }
-
-
 }

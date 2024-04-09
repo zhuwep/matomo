@@ -13,13 +13,16 @@
             </div>
         </div>
         <div class="UserCountryMap-tooltip UserCountryMap-info">
-            <div class="content unlocated-stats" data-tpl="{{ 'UserCountryMap_Unlocated'|translate }}">
+            <div class="content unlocated-stats">
             </div>
         </div>
         <div class="UserCountryMap-info-btn" data-tooltip-target=".UserCountryMap-tooltip"></div>
     </div>
     <div class="mapWidgetStatus">
         {% if noData %}
+            {% if not isWidget %}
+            <h2>{{ 'UserCountryMap_VisitorMap'|translate }}</h2>
+            {% endif %}
             <div class="pk-emptyDataTable">{{ 'CoreHome_ThereIsNoDataForThisReport'|translate }}</div>
         {% else %}
             <span class="loadingPiwik">
@@ -28,7 +31,8 @@
             </span>
         {% endif %}
     </div>
-    <div class="dataTableFeatures" style="padding-top:0;">
+    {% if not noData %}
+    <div class="dataTableFeatures">
         <div class="dataTableFooterIcons">
             <div class="dataTableFooterWrap" var="graphVerticalBar">
                 <img class="UserCountryMap-activeItem dataTableFooterActiveItem" src="plugins/Morpheus/images/data_table_footer_active_item.png" style="left: 25px;" />
@@ -42,12 +46,12 @@
                 </div>
                 <div class="tableIconsGroup UserCountryMap-view-mode-buttons">
                     <span class="tableAllColumnsSwitch">
-                        <a var="tableAllColumns" class="UserCountryMap-btn-region tableIcon activeIcon" format="tableAllColumns"
+                        <a class="UserCountryMap-btn-region tableIcon activeIcon"
                            data-region="{{ 'UserCountryMap_Regions'|translate }}" data-country="{{ 'UserCountryMap_Countries'|translate }}">
                             <img src="plugins/UserCountryMap/images/regions.png" title="Show visitors per region/country" />
                             <span style="margin:0;">{{ 'UserCountryMap_Countries'|translate }}</span>&nbsp;
                         </a>
-                        <a var="tableGoals" class="UserCountryMap-btn-city tableIcon inactiveIco" format="tableGoals">
+                        <a class="UserCountryMap-btn-city tableIcon inactiveIcon" style="display: none;">
                             <img src="plugins/UserCountryMap/images/cities.png" title="Show visitors per city" />
                             <span style="margin:0;">{{ 'UserCountryMap_Cities'|translate }}</span>&nbsp;
                         </a>
@@ -57,7 +61,7 @@
 
             <select class="userCountryMapSelectMetrics browser-default" style="float:right;margin-right:25px;margin-bottom:10px;max-width: 10em;font-size:10px;height: auto;">
                 {% for metric in metrics %}
-                    <option value="{{ metric[0] }}" {% if metric[0] == defaultMetric %}selected="selected"{% endif %}}>{{ metric[1] }}</option>
+                    <option value="{{ metric[0] }}" {% if metric[0] == defaultMetric %}selected="selected"{% endif %}>{{ metric[1] }}</option>
                 {% endfor %}
             </select>
             <select class="userCountryMapSelectCountry browser-default" style="height: auto;">
@@ -70,6 +74,7 @@
             </select>
         </div>
     </div>
+    {% endif %}
 </div>
 </section>
 
@@ -81,8 +86,6 @@
     config._ = JSON.parse('{{ localeJSON|e('js') }}');
     config.reqParams = JSON.parse('{{ reqParamsJSON|e('js') }}');
     config.countryNames = JSON.parse('{{ countriesByIso|json_encode|e('js') }}');
-
-    $('.UserCountryMap').addClass('dataTable');
 
     if ($('#dashboardWidgetsArea').length) {
         // dashboard mode

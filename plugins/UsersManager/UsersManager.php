@@ -1,24 +1,23 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\UsersManager;
 
 use Exception;
 use Piwik\Access\Role\Admin;
 use Piwik\Access\Role\Write;
 use Piwik\API\Request;
-use Piwik\Auth\Password;
-use Piwik\Common;
 use Piwik\Config;
 use Piwik\Option;
 use Piwik\Piwik;
 use Piwik\Plugins\CoreHome\SystemSummary;
-use Piwik\Plugins\CorePluginsAdmin\CorePluginsAdmin;
 use Piwik\SettingsPiwik;
 
 /**
@@ -35,21 +34,19 @@ class UsersManager extends \Piwik\Plugin
      */
     public function registerEvents()
     {
-        return array(
-            'AssetManager.getJavaScriptFiles'        => 'getJsFiles',
+        return [
             'AssetManager.getStylesheetFiles'        => 'getStylesheetFiles',
             'SitesManager.deleteSite.end'            => 'deleteSite',
             'Tracker.Cache.getSiteAttributes'        => 'recordAdminUsersInCache',
             'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Platform.initialized'                   => 'onPlatformInitialized',
             'System.addSystemSummaryItems'           => 'addSystemSummaryItems',
-            'CronArchive.getTokenAuth'               => 'getCronArchiveTokenAuth'
-        );
+        ];
     }
 
     public static function isUsersAdminEnabled()
     {
-        return (bool) Config::getInstance()->General['enable_users_admin'];
+        return (bool)Config::getInstance()->General['enable_users_admin'];
     }
 
     public static function dieIfUsersAdminIsDisabled()
@@ -73,7 +70,14 @@ class UsersManager extends \Piwik\Plugin
             $numUsers--;
         }
 
-        $systemSummary[] = new SystemSummary\Item($key = 'users', Piwik::translate('General_NUsers', $numUsers), $value = null, array('module' => 'UsersManager', 'action' => 'index'), $icon = 'icon-user', $order = 5);
+        $systemSummary[] = new SystemSummary\Item(
+            $key = 'users',
+            Piwik::translate('General_NUsers', $numUsers),
+            $value = null,
+            array('module' => 'UsersManager', 'action' => 'index'),
+            $icon = 'icon-user',
+            $order = 5
+        );
     }
 
     public function onPlatformInitialized()
@@ -94,22 +98,17 @@ class UsersManager extends \Piwik\Plugin
     public function recordAdminUsersInCache(&$attributes, $idSite)
     {
         $model = new Model();
-        $adminLogins = $model->getUsersLoginWithSiteAccess($idSite, Admin::ID);
+        $logins = $model->getUsersLoginWithSiteAccess($idSite, Admin::ID);
         $writeLogins = $model->getUsersLoginWithSiteAccess($idSite, Write::ID);
+        $logins = array_merge($logins, $writeLogins);
+
+        $token_auths = $model->getAllHashedTokensForLogins($logins);
 
         $attributes['tracking_token_auth'] = array();
 
-        if (!empty($adminLogins)) {
-            $users = $model->getUsers($adminLogins);
-            foreach ($users as $user) {
-                $attributes['tracking_token_auth'][] = self::hashTrackingToken($user['token_auth'], $idSite);
-            }
-        }
-
-        if (!empty($writeLogins)) {
-            $users = $model->getUsers($writeLogins);
-            foreach ($users as $user) {
-                $attributes['tracking_token_auth'][] = self::hashTrackingToken($user['token_auth'], $idSite);
+        if (!empty($token_auths)) {
+            foreach ($token_auths as $token_auth) {
+                $attributes['tracking_token_auth'][] = self::hashTrackingToken($token_auth, $idSite);
             }
         }
     }
@@ -117,16 +116,6 @@ class UsersManager extends \Piwik\Plugin
     public static function hashTrackingToken($tokenAuth, $idSite)
     {
         return sha1($idSite . $tokenAuth . SettingsPiwik::getSalt());
-    }
-
-    public function getCronArchiveTokenAuth(&$tokens)
-    {
-        $model      = new Model();
-        $superUsers = $model->getUsersHavingSuperUserAccess();
-
-        foreach($superUsers as $superUser) {
-            $tokens[] = $superUser['token_auth'];
-        }
     }
 
     /**
@@ -138,34 +127,17 @@ class UsersManager extends \Piwik\Plugin
     }
 
     /**
-     * Return list of plug-in specific JavaScript files to be imported by the asset manager
-     *
-     * @see \Piwik\AssetManager
-     */
-    public function getJsFiles(&$jsFiles)
-    {
-        $jsFiles[] = "plugins/UsersManager/angularjs/users-manager/users-manager.component.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/paged-users-list/paged-users-list.component.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/user-edit-form/user-edit-form.component.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/user-permissions-edit/user-permissions-edit.component.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/personal-settings/personal-settings.controller.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/personal-settings/anonymous-settings.controller.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/permissions-metadata/permissions-metadata.service.js";
-        $jsFiles[] = "plugins/UsersManager/angularjs/capabilities-edit/capabilities-edit.component.js";
-    }
-
-    /**
      * Get CSS files
      */
     public function getStylesheetFiles(&$stylesheets)
     {
         $stylesheets[] = "plugins/UsersManager/stylesheets/usersManager.less";
 
-        $stylesheets[] = "plugins/UsersManager/angularjs/users-manager/users-manager.component.less";
-        $stylesheets[] = "plugins/UsersManager/angularjs/paged-users-list/paged-users-list.component.less";
-        $stylesheets[] = "plugins/UsersManager/angularjs/user-edit-form/user-edit-form.component.less";
-        $stylesheets[] = "plugins/UsersManager/angularjs/user-permissions-edit/user-permissions-edit.component.less";
-        $stylesheets[] = "plugins/UsersManager/angularjs/capabilities-edit/capabilities-edit.component.less";
+        $stylesheets[] = "plugins/UsersManager/vue/src/UsersManager/UsersManager.less";
+        $stylesheets[] = "plugins/UsersManager/vue/src/PagedUsersList/PagedUsersList.less";
+        $stylesheets[] = "plugins/UsersManager/vue/src/UserEditForm/UserEditForm.less";
+        $stylesheets[] = "plugins/UsersManager/vue/src/UserPermissionsEdit/UserPermissionsEdit.less";
+        $stylesheets[] = "plugins/UsersManager/vue/src/CapabilitiesEdit/CapabilitiesEdit.less";
     }
 
     /**
@@ -176,7 +148,8 @@ class UsersManager extends \Piwik\Plugin
      */
     public static function isValidPasswordString($input)
     {
-        if (!SettingsPiwik::isUserCredentialsSanityCheckEnabled()
+        if (
+            !SettingsPiwik::isUserCredentialsSanityCheckEnabled()
             && !empty($input)
         ) {
             return true;
@@ -205,20 +178,28 @@ class UsersManager extends \Piwik\Plugin
          *
          * @param string $password Checking password in plain text.
          */
+
         Piwik::postEvent('UsersManager.checkPassword', array($password));
 
         if (!self::isValidPasswordString($password)) {
-            throw new Exception(Piwik::translate('UsersManager_ExceptionInvalidPassword', array(self::PASSWORD_MIN_LENGTH)));
+            throw new Exception(Piwik::translate(
+                'UsersManager_ExceptionInvalidPassword',
+                array(self::PASSWORD_MIN_LENGTH)
+            ));
         }
-        if (Common::mb_strlen($password) > self::PASSWORD_MAX_LENGTH) {
-            throw new Exception(Piwik::translate('UsersManager_ExceptionInvalidPasswordTooLong', array(self::PASSWORD_MAX_LENGTH)));
+        if (mb_strlen($password) > self::PASSWORD_MAX_LENGTH) {
+            throw new Exception(Piwik::translate(
+                'UsersManager_ExceptionInvalidPasswordTooLong',
+                array(self::PASSWORD_MAX_LENGTH)
+            ));
         }
     }
 
     public static function getPasswordHash($password)
     {
-        self::checkBasicPasswordStrength($password);
-
+        if (SettingsPiwik::isUserCredentialsSanityCheckEnabled()) {
+            self::checkBasicPasswordStrength($password);
+        }
         // if change here, should also edit the installation process
         // to change how the root pwd is saved in the config file
         return md5($password);
@@ -247,105 +228,187 @@ class UsersManager extends \Piwik\Plugin
      */
     public static function checkPasswordHash($passwordHash, $exceptionMessage)
     {
-        if (strlen($passwordHash) != 32) {  // MD5 hash length
+        if (strlen($passwordHash) != 32 || !ctype_xdigit($passwordHash)) {  // MD5 hash length
             throw new Exception($exceptionMessage);
         }
     }
 
     public function getClientSideTranslationKeys(&$translationKeys)
     {
-        $translationKeys[] = "General_OrCancel";
-        $translationKeys[] = "General_Save";
-        $translationKeys[] = "General_Done";
-        $translationKeys[] = "General_Pagination";
-        $translationKeys[] = "General_PleaseTryAgain";
-        $translationKeys[] = "UsersManager_DeleteConfirm";
-        $translationKeys[] = "UsersManager_ConfirmGrantSuperUserAccess";
-        $translationKeys[] = "UsersManager_ConfirmProhibitOtherUsersSuperUserAccess";
-        $translationKeys[] = "UsersManager_ConfirmProhibitMySuperUserAccess";
-        $translationKeys[] = "UsersManager_ExceptionUserHasViewAccessAlready";
-        $translationKeys[] = "UsersManager_ExceptionNoValueForUsernameOrEmail";
-        $translationKeys[] = "UsersManager_GiveUserAccess";
-        $translationKeys[] = "UsersManager_PrivAdmin";
-        $translationKeys[] = "UsersManager_PrivView";
-        $translationKeys[] = "UsersManager_RemoveUserAccess";
-        $translationKeys[] = "UsersManager_ConfirmWithPassword";
-        $translationKeys[] = "UsersManager_YourCurrentPassword";
-        $translationKeys[] = "UsersManager_UserHasPermission";
-        $translationKeys[] = "UsersManager_UserHasNoPermission";
-        $translationKeys[] = "UsersManager_PrivNone";
-        $translationKeys[] = "UsersManager_ManageUsers";
-        $translationKeys[] = "UsersManager_ManageUsersDesc";
-        $translationKeys[] = 'Mobile_NavigationBack';
-        $translationKeys[] = 'UsersManager_AddExistingUser';
-        $translationKeys[] = 'UsersManager_AddUser';
-        $translationKeys[] = 'UsersManager_EnterUsernameOrEmail';
-        $translationKeys[] = 'UsersManager_NoAccessWarning';
-        $translationKeys[] = 'UsersManager_BulkActions';
-        $translationKeys[] = 'UsersManager_SetPermission';
-        $translationKeys[] = 'UsersManager_RolesHelp';
-        $translationKeys[] = 'UsersManager_Role';
-        $translationKeys[] = 'UsersManager_2FA';
-        $translationKeys[] = 'UsersManager_UsesTwoFactorAuthentication';
         $translationKeys[] = 'General_Actions';
-        $translationKeys[] = 'UsersManager_TheDisplayedWebsitesAreSelected';
-        $translationKeys[] = 'UsersManager_ClickToSelectAll';
-        $translationKeys[] = 'UsersManager_AllWebsitesAreSelected';
-        $translationKeys[] = 'UsersManager_ClickToSelectDisplayedWebsites';
-        $translationKeys[] = 'UsersManager_DeletePermConfirmSingle';
-        $translationKeys[] = 'UsersManager_DeletePermConfirmMultiple';
-        $translationKeys[] = 'UsersManager_ChangePermToSiteConfirmSingle';
-        $translationKeys[] = 'UsersManager_ChangePermToSiteConfirmMultiple';
-        $translationKeys[] = 'UsersManager_BasicInformation';
-        $translationKeys[] = 'UsersManager_Permissions';
-        $translationKeys[] = 'UsersManager_RemovePermissions';
-        $translationKeys[] = 'UsersManager_FirstSiteInlineHelp';
-        $translationKeys[] = 'UsersManager_SuperUsersPermissionsNotice';
-        $translationKeys[] = 'UsersManager_SuperUserIntro1';
-        $translationKeys[] = 'UsersManager_SuperUserIntro2';
-        $translationKeys[] = 'UsersManager_HasSuperUserAccess';
-        $translationKeys[] = 'UsersManager_AreYouSure';
-        $translationKeys[] = 'UsersManager_RemoveSuperuserAccessConfirm';
-        $translationKeys[] = 'UsersManager_AddSuperuserAccessConfirm';
-        $translationKeys[] = 'UsersManager_UserSearch';
-        $translationKeys[] = 'UsersManager_DeleteUsers';
-        $translationKeys[] = 'UsersManager_FilterByAccess';
-        $translationKeys[] = 'UsersManager_Username';
-        $translationKeys[] = 'UsersManager_RoleFor';
-        $translationKeys[] = 'UsersManager_TheDisplayedUsersAreSelected';
-        $translationKeys[] = 'UsersManager_AllUsersAreSelected';
-        $translationKeys[] = 'UsersManager_ClickToSelectDisplayedUsers';
-        $translationKeys[] = 'UsersManager_DeleteUserConfirmSingle';
-        $translationKeys[] = 'UsersManager_DeleteUserConfirmMultiple';
-        $translationKeys[] = 'UsersManager_DeleteUserPermConfirmSingle';
-        $translationKeys[] = 'UsersManager_DeleteUserPermConfirmMultiple';
-        $translationKeys[] = 'UsersManager_ResetTwoFactorAuthentication';
-        $translationKeys[] = 'UsersManager_ResetTwoFactorAuthenticationInfo';
-        $translationKeys[] = 'UsersManager_TwoFactorAuthentication';
-        $translationKeys[] = 'UsersManager_AddNewUser';
-        $translationKeys[] = 'UsersManager_EditUser';
-        $translationKeys[] = 'UsersManager_CreateUser';
-        $translationKeys[] = 'UsersManager_SaveBasicInfo';
-        $translationKeys[] = 'UsersManager_Email';
-        $translationKeys[] = 'UsersManager_LastSeen';
-        $translationKeys[] = 'UsersManager_SuperUserAccess';
-        $translationKeys[] = 'UsersManager_AreYouSureChangeDetails';
-        $translationKeys[] = 'UsersManager_AnonymousUserRoleChangeWarning';
-        $translationKeys[] = 'General_Warning';
         $translationKeys[] = 'General_Add';
+        $translationKeys[] = 'General_AllWebsitesDashboard';
+        $translationKeys[] = 'General_ChangePassword';
+        $translationKeys[] = 'General_CreationDate';
+        $translationKeys[] = 'General_Delete';
+        $translationKeys[] = 'General_Description';
+        $translationKeys[] = 'General_Done';
+        $translationKeys[] = 'General_Language';
+        $translationKeys[] = 'General_Never';
         $translationKeys[] = 'General_Note';
+        $translationKeys[] = 'General_Ok';
+        $translationKeys[] = 'General_OrCancel';
+        $translationKeys[] = 'General_Pagination';
+        $translationKeys[] = 'General_Password';
+        $translationKeys[] = 'General_PleaseTryAgain';
+        $translationKeys[] = 'General_Save';
+        $translationKeys[] = 'General_TimeFormat';
+        $translationKeys[] = 'General_Username';
+        $translationKeys[] = 'General_ValidatorErrorEmptyValue';
+        $translationKeys[] = 'General_Warning';
         $translationKeys[] = 'General_Yes';
-        $translationKeys[] = 'UsersManager_FilterByWebsite';
-        $translationKeys[] = 'UsersManager_GiveAccessToAll';
-        $translationKeys[] = 'UsersManager_OrManageIndividually';
+        $translationKeys[] = 'LanguagesManager_AboutPiwikTranslations';
+        $translationKeys[] = 'Login_NewPassword';
+        $translationKeys[] = 'Login_NewPasswordRepeat';
+        $translationKeys[] = 'Mobile_NavigationBack';
+        $translationKeys[] = 'UsersManager_2FA';
+        $translationKeys[] = 'UsersManager_Active';
+        $translationKeys[] = 'UsersManager_AddExistingUser';
+        $translationKeys[] = 'UsersManager_AddNewUser';
+        $translationKeys[] = 'UsersManager_AddSuperuserAccessConfirm';
+        $translationKeys[] = 'UsersManager_AllUsersAreSelected';
+        $translationKeys[] = 'UsersManager_AllWebsitesAreSelected';
+        $translationKeys[] = 'UsersManager_AnonymousUserRoleChangeWarning';
+        $translationKeys[] = 'UsersManager_AreYouSure';
+        $translationKeys[] = 'UsersManager_AreYouSureAddCapability';
+        $translationKeys[] = 'UsersManager_AreYouSureChangeDetails';
+        $translationKeys[] = 'UsersManager_AreYouSureRemoveCapability';
+        $translationKeys[] = 'UsersManager_AuthTokenSecureOnlyHelp';
+        $translationKeys[] = 'UsersManager_AuthTokenSecureOnlyHelpForced';
+        $translationKeys[] = 'UsersManager_AuthTokenPurpose';
+        $translationKeys[] = 'UsersManager_AuthTokens';
+        $translationKeys[] = 'UsersManager_BackToUser';
+        $translationKeys[] = 'UsersManager_BasicInformation';
+        $translationKeys[] = 'UsersManager_BulkActions';
+        $translationKeys[] = 'UsersManager_Capabilities';
+        $translationKeys[] = 'UsersManager_CapabilitiesHelp';
         $translationKeys[] = 'UsersManager_ChangePermToAllSitesConfirm';
         $translationKeys[] = 'UsersManager_ChangePermToAllSitesConfirm2';
-        $translationKeys[] = 'UsersManager_CapabilitiesHelp';
-        $translationKeys[] = 'UsersManager_Capabilities';
-        $translationKeys[] = 'UsersManager_AreYouSureAddCapability';
-        $translationKeys[] = 'UsersManager_AreYouSureRemoveCapability';
+        $translationKeys[] = 'UsersManager_ChangePermToSiteConfirmMultiple';
+        $translationKeys[] = 'UsersManager_ChangePermToSiteConfirmSingle';
+        $translationKeys[] = 'UsersManager_ClickHereToDeleteTheCookie';
+        $translationKeys[] = 'UsersManager_ClickHereToSetTheCookieOnDomain';
+        $translationKeys[] = 'UsersManager_ClickToSelectAll';
+        $translationKeys[] = 'UsersManager_ClickToSelectDisplayedUsers';
+        $translationKeys[] = 'UsersManager_ClickToSelectDisplayedWebsites';
+        $translationKeys[] = 'UsersManager_ConfirmGrantSuperUserAccess';
+        $translationKeys[] = 'UsersManager_ConfirmProhibitMySuperUserAccess';
+        $translationKeys[] = 'UsersManager_ConfirmProhibitOtherUsersSuperUserAccess';
+        $translationKeys[] = 'UsersManager_ConfirmThisChange';
+        $translationKeys[] = 'UsersManager_ConfirmTokenCopied';
+        $translationKeys[] = 'UsersManager_ConfirmWithPassword';
+        $translationKeys[] = 'UsersManager_CopyDenied';
+        $translationKeys[] = 'UsersManager_CopyDeniedHints';
+        $translationKeys[] = 'UsersManager_CopyLink';
+        $translationKeys[] = 'UsersManager_CreateNewToken';
+        $translationKeys[] = 'UsersManager_Decline';
+        $translationKeys[] = 'UsersManager_DeleteAllTokens';
+        $translationKeys[] = 'UsersManager_DeleteConfirm';
+        $translationKeys[] = 'UsersManager_DeleteNotSuccessful';
+        $translationKeys[] = 'UsersManager_DeletePermConfirmMultiple';
+        $translationKeys[] = 'UsersManager_DeletePermConfirmSingle';
+        $translationKeys[] = 'UsersManager_DeleteSuccess';
+        $translationKeys[] = 'UsersManager_DeleteUserConfirmMultiple';
+        $translationKeys[] = 'UsersManager_DeleteUserConfirmSingle';
+        $translationKeys[] = 'UsersManager_DeleteUserPermConfirmMultiple';
+        $translationKeys[] = 'UsersManager_DeleteUserPermConfirmSingle';
+        $translationKeys[] = 'UsersManager_DeleteUsers';
+        $translationKeys[] = 'UsersManager_DoNotStoreToken';
+        $translationKeys[] = 'UsersManager_EditUser';
+        $translationKeys[] = 'UsersManager_Email';
+        $translationKeys[] = 'UsersManager_EmailYourAdministrator';
+        $translationKeys[] = 'UsersManager_EnterUsernameOrEmail';
+        $translationKeys[] = 'UsersManager_ExceptionNoValueForUsernameOrEmail';
+        $translationKeys[] = 'UsersManager_ExceptionUserHasViewAccessAlready';
+        $translationKeys[] = 'UsersManager_ExcludeVisitsViaCookie';
+        $translationKeys[] = 'UsersManager_ExpireDate';
+        $translationKeys[] = 'UsersManager_Expired';
+        $translationKeys[] = 'UsersManager_ExpiredInviteAutomaticallyRemoved';
+        $translationKeys[] = 'UsersManager_ExpiredTokensDeleteAutomatically';
+        $translationKeys[] = 'UsersManager_FilterByAccess';
+        $translationKeys[] = 'UsersManager_FilterByStatus';
+        $translationKeys[] = 'UsersManager_FilterByWebsite';
+        $translationKeys[] = 'UsersManager_FirstSiteInlineHelp';
+        $translationKeys[] = 'UsersManager_FirstWebsitePermission';
+        $translationKeys[] = 'UsersManager_ForAnonymousUsersReportDateToLoadByDefault';
+        $translationKeys[] = 'UsersManager_GiveAccessToAll';
+        $translationKeys[] = 'UsersManager_GiveUserAccess';
+        $translationKeys[] = 'UsersManager_GoBackSecurityPage';
+        $translationKeys[] = 'UsersManager_HasSuperUserAccess';
+        $translationKeys[] = 'UsersManager_IfYouWouldLikeToChangeThePasswordTypeANewOne';
         $translationKeys[] = 'UsersManager_IncludedInUsersRole';
+        $translationKeys[] = 'UsersManager_InjectedHostCannotChangePwd';
+        $translationKeys[] = 'UsersManager_InvitationSent';
+        $translationKeys[] = 'UsersManager_InviteActionNotes';
+        $translationKeys[] = 'UsersManager_InviteConfirm';
+        $translationKeys[] = 'UsersManager_InviteConfirmMessage';
+        $translationKeys[] = 'UsersManager_InviteDayLeft';
+        $translationKeys[] = 'UsersManager_InviteNewUser';
+        $translationKeys[] = 'UsersManager_InviteSuccess';
+        $translationKeys[] = 'UsersManager_InviteSuccessNotification';
+        $translationKeys[] = 'UsersManager_InviteUser';
+        $translationKeys[] = 'UsersManager_LastSeen';
+        $translationKeys[] = 'UsersManager_LastUsed';
+        $translationKeys[] = 'UsersManager_LinkCopied';
+        $translationKeys[] = 'UsersManager_ManageUsers';
+        $translationKeys[] = 'UsersManager_ManageUsersAdminDesc';
+        $translationKeys[] = 'UsersManager_ManageUsersDesc';
         $translationKeys[] = 'UsersManager_NewsletterSignupFailureMessage';
+        $translationKeys[] = 'UsersManager_NewsletterSignupMessage';
         $translationKeys[] = 'UsersManager_NewsletterSignupSuccessMessage';
+        $translationKeys[] = 'UsersManager_NewsletterSignupTitle';
+        $translationKeys[] = 'UsersManager_NoAccessWarning';
+        $translationKeys[] = 'UsersManager_NoTokenCreatedYetCreateNow';
+        $translationKeys[] = 'UsersManager_NoteNoAnonymousUserAccessSettingsWontBeUsed2';
+        $translationKeys[] = 'UsersManager_OrManageIndividually';
+        $translationKeys[] = 'UsersManager_PasswordChangeTerminatesOtherSessions';
+        $translationKeys[] = 'UsersManager_Pending';
+        $translationKeys[] = 'UsersManager_Permissions';
+        $translationKeys[] = 'UsersManager_PersonalSettings';
+        $translationKeys[] = 'UsersManager_PleaseStoreToken';
+        $translationKeys[] = 'UsersManager_PrivAdmin';
+        $translationKeys[] = 'UsersManager_PrivNone';
+        $translationKeys[] = 'UsersManager_PrivView';
+        $translationKeys[] = 'UsersManager_OnlyAllowSecureRequests';
+        $translationKeys[] = 'UsersManager_RemovePermissions';
+        $translationKeys[] = 'UsersManager_RemoveSuperuserAccessConfirm';
+        $translationKeys[] = 'UsersManager_RemoveUserAccess';
+        $translationKeys[] = 'UsersManager_ReportDateToLoadByDefault';
+        $translationKeys[] = 'UsersManager_ReportToLoadByDefault';
+        $translationKeys[] = 'UsersManager_ResendInvite';
+        $translationKeys[] = 'UsersManager_ResendInviteConfirmSingle';
+        $translationKeys[] = 'UsersManager_ResendInviteSuccess';
+        $translationKeys[] = 'UsersManager_ResetTwoFactorAuthentication';
+        $translationKeys[] = 'UsersManager_ResetTwoFactorAuthenticationInfo';
+        $translationKeys[] = 'UsersManager_Role';
+        $translationKeys[] = 'UsersManager_RoleFor';
+        $translationKeys[] = 'UsersManager_RolesHelp';
+        $translationKeys[] = 'UsersManager_SaveBasicInfo';
+        $translationKeys[] = 'UsersManager_SecureUseOnly';
+        $translationKeys[] = 'UsersManager_SendInvite';
+        $translationKeys[] = 'UsersManager_SetPermission';
+        $translationKeys[] = 'UsersManager_Status';
+        $translationKeys[] = 'UsersManager_SuperUserAccess';
+        $translationKeys[] = 'UsersManager_SuperUserIntro1';
+        $translationKeys[] = 'UsersManager_SuperUserIntro2';
+        $translationKeys[] = 'UsersManager_SuperUsersPermissionsNotice';
+        $translationKeys[] = 'UsersManager_TheDisplayedUsersAreSelected';
+        $translationKeys[] = 'UsersManager_TheDisplayedWebsitesAreSelected';
+        $translationKeys[] = 'UsersManager_TokenAuthIntro';
+        $translationKeys[] = 'UsersManager_TokenSuccessfullyGenerated';
+        $translationKeys[] = 'UsersManager_TokensWithExpireDateCreationBySystem';
+        $translationKeys[] = 'UsersManager_TwoFactorAuthentication';
+        $translationKeys[] = 'UsersManager_TypeYourCurrentPassword';
+        $translationKeys[] = 'UsersManager_TypeYourPasswordAgain';
+        $translationKeys[] = 'UsersManager_UserHasNoPermission';
+        $translationKeys[] = 'UsersManager_UserHasPermission';
+        $translationKeys[] = 'UsersManager_UserSearch';
+        $translationKeys[] = 'UsersManager_Username';
+        $translationKeys[] = 'UsersManager_UsesTwoFactorAuthentication';
+        $translationKeys[] = 'UsersManager_WhenUsersAreNotLoggedInAndVisitPiwikTheyShouldAccess';
+        $translationKeys[] = 'UsersManager_YourCurrentPassword';
+        $translationKeys[] = 'UsersManager_YourUsernameCannotBeChanged';
+        $translationKeys[] = 'UsersManager_YourVisitsAreIgnoredOnDomain';
+        $translationKeys[] = 'UsersManager_YourVisitsAreNotIgnored';
     }
 }

@@ -1,12 +1,13 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\Events\Columns\Metrics;
 
+use Piwik\Columns\Dimension;
 use Piwik\DataTable\Row;
 use Piwik\Piwik;
 use Piwik\Plugin\ProcessedMetric;
@@ -41,5 +42,10 @@ class AverageEventValue extends ProcessedMetric
     public function getDependentMetrics()
     {
         return array('sum_event_value', 'nb_events_with_value');
+    }
+
+    public function getSemanticType(): ?string
+    {
+        return Dimension::TYPE_NUMBER;
     }
 }

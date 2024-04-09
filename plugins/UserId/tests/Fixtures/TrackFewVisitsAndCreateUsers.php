@@ -1,14 +1,13 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\UserId\tests\Fixtures;
 
 use Piwik\Date;
-use Piwik\Plugins\UserId\API;
 use Piwik\Tests\Framework\Fixture;
 
 /**
@@ -19,7 +18,7 @@ class TrackFewVisitsAndCreateUsers extends Fixture
     public $dateTime = '2010-02-01 11:22:33';
     public $idSite = 1;
 
-    public function setUp()
+    public function setUp(): void
     {
         if (!self::siteCreated($idSite = 1)) {
             self::createWebsite($this->dateTime);
@@ -35,14 +34,9 @@ class TrackFewVisitsAndCreateUsers extends Fixture
         $t->enableBulkTracking();
 
         foreach (array('user1', 'user2', 'user3') as $key => $userId) {
-            for ($numVisits = 0; $numVisits < ($key+1) * 10; $numVisits++) {
+            for ($numVisits = 0; $numVisits < ($key + 1) * 10; $numVisits++) {
                 $t->setUserId($userId);
-                if ($numVisits % 5 == 0) {
-                    $t->doTrackSiteSearch('some search term');
-                }
-                if ($numVisits % 4 == 0) {
-                    $t->doTrackEvent('Event action', 'event cat');
-                }
+                $t->setVisitorId(str_pad($numVisits . $key, 16, 'a'));
                 $t->setForceNewVisit();
                 $t->setUrl('http://example.org/my/dir/page' . ($numVisits % 4));
 
@@ -50,6 +44,17 @@ class TrackFewVisitsAndCreateUsers extends Fixture
                 $t->setForceVisitDateTime($visitDateTime);
 
                 self::assertTrue($t->doTrackPageView('incredible title ' . ($numVisits % 3)));
+
+                if ($numVisits && $numVisits % 5 == 0) {
+                    $visitDateTime = Date::factory($this->dateTime)->addDay($numVisits)->addHour(0.02)->getDatetime();
+                    $t->setForceVisitDateTime($visitDateTime);
+                    self::assertTrue($t->doTrackSiteSearch('some search term'));
+                }
+                if ($numVisits && $numVisits % 4 == 0) {
+                    $visitDateTime = Date::factory($this->dateTime)->addDay($numVisits)->addHour(0.04)->getDatetime();
+                    $t->setForceVisitDateTime($visitDateTime);
+                    self::assertTrue($t->doTrackEvent('Event action', 'event cat'));
+                }
             }
         }
 

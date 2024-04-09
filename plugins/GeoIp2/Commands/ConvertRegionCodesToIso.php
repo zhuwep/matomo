@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,8 +15,6 @@ use Piwik\Option;
 use Piwik\Plugin\ConsoleCommand;
 use Piwik\Plugins\UserCountry\LocationProvider;
 use Piwik\Plugins\GeoIp2\LocationProvider\GeoIp2;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class ConvertRegionCodesToIso extends ConsoleCommand
 {
@@ -35,16 +33,16 @@ class ConvertRegionCodesToIso extends ConsoleCommand
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return void|int
+     * @return int
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function doExecute(): int
     {
+        $output = $this->getOutput();
+
         // chick if option is set to disable second run
         if (Option::get(self::OPTION_NAME)) {
             $output->writeln('Converting region codes already done.');
-            return;
+            return self::SUCCESS;
         }
 
         $output->setDecorated(true);
@@ -53,11 +51,13 @@ class ConvertRegionCodesToIso extends ConsoleCommand
 
         Db::query('DROP table if exists ' . self::MAPPING_TABLE_NAME);
 
-        DbHelper::createTable(self::MAPPING_TABLE_NAME,
+        DbHelper::createTable(
+            self::MAPPING_TABLE_NAME,
             "`country_code` VARCHAR(2) NOT NULL,
                            `fips_code` VARCHAR(2) NOT NULL,
                            `iso_code` VARCHAR(4) NULL DEFAULT NULL,
-                           PRIMARY KEY (`country_code`, `fips_code`)");
+                           PRIMARY KEY (`country_code`, `fips_code`)"
+        );
 
         $output->writeln(' <fg=green>✓</>');
 
@@ -72,9 +72,9 @@ class ConvertRegionCodesToIso extends ConsoleCommand
                     continue; // nothing needs to be changed, so ignore the mapping
                 }
 
-                Db::query('INSERT INTO `'.Common::prefixTable(self::MAPPING_TABLE_NAME).'` VALUES (?, ?, ?)', [$country, $fips, $iso]);
+                Db::query('INSERT INTO `' . Common::prefixTable(self::MAPPING_TABLE_NAME) . '` VALUES (?, ?, ?)', [$country, $fips, $iso]);
                 $counter++;
-                if ($counter%50 == 0) {
+                if ($counter % 50 == 0) {
                     $output->write('.');
                 }
             }
@@ -87,7 +87,7 @@ class ConvertRegionCodesToIso extends ConsoleCommand
         $activationTime = Option::get(GeoIp2::SWITCH_TO_ISO_REGIONS_OPTION_NAME);
         $activationDateTime = date('Y-m-d H:i:s', $activationTime);
 
-        // fix country and region of tibet so it wil be updated correctly afterwards
+        // fix country and region of tibet so it will be updated correctly afterwards
         $tibetFixQuery = 'UPDATE %s SET location_country = "cn", location_region = "14" WHERE location_country = "ti"';
 
         // replace invalid country codes used by GeoIP Legacy
@@ -118,7 +118,7 @@ class ConvertRegionCodesToIso extends ConsoleCommand
         Option::set(self::OPTION_NAME, true);
 
         $output->writeln('All region codes converted.');
+
+        return self::SUCCESS;
     }
-
-
 }

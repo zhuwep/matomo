@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -61,7 +61,6 @@ class GetSiteSearchKeywords extends SiteSearchBase
 
     public function configureView(ViewDataTable $view)
     {
-        $view->config->addTranslation('label', $this->dimension->getName());
         $view->config->columns_to_display = array('label', 'nb_visits', 'nb_pages_per_search', 'exit_rate');
 
         $this->addSiteSearchDisplayProperties($view);

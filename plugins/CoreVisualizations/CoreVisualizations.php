@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -39,8 +39,8 @@ class CoreVisualizations extends \Piwik\Plugin
 
     public function getStylesheetFiles(&$stylesheets)
     {
-        $stylesheets[] = "plugins/CoreVisualizations/angularjs/series-picker/series-picker.component.less";
-        $stylesheets[] = "plugins/CoreVisualizations/angularjs/single-metric-view/single-metric-view.component.less";
+        $stylesheets[] = "plugins/CoreVisualizations/vue/src/SeriesPicker/SeriesPicker.less";
+        $stylesheets[] = "plugins/CoreVisualizations/vue/src/SingleMetricView/SingleMetricView.less";
 
         $stylesheets[] = "plugins/CoreVisualizations/stylesheets/dataTableVisualizations.less";
         $stylesheets[] = "plugins/CoreVisualizations/stylesheets/jqplot.css";
@@ -48,8 +48,6 @@ class CoreVisualizations extends \Piwik\Plugin
 
     public function getJsFiles(&$jsFiles)
     {
-        $jsFiles[] = "plugins/CoreVisualizations/angularjs/series-picker/series-picker.component.js";
-        $jsFiles[] = "plugins/CoreVisualizations/angularjs/single-metric-view/single-metric-view.component.js";
 
         $jsFiles[] = "plugins/CoreVisualizations/javascripts/seriesPicker.js";
         $jsFiles[] = "plugins/CoreVisualizations/javascripts/jqplot.js";
@@ -67,5 +65,7 @@ class CoreVisualizations extends \Piwik\Plugin
         $translationKeys[] = 'General_ExportAsImage';
         $translationKeys[] = 'General_NoDataForGraph';
         $translationKeys[] = 'General_EvolutionSummaryGeneric';
+        $translationKeys[] = 'General_IncompletePeriod';
+        $translationKeys[] = 'General_InvalidatedPeriod';
     }
 }

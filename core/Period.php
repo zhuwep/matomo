@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -248,6 +248,46 @@ abstract class Period
     }
 
     /**
+     * Returns whether the date `$date` is within the current period or not.
+     *
+     * Note: the time component of the period's dates and `$date` is ignored.
+     *
+     * @param Date $today
+     * @return bool
+     */
+    public function isDateInPeriod(Date $date)
+    {
+        $ts = $date->getStartOfDay()->getTimestamp();
+        return $ts >= $this->getDateStart()->getStartOfDay()->getTimestamp()
+            && $ts < $this->getDateEnd()->addDay(1)->getStartOfDay()->getTimestamp();
+    }
+
+    /**
+     * Returns whether the given period date range intersects with this one.
+     *
+     * @param Period $other
+     * @return bool
+     */
+    public function isPeriodIntersectingWith(Period $other)
+    {
+        return !($this->getDateEnd()->getTimestamp() < $other->getDateStart()->getTimestamp()
+            || $this->getDateStart()->getTimestamp() > $other->getDateEnd()->getTimestamp());
+    }
+
+    /**
+     * Returns the start day and day after the end day for this period in the given timezone.
+     *
+     * @param Date[] $timezone
+     */
+    public function getBoundsInTimezone(string $timezone)
+    {
+        $date1 = $this->getDateTimeStart()->setTimezone($timezone);
+        $date2 = $this->getDateTimeEnd()->setTimezone($timezone);
+
+        return [$date1, $date2];
+    }
+
+    /**
      * Add a date to the period.
      *
      * Protected because adding periods after initialization is not supported.
@@ -390,8 +430,9 @@ abstract class Period
         $cleanedFormat = preg_replace_callback('/(\'[^\']+\')/', array($this, 'replaceWithStars'), $format);
 
         // search for first duplicate date field
-        foreach ($intervalTokens AS $tokens) {
-            if (preg_match_all('/[' . implode('|', $tokens) . ']+/', $cleanedFormat, $matches, PREG_OFFSET_CAPTURE) &&
+        foreach ($intervalTokens as $tokens) {
+            if (
+                preg_match_all('/[' . implode('|', $tokens) . ']+/', $cleanedFormat, $matches, PREG_OFFSET_CAPTURE) &&
                 count($matches[0]) > 1 && $offset > $matches[0][1][1]
             ) {
                 $offset = $matches[0][1][1];

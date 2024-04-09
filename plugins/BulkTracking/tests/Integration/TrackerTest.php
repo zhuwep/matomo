@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\BulkTracking\tests\Integration;
 
 use Piwik\Common;
-use Piwik\Plugin;
 use Piwik\Plugins\BulkTracking\tests\Framework\Mock\Tracker\Response;
 use Piwik\Plugins\BulkTracking\tests\Framework\TestCase\BulkTrackingTestCase;
 use Piwik\Plugins\BulkTracking\Tracker\Handler;
@@ -17,8 +16,8 @@ use Piwik\Tests\Framework\Fixture;
 use Piwik\Tracker;
 use Piwik\Tests\Framework\Mock\Tracker\RequestSet;
 
-class TestIntegrationTracker extends Tracker {
-
+class TestIntegrationTracker extends Tracker
+{
     protected function loadTrackerPlugins()
     {
         // if we reload the plugins we would lose the injected data :(
@@ -36,7 +35,7 @@ class TrackerTest extends BulkTrackingTestCase
      */
     private $tracker;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

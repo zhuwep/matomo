@@ -9,7 +9,7 @@
 		<module>UserCountry</module>
 		<action>getContinent</action>
 		<dimension>Continent</dimension>
-		<documentation>This report shows which continent your visitors were in when they accessed your website.</documentation>
+		<documentation>Shows which continent your visitors connected from when accessing your website.</documentation>
 		<metrics>
 			<nb_visits>Visits</nb_visits>
 			<nb_uniq_visitors>Unique visitors</nb_uniq_visitors>
@@ -29,6 +29,15 @@
 			<avg_time_on_site>Avg. Time on Website</avg_time_on_site>
 			<bounce_rate>Bounce Rate</bounce_rate>
 		</processedMetrics>
+		<metricTypes>
+			<nb_visits>number</nb_visits>
+			<nb_uniq_visitors>number</nb_uniq_visitors>
+			<nb_actions>number</nb_actions>
+			<nb_actions_per_visit>number</nb_actions_per_visit>
+			<avg_time_on_site>duration_s</avg_time_on_site>
+			<bounce_rate>percent</bounce_rate>
+			<conversion_rate>percent</conversion_rate>
+		</metricTypes>
 		<metricsGoal>
 			<nb_conversions>Conversions</nb_conversions>
 			<revenue>Revenue</revenue>
@@ -36,6 +45,12 @@
 		<processedMetricsGoal>
 			<revenue_per_visit>Revenue per Visit</revenue_per_visit>
 		</processedMetricsGoal>
+		<metricTypesGoal>
+			<revenue_per_visit>money</revenue_per_visit>
+			<nb_conversions>number</nb_conversions>
+			<conversion_rate>percent</conversion_rate>
+			<revenue>money</revenue>
+		</metricTypesGoal>
 		<imageGraphUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=UserCountry&amp;apiAction=getContinent&amp;period=day&amp;date=2012-08-10</imageGraphUrl>
 		<imageGraphEvolutionUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=UserCountry&amp;apiAction=getContinent&amp;period=day&amp;date=2012-07-12,2012-08-10</imageGraphEvolutionUrl>
 		<uniqueId>UserCountry_getContinent</uniqueId>
@@ -132,8 +147,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -157,8 +172,8 @@
 					<compareSegmentPretty>browserCode==ie</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -244,8 +259,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -269,8 +284,8 @@
 					<compareSegmentPretty>browserCode==ie</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>
@@ -357,8 +372,8 @@
 					<compareSegmentPretty>All visits</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (All visits)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 				<row>
@@ -382,8 +397,8 @@
 					<compareSegmentPretty>browserCode==ie</compareSegmentPretty>
 					<comparePeriod>week</comparePeriod>
 					<compareDate>2012-08-16</compareDate>
-					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
-					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
+					<comparePeriodPretty>Week August 13 – 19, 2012</comparePeriodPretty>
+					<compareSeriesPretty>(Week August 13 – 19, 2012) (browserCode==ie)</compareSeriesPretty>
 					<idsubdatatable>-1</idsubdatatable>
 				</row>
 			</comparisons>

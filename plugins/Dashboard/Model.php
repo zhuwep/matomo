@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link     http://piwik.org
+ * @link     https://matomo.org
  * @license  http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\Dashboard;
@@ -33,8 +33,10 @@ class Model
      */
     public function getLayoutForUser($login, $idDashboard)
     {
-        $query   = sprintf('SELECT layout FROM %s WHERE login = ? AND iddashboard = ?',
-                           $this->table);
+        $query   = sprintf(
+            'SELECT layout FROM %s WHERE login = ? AND iddashboard = ?',
+            $this->table
+        );
         $bind    = array($login, $idDashboard);
         $layouts = Db::fetchAll($query, $bind);
 
@@ -98,8 +100,10 @@ class Model
     public function createOrUpdateDashboard($login, $idDashboard, $layout)
     {
         $bind   = array($login, $idDashboard, $layout, $layout);
-        $query  = sprintf('INSERT INTO %s (login, iddashboard, layout) VALUES (?,?,?) ON DUPLICATE KEY UPDATE layout=?',
-                          $this->table);
+        $query  = sprintf(
+            'INSERT INTO %s (login, iddashboard, layout) VALUES (?,?,?) ON DUPLICATE KEY UPDATE layout=?',
+            $this->table
+        );
         Db::query($query, $bind);
     }
 
@@ -125,8 +129,10 @@ class Model
     public function updateLayoutForUser($login, $idDashboard, $layout)
     {
         $bind  = array($login, $idDashboard, $layout, $layout);
-        $query = sprintf('INSERT INTO %s (login, iddashboard, layout) VALUES (?,?,?) ON DUPLICATE KEY UPDATE layout=?',
-                         $this->table);
+        $query = sprintf(
+            'INSERT INTO %s (login, iddashboard, layout) VALUES (?,?,?) ON DUPLICATE KEY UPDATE layout=?',
+            $this->table
+        );
         Db::query($query, $bind);
     }
 
@@ -177,7 +183,7 @@ class Model
 
             foreach ($column as $widget) {
 
-                foreach ($oldWidgets AS $pos => $oldWidgetData) {
+                foreach ($oldWidgets as $pos => $oldWidgetData) {
 
                     $oldWidgetId = WidgetsList::getWidgetUniqueId($oldWidgetData['module'], $oldWidgetData['action'], $oldWidgetData['params']);
 

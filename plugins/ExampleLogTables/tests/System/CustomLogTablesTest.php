@@ -32,6 +32,8 @@ class CustomLogTablesTest extends SystemTestCase
      */
     public function testNoApiReturnsError($segment)
     {
+        self::expectNotToPerformAssertions();
+
         $dateTime = self::$fixture->dateTime;
         $idSite1 = self::$fixture->idSite;
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -57,6 +57,17 @@ class SettingsServer
     }
 
     /**
+     * Returns true if Matomo is running within Matomo for WordPress.
+     *
+     * @return bool  true if Matomo is running in WordPress, false if Matomo is running as part of On-Premise
+     * @api
+     */
+    public static function isMatomoForWordPress()
+    {
+        return defined('ABSPATH') && function_exists('\add_action');
+    }
+
+    /**
      * Returns `true` if running on Microsoft IIS 7 (or above), `false` if otherwise.
      *
      * @return bool
@@ -80,7 +91,10 @@ class SettingsServer
      */
     public static function isWindows()
     {
-        return DIRECTORY_SEPARATOR === '\\';
+        if (PHP_OS_FAMILY == "Unknown") {
+            return DIRECTORY_SEPARATOR === '\\';
+        }
+        return PHP_OS_FAMILY === "Windows";
     }
 
     /**
@@ -131,6 +145,11 @@ class SettingsServer
      */
     public static function raiseMemoryLimitIfNecessary()
     {
+        if (self::isArchivePhpTriggered()) {
+            // core:archive command: no time limit
+            self::setMaxExecutionTime(0);
+        }
+
         $memoryLimit = self::getMemoryLimitValue();
         if ($memoryLimit === false) {
             return false;
@@ -138,8 +157,7 @@ class SettingsServer
         $minimumMemoryLimit = Config::getInstance()->General['minimum_memory_limit'];
 
         if (self::isArchivePhpTriggered()) {
-            // core:archive command: no time limit, high memory limit
-            self::setMaxExecutionTime(0);
+            // core:archive command:  high memory limit
             $minimumMemoryLimitWhenArchiving = Config::getInstance()->General['minimum_memory_limit_when_archiving'];
             if ($memoryLimit < $minimumMemoryLimitWhenArchiving) {
                 return self::setMemoryLimit($minimumMemoryLimitWhenArchiving);
@@ -164,7 +182,8 @@ class SettingsServer
     {
         // in Megabytes
         $currentValue = self::getMemoryLimitValue();
-        if ($currentValue === false
+        if (
+            $currentValue === false
             || ($currentValue < $minimumMemoryLimit && @ini_set('memory_limit', $minimumMemoryLimit . 'M'))
         ) {
             return true;
@@ -178,29 +197,59 @@ class SettingsServer
      * Prior to PHP 5.2.1, or on Windows, --enable-memory-limit is not a
      * compile-time default, so ini_get('memory_limit') may return false.
      *
-     * @see http://www.php.net/manual/en/faq.using.php#faq.using.shorthandbytes
      * @return int|bool  memory limit in megabytes, or false if there is no limit
      */
     public static function getMemoryLimitValue()
     {
         if (($memory = ini_get('memory_limit')) > 0) {
-            // handle shorthand byte options (case-insensitive)
-            $shorthandByteOption = substr($memory, -1);
-            switch ($shorthandByteOption) {
-                case 'G':
-                case 'g':
-                    return substr($memory, 0, -1) * 1024;
-                case 'M':
-                case 'm':
-                    return substr($memory, 0, -1);
-                case 'K':
-                case 'k':
-                    return substr($memory, 0, -1) / 1024;
-            }
-            return $memory / 1048576;
+            return self::getMegaBytesFromShorthandByte($memory);
         }
 
         // no memory limit
+        return false;
+    }
+
+    /**
+     * Get php post_max_size (in Megabytes)
+     *
+     * @return int|bool  max upload size in megabytes, or false if there is no limit
+     */
+    public static function getPostMaxUploadSize()
+    {
+        if (($maxPostSize = ini_get('post_max_size')) > 0) {
+            return self::getMegaBytesFromShorthandByte($maxPostSize);
+        }
+
+        // no max upload size
+        return false;
+    }
+
+    /**
+     * @see http://www.php.net/manual/en/faq.using.php#faq.using.shorthandbytes
+     * @param $value
+     * @return false|float|int
+     */
+    private static function getMegaBytesFromShorthandByte($value)
+    {
+        $value = str_replace(' ', '', $value);
+
+        $shorthandByteOption = substr($value, -1);
+        switch ($shorthandByteOption) {
+            case 'G':
+            case 'g':
+                return substr($value, 0, -1) * 1024;
+            case 'M':
+            case 'm':
+                return substr($value, 0, -1);
+            case 'K':
+            case 'k':
+                return substr($value, 0, -1) / 1024;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value / 1048576;
+        }
+
         return false;
     }
 
@@ -213,7 +262,9 @@ class SettingsServer
     {
         // in the event one or the other is disabled...
         @ini_set('max_execution_time', $executionTime);
-        @set_time_limit($executionTime);
+        if (function_exists('set_time_limit')) {
+            @set_time_limit($executionTime);
+        }
     }
 
     public static function isMac()

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,13 +9,11 @@
 namespace Piwik\Tests\Framework\TestCase;
 
 use Piwik\Access;
-use Piwik\Config;
+use Piwik\Cache as PiwikCache;
 use Piwik\Db;
-use Piwik\DbHelper;
-use Piwik\Menu\MenuAbstract;
+use Piwik\EventDispatcher;
 use Piwik\Option;
 use Piwik\Tests\Framework\Fixture;
-use Piwik\Cache as PiwikCache;
 use Piwik\Tests\Framework\TestingEnvironmentVariables;
 
 /**
@@ -46,18 +44,18 @@ abstract class IntegrationTestCase extends SystemTestCase
      * If your test modifies table columns, you will need to recreate the database
      * completely. This can be accomplished by:
      *
-     *     public function setUp()
+     *     public function setUp(): void
      *     {
      *         self::$fixture->performSetUp();
      *     }
      *
-     *     public function tearDown()
+     *     public function tearDown(): void
      *     {
      *         parent::tearDown();
      *         self::$fixture->performTearDown();
      *     }
      */
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         static::configureFixture(static::$fixture);
         parent::setUpBeforeClass();
@@ -66,15 +64,17 @@ abstract class IntegrationTestCase extends SystemTestCase
         self::$tableData = self::getDbTablesWithData();
     }
 
-    public static function tearDownAfterClass()
+    public static function tearDownAfterClass(): void
     {
         self::$tableData = array();
+
+        parent::tearDownAfterClass();
     }
 
     /**
      * Setup the database and create the base tables for all tests
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -85,23 +85,25 @@ abstract class IntegrationTestCase extends SystemTestCase
         Fixture::loadAllPlugins(new TestingEnvironmentVariables(), get_class($this), self::$fixture->extraPluginsToLoad);
 
         Access::getInstance()->setSuperUserAccess(true);
-        
+
         if (!empty(self::$tableData)) {
             self::restoreDbTables(self::$tableData);
         }
 
+        // Note: we can't clear all in memory caches at this point
+        // Otherwise fixtures can't be used to e.g. manipulate static instances
         PiwikCache::getEagerCache()->flushAll();
         PiwikCache::getTransientCache()->flushAll();
-        MenuAbstract::clearMenus();
+        EventDispatcher::getInstance()->clearCache();
         Option::clearCache();
     }
 
     /**
      * Resets all caches and drops the database
      */
-    public function tearDown()
+    public function tearDown(): void
     {
-        static::$fixture->clearInMemoryCaches();
+        Fixture::clearInMemoryCaches();
         static::$fixture->destroyEnvironment();
 
         parent::tearDown();
@@ -112,8 +114,9 @@ abstract class IntegrationTestCase extends SystemTestCase
      */
     protected static function configureFixture($fixture)
     {
-        $fixture->createSuperUser     = false;
-        $fixture->configureComponents = false;
+        $fixture->createSuperUser        = false;
+        $fixture->configureComponents    = false;
+        $fixture->dropDatabaseInTearDown = false;
 
         $fixture->extraTestEnvVars['loadRealTranslations'] = false;
     }

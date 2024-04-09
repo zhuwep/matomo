@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -33,6 +33,7 @@ class XssTesting
         return $result;
     }
 
+    // kept after vue migration for proof angularjs injection does not apply
     public function forAngular($type, $sanitize = false)
     {
         $n = $this->addXssEntry($type, 'angular');
@@ -91,9 +92,9 @@ JS;
     public static function getJavaScriptAddEvent()
     {
         $xssTesting = new XssTesting();
-        return ['Template.jsGlobalVariables', function (&$out) use ($xssTesting) {
+        return ['Template.jsGlobalVariables', \Piwik\DI::value(function (&$out) use ($xssTesting) {
             $out .= $xssTesting->getJavaScriptCode();
-        }];
+        })];
     }
 
     /**
@@ -138,8 +139,8 @@ JS;
             'angular-(useragent)',
             'twig-(annotation)',
             'angular-(Annotation note 3)',
-            'twig-(useralias)',
-            'angular-(useralias)',
+            'twig-(excludedparameter)',
+            'angular-(excludedparameter)',
             'twig-(scheduledreport)',
             'twig-(dimensionname)',
             'twig-(category)',
@@ -170,7 +171,7 @@ JS;
         $actualEntries = array_values($actualEntries);
 
         try {
-            \PHPUnit_Framework_Assert::assertEquals($expectedEntries, $actualEntries);
+            \PHPUnit\Framework\Assert::assertEquals($expectedEntries, $actualEntries);
         } catch (\Exception $ex) {
             print "XssTesting::sanityCheck() failed, got: " . var_export($actualEntries, true)
                 . "\nexpected: " . var_export($expectedEntries, true);

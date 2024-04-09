@@ -1,16 +1,16 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Site selector screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
 describe("SiteSelector", function () {
     this.timeout(0);
 
-    const selectorToCapture = '[piwik-siteselector],[piwik-siteselector] .dropdown';
+    const selectorToCapture = '.siteSelector,.siteSelector .dropdown';
     const url = "?module=UsersManager&action=userSettings&idSite=1&period=day&date=yesterday";
 
     it("should load correctly", async function() {
@@ -18,6 +18,7 @@ describe("SiteSelector", function () {
         await page.waitForNetworkIdle();
 
         dialog = await page.$(selectorToCapture);
+        await page.waitForTimeout(500);
         expect(await dialog.screenshot()).to.matchImage('loaded');
     });
 
@@ -26,13 +27,14 @@ describe("SiteSelector", function () {
 
         await page.waitForSelector('.custom_select_ul_list');
         await page.waitForNetworkIdle();
+        await page.click('.websiteSearch');
 
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('expanded');
     });
 
     it("should show no results when search returns no results", async function() {
         await page.type(".websiteSearch", "abc");
-        await page.waitFor(500);
+        await page.waitForTimeout(500);
         await page.waitForNetworkIdle();
 
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_no_results');
@@ -40,9 +42,10 @@ describe("SiteSelector", function () {
 
     it("should search when one character typed into search input", async function() {
         await page.click('.reset');
+        await page.waitForTimeout(500);
         await page.type(".websiteSearch", "s");
         await page.waitForNetworkIdle();
-        await page.waitFor(500);
+        await page.waitForTimeout(500);
 
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_one_char');
     });
@@ -50,7 +53,7 @@ describe("SiteSelector", function () {
     it("should search again when second character typed into search input", async function() {
         await page.type(".websiteSearch", "t");
         await page.waitForNetworkIdle();
-        await page.waitFor(500);
+        await page.waitForTimeout(500);
 
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_two_chars');
     });
@@ -59,6 +62,7 @@ describe("SiteSelector", function () {
         elem = await page.jQuery(".custom_select_ul_list>li:visible");
         elem.click();
         await page.waitForNetworkIdle();
+        await page.waitForTimeout(200);
 
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('site_selected');
     });

@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Dashboard screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -11,9 +11,9 @@ describe('SingleMetricView', function () {
     this.timeout(0);
 
     var url = "?module=Widgetize&action=iframe&idSite=1&period=year&date=2012-08-09&moduleToWidgetize=Dashboard&"
-        + "actionToWidgetize=index&idDashboard=5";
+        + "actionToWidgetize=index&idDashboard=1";
     var rangeUrl = "?module=Widgetize&action=iframe&idSite=1&period=range&date=2012-08-07,2012-08-10&moduleToWidgetize=Dashboard&"
-        + "actionToWidgetize=index&idDashboard=5";
+        + "actionToWidgetize=index&idDashboard=1";
 
     it('should load correctly', async function () {
         await page.goto(url);
@@ -28,7 +28,7 @@ describe('SingleMetricView', function () {
 
         var elem = await page.waitForSelector('#widgetCoreVisualizationssingleMetricViewcolumn');
         await page.waitForNetworkIdle();
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         expect(await elem.screenshot()).to.matchImage('loaded');
     });
@@ -38,10 +38,10 @@ describe('SingleMetricView', function () {
             $('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn .jqplot-seriespicker').trigger('mouseenter');
         });
         await page.webpage.evaluate(function(){
-            $('#dashboardWidgetsArea .jqplot-seriespicker-popover label:contains(Revenue)').click();
+            $('#dashboardWidgetsArea .jqplot-seriespicker-popover label:contains(Revenue):eq(0)').click();
         });
         await page.waitForNetworkIdle();
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         var elem = await page.waitForSelector('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn');
         expect(await elem.screenshot()).to.matchImage('formatted_metric');
@@ -51,12 +51,12 @@ describe('SingleMetricView', function () {
         await page.evaluate(function(){
             $('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn .jqplot-seriespicker').last().trigger('mouseenter');
         });
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
         await page.evaluate(function(){
-            $('#dashboardWidgetsArea .jqplot-seriespicker-popover label:contains(_x)').click()
+            $('#dashboardWidgetsArea .jqplot-seriespicker-popover label:contains(_x):eq(0)').click()
         });
         await page.waitForNetworkIdle();
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         var elem = await page.$('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn');
         expect(await elem.screenshot()).to.matchImage('goal_metric');
@@ -67,12 +67,12 @@ describe('SingleMetricView', function () {
         await page.evaluate(function(){
             $('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn .jqplot-seriespicker').trigger('mouseenter');
         });
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
         await page.evaluate(function(){
-            $('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn .jqplot-seriespicker-popover label:contains(Revenue)').click()
+            $('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn .jqplot-seriespicker-popover label:contains(Revenue):eq(0)').click()
         });
         await page.waitForNetworkIdle();
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         var elem = await page.$('#dashboardWidgetsArea #widgetCoreVisualizationssingleMetricViewcolumn');
         expect(await elem.screenshot()).to.matchImage('range');

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -93,7 +93,8 @@ class MockDataAccess extends MySQLMetadataDataAccess
     {
         $result = array();
         foreach (self::$tableStatuses as $tableName => $ignore) {
-            if ($tableName == "archive_numeric"
+            if (
+                $tableName == "archive_numeric"
                 || $tableName == "archive_blob"
             ) {
                 continue;

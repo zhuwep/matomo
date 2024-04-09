@@ -1,8 +1,446 @@
 # Matomo Platform Changelog
 
-This is the Developer Changelog for Matomo platform developers. All changes in our HTTP API's, Plugins, Themes, SDKs, etc. are listed below.
+This is the Developer Changelog for Matomo platform developers. All changes in our HTTP APIs, Plugins, Themes, SDKs, etc. are listed below.
 
 The Product Changelog at **[matomo.org/changelog](https://matomo.org/changelog)** lets you see more details about any Matomo release, such as the list of new guides and FAQs, security fixes, and links to all closed issues. 
+
+## Matomo 5.1.0
+
+### Breaking Changes
+
+* The `errorlog` (`\Monolog\Handler\ErrorLogHandler`) and `syslog` (`\Monolog\Handler\SyslogHandler`) handlers are no longer directly used. Plugins using or overwriting those handlers using DI should now use the scoped classes `Piwik\Plugins\Monolog\Handler\ErrorLogHandler` and `Piwik\Plugins\Monolog\Handler\SyslogHandler` instead.
+
+### Deprecations
+
+The API method `Overlay.getExcludedQueryParameters` has been deprecated and will be removed in Matomo 6. Use the new method `SitesManager.getExcludedQueryParameters` instead.
+
+### JavaScript Tracker
+
+#### New APIs
+
+* The method `disableCampaignParameters` have been added to the JavaScript tracker. It allows to disable processing of campaign parameters and forwarding them to the tracking endpoint.
+
+## Matomo 5.0.0
+
+### Breaking Changes
+
+* AngularJS has been completely removed from the code base, existing AngularJS code will no longer work. It is recommended to convert that code to Vue.
+* jQuery has been updated to 3.6.3. Please check your plugins javascript code if it needs to be adjusted. More details can be found in jQuery update guides: https://jquery.com/upgrade-guide/3.0/ and https://jquery.com/upgrade-guide/3.5/
+* The `Common::fixLbrace()` function has been removed. It was only necessary for AngularJS and no longer needs to be used.
+* The deprecated `JSON2` API format has now been removed. We recommend switching to the `JSON` renderer, which behaves the same.
+* The javascript event `piwikPageChange`, which is triggered when a reporting page is loaded, has been renamed to `matomoPageChange`. Ensure to update your implementation if you rely on it.
+* The deprecated javascript functions `broadcast.init`, `broadcast.propagateAjax` and `broadcast.pageLoad` have been removed.
+* Plugin names are now limited to 60 characters. If you used to have a plugin with a longer name, you might need to rename it.
+* The `instance_id` configuration does no longer support characters other than `a-z`, `0-9` and the special characters `.-_`. If the configured value contains other characters, they will be simply removed.
+* When an invalid token is provided in an API request, a 401 response code is now returned instead of 200 response code.
+* By default, the `file://` protocol is no longer tracked. To enable tracking of the `file://` protocol use the new JavaScript tracker method `enableFileTracking` ([learn more](https://matomo.org/faq/how-to/why-is-no-data-tracked-for-local-files/)).
+* We have migrated our automated tests from Travis CI to GitHub actions. If your plugin used Travis CI for running tests ensure to migrate that to a GitHub action as support for running tests on Travis has been dropped.
+* By default, the last ip address in the proxy list will now be used rather than the first ip address. To force the first ip address to be used set the config option `proxy_ip_read_last_in_list = 0`.
+* The deprecated method `Piwik\Log::setLogLevel()` has been removed
+* The deprecated method `Piwik\Log::getLogLevel()` has been removed
+* A parameter `$login` has been added to the methods `setCompleted()`, `isCompleted()`, `skipChallenge()` and `isSkipped()` in the `Piwik\Plugins\Tour\Engagement\Challenge` class
+* In order to encapsulate Matomo's dependencies from direct usage in plugins we introduce some proxy classes and patterns that need to be used instead. For plugin development avoid using any external Matomo dependency directly. 
+  * Use `Piwik\Log\Logger` instead of `Monolog\Logger`
+  * Use `Piwik\Log\LoggerInterface` instead of `Psr\Log\LoggerInterface`
+  * Use `Piwik\Log\NullLogger` instead of `Psr\Log\NullLogger`
+  * Use `Piwik\DI` instead of `DI`
+    * `DI` namespaced functions need to be replaced with static `Piwik\DI` methods. E.g. `DI\add()` will become `Piwik\DI::add()`
+    * If you need to catch dependency related exceptions use `Piwik\Exception\DI\DependencyException` or `Piwik\Exception\DI\NotFoundException`
+    * We are now using our own Container class. So when defining dependencies use `\Piwik\Container\Container` where you used to use `\Psr\Container\ContainerInterface` or `DI\Container` as typehints
+  * To encapsulate plugin commands from directly using any symfony console dependency our class `Piwik\Plugins\ConsoleCommand` has been rewritten. To migrate your commands you need to apply some changes:
+    * Methods like `run`, `execute`, `interact` or `initialize` can no longer be overwritten. Instead, use our custom methods prefixed with `do`: `doExecute`, `doInteract` or `doInitialize`
+      * `doExecute()` method needs to return integers. We recommend using the class constants `SUCCESS` or `FAILURE` as return values.
+    * Where ever you need to work with input or output use `$this->getInput()` or `$this->getOutput()` instead. Don't use `InputInterface` or `OutputInterface` as method typehints.
+    * When defining input options and arguments `addOption` and `addArgument` can no longer be used
+      * For arguments use `addOptionalArgument` or `addRequiredArgument`
+      * For options use `addNegatableOption`, `addOptionalValueOption`, `addNoValueOption` or `addRequiredValueOption`
+    * Directly using any console helpers is now prohibited
+      * When needing user input use the new methods `askForConfirmation`, `askAndValidate` or `ask`
+      * For progress bars use the methods `initProgressBar`, `startProgressBar`, `advanceProgressBar` and `finishProgressBar`
+      * Tables can be rendered using the new method `renderTable`
+    * For executing another command within your command use the new method `runCommand`
+* Requests sent by Matomo to plugins.matomo.org will no longer include an `HTTP_X_FORWARDED_FOR` header containing the current user's IP address. If you use an outbound proxy rule that used this header to allow access for Matomo then it should be replaced with rule allowing access by IP and/or URL.    
+* Matomo does no longer include the jQuery browser plugin. If your plugin requires it, you need to include it yourself.
+
+### New APIs
+
+* The class `Piwik\Request` has been introduced. It will allow fetching parameters from a request, optionally validated / casted to a certain type. Use this class in favor of `Common::getRequestVar`.
+* All API are now able to overwrite the property `$autoSanitizeInputParams`. Setting this variable to `false` will prevent an automatic apply of `Common::sanitizeInputValues` on all parameter passed to the API methods. By now this property defaults to `true`, but this might change in upcoming major releases.
+* All API methods can now use type hinted parameters. This allows to force certain parameters to be provided in a defined type. If the API is called with a mismatching type, an error will be triggered, without calling the method at all. Only basic types are supported: string, int, float, bool, array
+
+### Deprecations
+
+* The method `Common::getRequestVar` is now deprecated, but will remain API until Matomo 6. You may already start using the new class `Piwik\Request` instead, but ensure to handle needed sanitizing / escaping yourself.
+* The brand related less variables for colors `color-black-piwik`, `color-blue-piwik`, `color-red-piwik` and `color-green-piwik` are now deprecated and will be removed in Matomo 6. New variables where `piwik` was replaced with `matomo` have been introduced. E.g. `color-black-matomo`
+* Support for jQuery UI is now depreated and might be removed in one of the next major releases. Please consider using Materialize CSS or Vue.js instead.
+
+### Removed Config
+
+* The segment subquery cache, previously enabled via the `enable_segments_subquery_cache` INI config, has been removed. Segment SQL queries that reference actions now directly join log_action. Related INI config options `segments_subquery_cache_ttl` and `segments_subquery_cache_limit` have also been removed.
+
+### Other Breaking changes
+
+* Requests to ASPSMS and Clockwork API do no longer accept invalid SSL certificates. If you experience problems with mobile messaging please check your SSL setup.
+
+### Archiving
+* When posting the event `Archiving.getIdSitesToMarkArchivesAsInvalidated` started passing date, period ,segment and name parameter along with idSites parameter.
+
+### Updated commands
+* The default maximum number of archivers processes to run concurrently has changed from unlimited to three. The `--concurrent-archivers` parameter can be used to increase this limit. A value of -1 will use an unlimited number of concurrent archivers
+
+### Usage of authentication tokens
+* By default, new authentication tokens will be restricted to be used in POST requests only. This is recommended for improved security. This option can be unselected when creating a new token. Existing tokens will continue to work with both, POST and GET requests.
+* A new config setting `only_allow_secure_auth_tokens`, defaulting to `0`, has been added. Enabling this option will prevent any use of tokens in GET API requests.
+
+## Matomo 4.14.0
+
+### HTTP Tracking API
+
+* The campaign attribution tracking parameters `_rcn` and `_rck` are no longer used to attribute visits. Those parameters will now only be used to attribute conversions. If you want to manually attribute a visit to a campaign ensure to attach camapign parameters to the tracked URL instead.
+
+## Matomo 4.13.1
+
+### New config.ini.php settings
+* Three new config settings `ssl_disallow_self_signed` ,`ssl_verify_peer`, `ssl_verify_peer_name` under [mail] to allow modifying the SSL handling in SMTP request.
+
+## Matomo 4.13.0
+
+### New config.ini.php settings
+* A new config setting `enable_opcache_reset` defaulting to `1`. Provides a configuration switch for `opcache_reset` when general caches are cleared. This may be useful for multi-tenant installations that would rather manage opcache resets by themselves. This could also be used by scripts to temporarily switch off opcache resets.
+
+## Matomo 4.12.0
+
+### Breaking Changes
+
+* When removing a user through the `UsersManager.deleteUser` API using a session authentication, a new parameter `passwordConfirmation` needs to be sent along with the request containing the current password of the user issuing the API request.
+* When adding a user through the `UsersManager.addUser` API using a session authentication, a new parameter `passwordConfirmation` needs to be sent along with the request containing the current password of the user issuing the API request.
+* When inviting a user through the `UsersManager.inviteUser` API using a session authentication, a new parameter `passwordConfirmation` needs to be sent along with the request containing the current password of the user issuing the API request.
+
+### New PHP events
+
+* Added new event `Login.userRequiresPasswordConfirmation`, which can be used in login plugins to circumvent the password confirmation in UI and for certain API methods
+* When removing a site through the `SitesManager.deleteSite` API using a session authentication, a new parameter `passwordConfirmation` needs to be sent along with the request containing the current password of the user issuing the API request.
+
+### New Privacy Opt-Out Options
+
+* The privacy manager iframe opt-out UI has been replaced with a choice of either generating JavaScript opt-out code which uses the Matomo tracker, or generating self-contained JavaScript opt-out code which directly sets the consent cookies. Existing iframe opt-outs will still work, but iframe opt-out code will no longer be generated by the UI as support for third party cookies in iframes is being discontinued by most major browsers.     
+
+### JavaScript Tracker
+
+#### New APIs
+
+* The methods `setExcludedReferrers` and `getExcludedReferrers` have been added to the JavaScript tracker. They allow setting and receiving the referrers the JavaScript tracker should ignore. If a referrer matches an entry on that list, it will not be passed with the tracking requests and the attribution cookie will stay unchanged. This can for example be used if you need to forward your users to an external service like SSO or payment and don't want any visits or conversions being attributed to those services.
+
+## Matomo 4.11.0
+
+### Breaking Changes
+
+* The user management UI no longer allows direct creation of a new user (with a password). Instead an invitation can be sent via email. Directly creating a new user is still possible using the API.
+
+### New config.ini.php settings
+* A general config setting `force_matomo_http_request` defaulting to 0. If the Matomo instance can't make requests to matomo.org via HTTPS this can be set to 1 to force matomo marketplace and matomo api requests to use HTTP instead of HTTPS.
+
+#### New PHP events
+
+* Added new event `UsersManager.inviteUser.end`, which is triggered after a new user has been invited
+* Added new event `UsersManager.inviteUser.resendInvite`, which is triggered after the invitation to a user has been resent
+* Added new event `UsersManager.inviteUser.accepted`, which is triggered after an invitation has been accepted
+* Added new event `UsersManager.inviteUser.declined`, which is triggered after an invitation has been declined
+
+* The existing event `UsersManager.addUser.end` will only be triggered when a user is added using the API.
+
+
+## Matomo 4.10.0
+
+### Breaking Changes
+
+* As access to files like `plugin.json` might reveal version details, `json` files will now longer be considered as static files that can be served safely. Therefore `json` will no longer be included in the list of static file extensions in generated `.htaccess` files.
+
+## Matomo 4.8.0
+
+### New config.ini.php settings
+
+* The config setting `enable_default_location_provider` in `Tracker` has been added. By setting this option to 0, you can disable the default location provider. This can be used to prevent the geolocator to guess the country based on the users language, if the configured provider doesn't provide any results.
+
+#### New PHP events
+
+* Added new event `Segment.filterSegments`. Plugins can use this to filter segment definitions.
+
+## Matomo 4.7.0
+
+### Deprecated APIs
+
+* The `piwik-field` and related directives have been converted to Vue and the `template-file` attribute is now considered deprecated and will be removed in Matomo 5. Instead,
+  the `component` property should be used to add a new form field, it should be an object with two properties that reference a Vue component, `plugin` and `name`, where `plugin`
+  is the plugin the Vue component is located in and `name` is the Vue name of the component's export. 
+
+### New Change Notifications
+
+* Plugins can now provide a list of changes which will be displayed as part of the "What's New?" menu notification. Learn more about how this works in the [developer guide.](https://developer.matomo.org/guides/providing-updates) 
+
+
+## Matomo 4.6.0
+
+### New Framework
+
+* We have begun introducing Vue 3 as the frontend framework to replace AngularJS. You can learn more about it in [our developer guide.](https://developer.matomo.org/guides/working-with-piwiks-ui)
+
+### New APIs
+* New API Methods `SecurityPolicy.addPolicy`, `SecurityPolicy.overridePolicy`, `SecurityPolicy.removeDirective`, `SecurityPolicy.allowEmbedPage`, `SecurityPolicy.disable` allow developers to modify or disable the default Content Security Policy. `Plugins\Controller` has a new member `securityPolicy` so plugins can use `$this->securityPolicy` to access these new methods when a custom Content Security Policy is needed.
+
+### Breaking Changes
+
+* With the introduction of Vue 3 we are also dropping support for IE11. All new supported browsers are determined by the browserslist tool. Running `npx browserslist` will list the browsers currently supported.
+* When the Ecommerce feature is disabled for a site, then the Live API no longer returns the Ecommerce related visitor properties `totalEcommerceRevenue`, `totalEcommerceConversions`, `totalEcommerceItems`,  `totalAbandonedCartsRevenue`, `totalAbandonedCarts` and `totalAbandonedCartsItems`.
+* Content Security Policy (added in Matomo 4.4.0) is no longer in Report Only mode by default. 
+
+### New config.ini.php settings
+
+* The config setting `contact_email_address` in `General` has been added. It will be used as contact email address for users. If not defined (default) all email addresses of all super users will be used instead, which equals the behavior it used to be.
+
+## Matomo 4.4.0
+
+### Breaking Changes
+
+* The `logme` method for [automatic logins](https://matomo.org/faq/how-to/faq_30/) is now disabled by default for new installations. For existing installations it will be enabled automatically on update. If you do not need it please consider disabling it again for security reasons by setting `login_allow_logme = 0` in `General` section of `config.ini.php`.
+* The redirect using the `url` param for the automatic login action `logme`, will no longer do redirects to untrusted hosts. If you need to do redirects to other URLs on purpose, please add the according hosts as `trusted_hosts` entry in `config.ini.php`
+
+### New config.ini.php settings
+
+* When determining the client IP address from proxy headers like X-Forwarded-For, Matomo will by default look at the first IP in the list. If you need to read the last IP instead, the new INI config option `[General] proxy_ip_read_last_in_list` be set to `1`. Using the last IP can be more secure when you are using proxy headers in combination with a load balancer.
+* Matomo logs can now be written into "errorlog" (logs using the error_log() php function) and "syslog" (logs to the syslog service) (to complement existing log writers: "screen", "file", "database"). [Learn more.](https://matomo.org/faq/troubleshooting/faq_115/)
+
+### New commands
+
+* Added new command `core:version` which returns the Matomo version number.
+
+## Matomo 4.3.1
+
+### New commands
+
+* Added new command `core:create-security-files` which creates some web server security files if they haven't existed previously (useful when using for example Apache or IIS web server).
+
+## Matomo 4.3.0
+
+### JavaScript Tracker
+
+#### Breaking changes in Matomo JS tracker
+
+* Before the JS tracker method, `enableLinkTracking` did not follow the DOM changes, from this version when the DOM updates, Matomo automatically adds event listeners for new links on the page. It makes it easier to track clicks on links in SPAs. From this version, if we use the `addListener` method to add event listener manually after the DOM has changed and the `enableLinkTracking` is turned on we will track the click event for that element twice.
+
+### Breaking Changes
+
+* Before every JS error was tracked, from this version the same JS error will be only tracked once per page view. If the very same error is happening multiple times, then it will be tracked only once within the same page view. If another page view is tracked or when the page reloads, then the error will be tracked again.
+* It's no longer possible to store any class instances directly in the session object. Please use arrays or plain data instead.
+
+### Upcoming Breaking Changes
+
+* In Matomo 4.3.0 we have added a 'passwordConfirmation' parameter to the CorePluginsAdmin.setSystemSettings API method. It is currently optional, but will become mandatory in version 4.4.0. Plugin developers and users of the API should make sure to update their plugins and apps before this happens.
+
+### New config.ini.php settings
+
+* The `password_hash_algorithm`, `password_hash_argon2_threads`, `password_hash_argon2_memory_cost` and `password_hash_argon2_time_cost` INI config options have been added to allow using specific `password_hash` algorithms and options if desired.
+* The `enable_php_profiler` INI config option was added. This must now be set to 1 before profiling is allowed in Matomo.
+
+## Matomo 4.2.0
+
+### New config.ini.php settings
+
+* A config setting `geolocation_download_from_trusted_hosts` was introduced. Downloading GeoIP databases will now be limited to those configured hosts only.
+
+## Matomo 4.1.1
+
+### Changed config.ini.php settings
+
+* The config settings `login_password_recovery_email_address` and `login_password_recovery_name` have been removed to avoid possible smtp problems when sending recovery mails. `noreply_email_address` and `noreply_email_name` will be used instead.
+
+## Matomo 4.0.0
+
+### JavaScript Tracker
+
+#### Breaking changes in Matomo JS tracker
+
+* Matomo no longer polyfills the `JSON` object in the JavaScript tracker. This means IE7 and older, Firefox 3 and older will be no longer suppported in the tracker. 
+* The JavaScript tracker now uses `sendBeacon` by default if supported by the browser. You can disable this by calling the tracker method `disableAlwaysUseSendBeacon`. As a result, callback parameters won't work anymore and a tracking request might not appear in the developer tools. This will improve the load time of your website. Tracking requests will be sent as POST request instead of GET but the parameters are by default included in the URL so they don't go lost in a redirect. 
+* The JS tracker event `PiwikInitialized` has been renamed to `MatomoInitialized`
+* Support for tracking and reporting of these browser plugins has been discontinued: Gears, Director
+* Plugins that extend the JS tracker should now add their callback to `matomoPluginAsyncInit` instead of `piwikPluginAsyncInit`
+* The visitor ID cookie now contains less data (due to the _idvc, _idts, _viewts and _ects tracking parameters no longer being used). This is a breaking change if you use the Matomo PHP Tracker and forward the visitor cookie to it, and you will need to upgrade the PHP tracker to use with Matomo 4.
+* The tracker method `setVisitStandardLength` has been removed as there is no need for it anymore.
+* The tracker method `setGenerationTimeMs(generationTime)` has been removed as the performance API is now used. Any calls to this method will be ignored. There is currently no replacement available yet.
+
+#### Deprecations in Matomo JS tracker
+
+* The JS Tracker method `getPiwikUrl` has been deprecated and `getMatomoUrl` should be used instead.
+* The JS Tracker init method `piwikAsyncInit` has been deprecated and `matomoAsyncInit` should be used instead.
+* The JS object `window.Piwik` has been deprecated and `window.Matomo` should be used instead.
+
+#### Recommendations for Matomo JS tracker
+
+These are only recommendations (because we will keep backward compatibility for many more years), but we do recommend you update your code for consistency and for future proofing your tracking:
+
+* If using the `piwik_ignore` css class to ignore outlinks we recommend replacing it with `matomo_ignore` 
+* If using the `piwik_download` css class to mark a link as download we recommend replacing it with `matomo_download` 
+* If using content tracking, we recommend replacing the following CSS classes should they be used `piwikTrackContent`, `piwikContentPiece`, `piwikContentTarget`, and `piwikContentIgnoreInteraction` with `matomoTrackContent`, `matomoContentPiece`, `matomoContentTarget`, and `matomoContentIgnoreInteraction`. 
+* We also encourage using the `matomo.js` JS tracker file instead of `piwik.js` and `matomo.php` tracker endpoint instead of `piwik.php` endpoint.
+
+#### New APIs
+* A new JS tracker method `getMatomoUrl` has been added which replaces `getPiwikUrl`.
+
+### HTTP APIs
+
+#### Breaking changes in HTTP API 
+
+##### Format changes
+* The `JSON2` API format has now been deprecated and is now applied  by default. The JSON2 renderer will be removed in Matomo 5 and we recommend switching to the `JSON` renderer. 
+* The `JSON` renderer now behaves like the previous `JSON2` renderer did. This means arrays like `['a' => 0, 'b' => 1]` will be rendered in JSON as `{"a":0,"b":1}` instead of `[{"a":0,"b":1}]`. This impacts these API methods:
+  * API.getSettings
+  * Annotations.get
+  * Goals.getGoal
+  * UsersManager.getUser
+  * UsersManager.getUserByEmail
+  * SitesManager.getSiteFromId
+* The API response format `php` has been removed.
+* The response of an individual request within the bulk request of `API.getBulkRequest` may change if the API returns a scalar value (eg `5`). In this case the response will be no longer `5` but for example `{value: 5}`
+
+##### Method changes
+* The API method `UsersManager.getTokenAuth` has been removed. Instead you need to use `UsersManager.createAppSpecificTokenAuth` and store this token in your application.
+* The API method `UsersManager.createTokenAuth` has been removed. Instead you need to use `UsersManager.createAppSpecificTokenAuth` and store this token in your application.
+* The API method `DevicesDetection.getBrowserFamilies` has been removed. Instead you need to use `DevicesDetection.getBrowsers`
+* The API method `CustomPiwikJs.doesIncludePluginTrackersAutomatically` has been renamed to `CustomJsTracker.doesIncludePluginTrackersAutomatically`
+* The API method `Live.getLastVisitsForVisitor` has been removed. Use `Live.getVisitorProfile` instead.
+* The API method `Live.getLastVisits` has been removed. Use `Live.getLastVisitsDetails` instead.
+* These API methods have been removed: `API.getDefaultMetricTranslations`, `API.getLogoUrl`, `API.getHeaderLogoUrl`, `API.getSVGLogoUrl`,   `API.hasSVGLogo`
+* These API methods have been removed: `SitesManager.getSitesIdWithVisits`, `SitesManager.isSiteSpecificUserAgentExcludeEnabled`, `SitesManager.setSiteSpecificUserAgentExcludeEnabled`
+* These API methods have been removed: `Referrers.getKeywordsForPageUrl` and `Referrers.getKeywordsForPageTitle`. Use `Referrers.getKeywords` instead in combination with a `entryPageUrl` or `entryPageTitle` segment.
+* The parameter `alias` from the API methods `UsersManager.addUser` and `UsersManager.updateUser` has been removed.
+
+#### HTTP Tracking API
+
+* An optional new tracking parameter called `ca` has been added which can be used for tracking requests that aren't page views see [#16569](https://github.com/matomo-org/matomo/issues/16569)
+
+### PHP Plugin API
+
+#### New PHP events
+
+* Added new event `Db.getTablesInstalled`, plugins should use to register the tables they create.
+
+#### Breaking changes in PHP events
+
+* The event `CustomPiwikJs.piwikJsChanged` has been renamed to `CustomJsTracker.trackerJsChanged`
+* The event `CustomPiwikJs.shouldAddTrackerFile` has been renamed to `CustomJsTracker.shouldAddTrackerFile`
+* The event `CustomMatomoJs.shouldAddTrackerFile` has been renamed to `CustomJsTracker.manipulateJsTracker`
+* The event `Live.getAllVisitorDetails` has been removed. Use a `VisitorDetails` class instead (see Live plugin).
+* The event `Live.getExtraVisitorDetails'` has been removed. Use the `VisitorDetails` class within each plugin instead.
+* The event `Piwik.getJavascriptCode` has been renamed to `Tracker.getJavascriptCode`.
+* The event `LanguageManager.getAvailableLanguages` has been removed. Use `LanguagesManager.getAvailableLanguages` instead.
+* The `$completed` parameter for the 'CronArchive.archiveSingleSite.finish' event has been removed. For both this event and the CronArchive.archiveSingleSite.start event, a new
+  parameter is added for the process' pid. Multiple processes can now trigger this event for the same site ID.
+
+#### Removed methods and constants in PHP Plugin API
+
+* The method `\Piwik\Plugin::getListHooksRegistered()` has been removed. Use `\Piwik\Plugin::registerEvents()` instead
+* The method `\Piwik\Piwik::doAsSuperUser()` has been removed. Use `\Piwik\Access::doAsSuperUser()` instead
+* The method `\Piwik\SettingsPiwik::isPiwikInstalled()` has been removed. Use `\Piwik\SettingsPiwik::isMatomoInstalled()` instead
+* The method `\Piwik\Updates::getSql()` has been removed. Use `\Piwik\Updates::getMigrations()` instead
+* The method `\Piwik\Updates::getMigrationQueries()` has been removed. Use `\Piwik\Updates::getMigrations()` instead
+* The method `\Piwik\Updates::executeMigrationQueries()` has been removed. Use `\Piwik\Updates::executeMigrations()` instead
+* The method `\Piwik\Updates::update()` has been removed. Use `\Piwik\Updates::doUpdate()` instead
+* The method `\Piwik\Updater::updateDatabase()` has been removed. The method is not needed anymore.
+* The method `\Piwik\Common::json_encode()` has been removed. Use `json_encode()` instead
+* The method `\Piwik\Common::json_decode()` has been removed. Use `json_decode()` instead
+* The method `\Piwik\Common::getContinentsList()` has been removed. Use `\Piwik\Intl\Data\Provider\RegionDataProvider::getContinentList()` instead
+* The method `\Piwik\Common::getCountriesList()` has been removed. Use `\Piwik\Intl\Data\Provider\RegionDataProvider::getCountriesList()` instead
+* The method `\Piwik\Common::getLanguagesList()` has been removed. Use `\Piwik\Intl\Data\Provider\LanguageDataProvider::getLanguagesList()` instead
+* The method `\Piwik\Common::getLanguageToCountryList()` has been removed. Use `\Piwik\Intl\Data\Provider\LanguageDataProvider::getLanguageToCountryList()` instead
+* The method `\Piwik\Site::getCurrencyList()` has been removed. Use `\Piwik\Intl\Data\Provider\CurrencyDataProvider::getCurrencyList()` instead
+* The method `\Piwik\Piwik::setUserHasSuperUserAccess()` has been removed. Use `\Piwik\Access::doAsSuperUser()` instead
+* The class `\Piwik\MetricsFormatter` has been removed. Use `Piwik\Metrics\Formatter` or `Piwik\Metrics\Formatter\Html` instead
+* The class `\Piwik\Registry` has been removed. Use `\Piwik\Container\StaticContainer` instead
+* The class `\Piwik\TaskScheduler` has been removed. Use `\Piwik\Scheduler\Scheduler` instead
+* The class `\Piwik\DeviceDetectorFactory` has been removed. Use `\Piwik\DeviceDetector\DeviceDetectorFactory` instead
+* The class `\Piwik\ScheduledTask` has been removed. Use `\Piwik\Scheduler\Task` instead.
+* The class `\Piwik\Translate` has been removed. Use `\Piwik\Translation\Translator` instead.
+* The class `\Piwik\Plugins\Login\SessionInitializer` is no longer considered API as it is no longer needed.
+* The class `\Piwik\Container\StaticContainer` still exists but we no longer consider it an API and constructor injection should be used instead where possible.
+* The method `Piwik\Columns\Dimension::factory` has been removed. Use `DimensionsProvider::factory` instead.
+* The method `Piwik\Config::reset` has been removed. Use the `reload` method instead.
+* The method `Piwik\Config::init` has been removed. Use the `reload()` method instead.
+* The method `Piwik\Db::getColumnNamesFromTable` has been removed. Use the `TableMetadata::getColumns` method instead.
+* The method `Piwik\Session\SessionInitializer::getHashTokenAuth` has been removed. There is no need for this method anymore.
+* The method `Piwik\Tracker::getDatetimeFromTimestamp` has been removed. Use `Piwik\Date::getDatetimeFromTimestamp` instead.
+* The method `Dimension::addSegment()` has been removed. See new implementation of `DimensionSegmentFactory::createSegment` for a replacement
+* The constant `Piwik\Plugins\Goals\API::NEW_VISIT_SEGMENT` has been removed. Use `Piwik\Plugins\VisitFrequency\API::NEW_VISITOR_SEGMENT` instead.
+* The signature of `Dimension::configureSegments()` has been changed. Similar to configuring Metrics it now takes two parameters `SegmentsList $segmentsList` and `DimensionSegmentFactory $dimensionSegmentFactory`.
+* The signature of the event `Segment.addSegments` has been changed. It now has one parameter `SegmentsList $list`, which allows adding new segments to the list
+* The core plugin `CustomPiwikJs` has been renamed to `CustomJsTracker`
+* The class `Piwik\Plugins\CustomPiwikJs\TrackerUpdater` has been renamed to `Piwik\Plugins\CustomJsTracker\TrackerUpdater`
+* The method `Piwik\Cookie::set` no longer accepts an array as value
+* `Zend_Validate` and all subclasses have been completely removed. 
+* Matomo's mail component (`Piwik\Mail`) has been rewritten:
+  * Zend_Mail has been removed. `Piwik\Mail` is now an independet class.
+  * PHPMailer is now used for sending mails in `\Piwik\Mail\Transport` and can be replaced using DI.
+  * Various methods in `Piwik\Mail` have been removed or changed their signature.
+  
+#### New APIs
+* A new API `UsersManager.createAppSpecificTokenAuth` has been added to create an app specific token for a user.
+* A new method `Common::hashEquals` has been added for timing attack safe string comparisons.
+* Reporting API: It is now possible to apply `hideColumns` recursively to nested values by setting `hideColumnsRecursively=1`. For all `Live` api methods this is the default behaviour.
+
+### Other Breaking changes
+
+* When embedding reports (widgets) into a different site, it is no longer possible to use authentication tokens of users with at least write access, unless the `[General] enable_framed_allow_write_admin_token_auth` is set. This means if you currently rely on this functionality, you will need to update your matomo config when updating to Matomo 4. Alternatively, create a user with `view` access and use the token of this user to embed the report.
+* The log importer in `misc/log-analytics` now supports Python 3 (3.5, 3.6, 3.7 or 3.8), it will no longer run with Python 2. If you have any automated scripts that run the importer, you will have to change them to use the Python 3 executable instead.
+* Deprecated `piwik` font was removed. Use `matomo` font instead
+* The JavaScript AjaxHelper does not longer support synchronous requests. All requests will be sent async instead.
+* The console option `--piwik-domain` has been removed. Use `--matomo-domain` instead
+* The controller action `Proxy.redirect` has been removed. Instead link to the URL directly in HTML and set an attribute `rel="noreferrer noopener"`  
+* GeoIP Legacy support has been fully removed. Users of GeoIP Legacy need to set up a new location provider like GeoIP2, otherwise the default location provider will be used.
+* Site search category and count are no longer stored as custom variables. That also means they will now have an extra field in action details and no longer appear in custom variables.
+* The dimension and `log_link_visit_action` column interaction_position has been renamed to pageview_position. If your database queries rely on the column you can simply replace the name.
+* The metric (avg.) page generation time has been deprecated. It is no longer possible to track it. Already tracked values will still be shown in old reports. More detailed performance metrics are now available in PagePerformance plugin.
+* Added support for campaign name parameter `matomo_campaign` / `mtm_campaign` and campaign keyword parameter `matomo_kwd` / `mtm_kwd`
+* The following dimensions have been removed and replaced with versions that measure seconds: visitor_days_since_first, visitor_days_since_last, visitor_days_since_order
+* The _idvc, _idts, _viewts and _ects tracker parameters are no longer used, the values are calculated server side.
+  Note: tracking these values server side means replaying log data in the past will result in inaccurate values for these dimensions.
+* The Dependency Injection library PHP-DI was updated. [Some definitions need to be updated]((https://php-di.org/doc/migration/6.0.html)):
+  * The Method `\DI\object()` has been removed. You can use `\DI\autowire()` or `\DI\create()` instead.
+  * The Method `\DI\link()` has been removed. Use `\DI\get()` instead.
+  * Defining global observer functions in config now requires the functions to be wrapped in `\DI\value()`, unless they are a factory.
+
+### New config.ini.php settings
+
+* `host_validation_use_server_name = 0`, if set to 1, Matomo will prefer using SERVER_NAME variable over HTTP_HOST. This can add an additional layer of security, as SERVER_NAME can't be manipulated by sending custom host headers when configured correctly.
+
+
+## Matomo 3.14.0
+
+### New API
+
+The following new JavaScript tracker methods have been added:
+
+* `_paq.push(['setVisitorId', visitorId]);`. This can be used to force a specific visitorId. It takes a 16 digit hexadecimal string.
+* `_paq.push(['requireCookieConsent']);`. Call this method if cookies should be only used when consent was given.
+* `_paq.push(['rememberCookieConsentGiven']);`. Call this method when a user gives you cookie consent.
+* `_paq.push(['forgetCookieConsentGiven']);`. Call this method when a user revokes cookie consent.
+* `_paq.push(['setCookieConsentGiven']);`. Call this method to let the tracker know consent was given for the current page view (won't be remembered across requests).
+* For more info on consent have a look at https://developer.matomo.org/guides/tracking-javascript-guide#asking-for-consent
+
+## Matomo 3.13.6
+
+### API Changes
+* The first parameter `userLogin` in the `UsersManager.getUserPreference` method is now optional and defaults to the currently authenticated user login.
+
+## Matomo 3.13.5
+
+### New API
+* A new event `ArchiveProcessor.ComputeNbUniques.getIdSites` was added so plugins can change which site IDs should be included when processing the number unique visitors and users for a specific site.
+
+## Matomo 3.13.1
+
+### Deprecations
+* The methods `\Piwik\Plugins\SitesManager\isSiteSpecificUserAgentExcludeEnabled()` and `\Piwik\Plugins\SitesManager\setSiteSpecificUserAgentExcludeEnabled()` have been deprecated.
+* The method `\Piwik\SettingsServer::isMatomoForWordPress()` has been added so plugins can detect if the plugin is being executed within Matomo for WordPress or Matomo On-Premise 
 
 ## Matomo 3.13.0
 
@@ -56,7 +494,7 @@ The Product Changelog at **[matomo.org/changelog](https://matomo.org/changelog)*
 ### New APIs
 
 * It is now possible to queue a request on the JavaScript tracker using the method `queueRequest(requestUrl)`. This can be useful to group multiple tracking requests into one bulk request to reduce the number of tracking requests that are sent to your server making the tracking more efficient.
-* When specifying a callback in the JavaScript tracker in a tracker method, we now make sure to execute the callback even in error cases or when sentBeacon is used. The callback recevies an event parameter to determine which request was sent and whether the request was sent successfully.
+* When specifying a callback in the JavaScript tracker in a tracker method, we now make sure to execute the callback even in error cases or when sentBeacon is used. The callback receives an event parameter to determine which request was sent and whether the request was sent successfully.
 * Added new event `Metrics.getEvolutionUnit` which lets you set the unit for a metric used in evolution charts and row evolution.
 
 ### New Features
@@ -569,7 +1007,7 @@ The folder containing expected screenshots was renamed from `expected-ui-screens
 
 ### Internal changes
 
-* The referrer spam filter has moved from the `referrer_urls_spam` INI option (in `global.ini.php`) to a separate package (see [https://github.com/matomo-org/referrer-spam-blacklist](https://github.com/matomo-org/referrer-spam-blacklist)).
+* The referrer spam filter has moved from the `referrer_urls_spam` INI option (in `global.ini.php`) to a separate package (see [https://github.com/matomo-org/referrer-spam-list](https://github.com/matomo-org/referrer-spam-list)).
 
 ## Piwik 2.12.0
 
@@ -819,7 +1257,7 @@ We are using `@since` annotations in case we are introducing new API's to make i
 * [Visit Dimension](http://developer.matomo.org/2.x/api-reference/Piwik/Plugin/Dimension/VisitDimension) to add a dimension that tracks visit related information
 * [Conversion Dimension](http://developer.matomo.org/2.x/api-reference/Piwik/Plugin/Dimension/ConversionDimension) to add a dimension that tracks conversion related information
 * [Dimension](http://developer.matomo.org/2.x/api-reference/Piwik/Columns/Dimension) to add a basic non tracking dimension that can be used in `Reports`
-* [Widgets](http://developer.matomo.org/2.x/api-reference/Piwik/Plugin/Widgets) to add or modfiy widgets
+* [Widgets](http://developer.matomo.org/2.x/api-reference/Piwik/Plugin/Widgets) to add or modify widgets
 * These Menu classes got new methods that make it easier to add new items to a specific section
   * [MenuAdmin](http://developer.matomo.org/2.x/api-reference/Piwik/Menu/MenuAdmin) to add or modify admin menu items. 
   * [MenuReporting](http://developer.matomo.org/2.x/api-reference/Piwik/Menu/MenuReporting) to add or modify reporting menu items
@@ -842,6 +1280,7 @@ We are using `@since` annotations in case we are introducing new API's to make i
 
 ### Breaking Changes
 ### Deprecations
+### API Changes
 ### New features
 ### New APIs
 ### New commands
@@ -851,4 +1290,3 @@ We are using `@since` annotations in case we are introducing new API's to make i
  -->
 
 Find the general Matomo Changelogs for each release at [matomo.org/changelog](https://matomo.org/changelog/)
- 

@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,21 +12,21 @@ namespace Piwik\Plugins\SitesManager\tests\Unit;
 use Piwik\Container\StaticContainer;
 use Piwik\Plugins\SitesManager\API;
 use Piwik\SettingsServer;
-use Piwik\Translate;
+use Piwik\Tests\Framework\Fixture;
 
 /**
  * @group SitesManaager
  * @group APITest
  * @group Plugins
  */
-class APITest extends \PHPUnit_Framework_TestCase
+class APITest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var Api
+     * @var API
      */
     private $api;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -33,32 +34,32 @@ class APITest extends \PHPUnit_Framework_TestCase
             $this->markTestSkipped('timezones needs to be supported');
         }
 
-        Translate::loadAllTranslations();
+        Fixture::loadAllTranslations();
 
         $this->api = API::getInstance();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
 
-        Translate::reset();
+        Fixture::resetTranslations();
     }
 
     public function getTimezoneNameTestData()
     {
-        return array(
-            array('Europe/Rome', 'en', 'Italy'),
-            array('Europe/Rome', 'it', 'Italia'),
-            array('America/New_York', 'en', 'United States - New York'),
-            array('America/New_York', 'ru', 'Соединенные Штаты - Нью-Йорк'),
-            array('Asia/Foo_Bar', 'en', 'Foo Bar'),
-            array('Etc/UTC', 'en', 'UTC'),
-            array('UTC', 'en', 'UTC'),
-            array('UTC+1', 'en', 'UTC+1'),
-            array('UTC+1.5', 'en', 'UTC+1:30'),
-            array('UTC-1.5', 'en', 'UTC-1:30'),
-        );
+        return [
+            ['Europe/Rome', 'en', 'Italy'],
+            ['Europe/Rome', 'it', 'Italia'],
+            ['America/New_York', 'en', 'United States - New York'],
+            ['America/New_York', 'ru', 'Соединенные Штаты - Нью-Йорк'],
+            ['Asia/Foo_Bar', 'en', 'Foo Bar'],
+            ['Etc/UTC', 'en', 'UTC'],
+            ['UTC', 'en', 'UTC'],
+            ['UTC+1', 'en', 'UTC+1'],
+            ['UTC+1.5', 'en', 'UTC+1:30'],
+            ['UTC-1.5', 'en', 'UTC-1:30'],
+        ];
     }
 
     /**

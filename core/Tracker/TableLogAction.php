@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,8 +10,6 @@
 namespace Piwik\Tracker;
 
 use Piwik\Common;
-use Piwik\Config;
-use Piwik\Container\StaticContainer;
 use Piwik\Segment\SegmentExpression;
 
 /**
@@ -44,7 +42,7 @@ class TableLogAction
 
         $actionIds = self::queryIdsAction($actionsNameAndType);
 
-        list($queriedIds, $fieldNamesToInsert) = self::processIdsToInsert($actionsNameAndType, $actionIds);
+        [$queriedIds, $fieldNamesToInsert] = self::processIdsToInsert($actionsNameAndType, $actionIds);
 
         $insertedIds = self::insertNewIdsAction($actionsNameAndType, $fieldNamesToInsert);
         $queriedIds  = $queriedIds + $insertedIds;
@@ -96,7 +94,7 @@ class TableLogAction
         $inserted = array();
 
         foreach ($fieldNamesToInsert as $fieldName) {
-            list($name, $type, $urlPrefix) = $actionsNameAndType[$fieldName];
+            [$name, $type, $urlPrefix] = $actionsNameAndType[$fieldName];
 
             $actionId = self::getModel()->createNewIdAction($name, $type, $urlPrefix);
 
@@ -117,7 +115,7 @@ class TableLogAction
     {
         $toQuery = array();
         foreach ($actionsNameAndType as &$actionNameType) {
-            list($name, $type, $urlPrefix) = $actionNameType;
+            [$name, $type, $urlPrefix] = $actionNameType;
             $toQuery[] = array('name' => $name, 'type' => $type);
         }
 
@@ -141,7 +139,8 @@ class TableLogAction
 
             $found = false;
             foreach ($actionIds as $row) {
-                if ($name == $row['name']
+                if (
+                    $name == $row['name']
                     && $type == $row['type']
                 ) {
                     $found = true;
@@ -180,19 +179,23 @@ class TableLogAction
             $sql = 'SELECT idaction FROM ' . Common::prefixTable('log_action') . ' WHERE type = ' . $actionType . ' )';
         } else {
             $actionType = self::guessActionTypeFromSegment($segmentName);
-            if ($actionType == Action::TYPE_PAGE_URL || $segmentName == 'eventUrl') {
-                // for urls trim protocol and www because it is not recorded in the db
-                $valueToMatch = preg_replace('@^http[s]?://(www\.)?@i', '', $valueToMatch);
-            }
+            $valueToMatch = self::removeProtocolIfSegmentStoredWithoutIt($valueToMatch, $actionType, $segmentName);
 
+            $unsanitizedValue = $valueToMatch;
             $valueToMatch = self::normaliseActionString($actionType, $valueToMatch);
-            if ($matchType == SegmentExpression::MATCH_EQUAL
+            if (
+                $matchType == SegmentExpression::MATCH_EQUAL
                 || $matchType == SegmentExpression::MATCH_NOT_EQUAL
             ) {
                 $idAction = self::getModel()->getIdActionMatchingNameAndType($valueToMatch, $actionType);
-                // Action is not found (eg. &segment=pageTitle==Větrnásssssss)
+                // If action can't be found normalized try search for it with original value
+                // This can eg happen for outlinks that contain a &amp; see https://github.com/matomo-org/matomo/issues/11806
                 if (empty($idAction)) {
-                    $idAction = null;
+                    $idAction = self::getModel()->getIdActionMatchingNameAndType($unsanitizedValue, $actionType);
+                    // Action is not found (eg. &segment=pageTitle==Větrnásssssss)
+                    if (empty($idAction)) {
+                        $idAction = null;
+                    }
                 }
                 return $idAction;
             }
@@ -202,9 +205,11 @@ class TableLogAction
             $sql = self::getSelectQueryWhereNameContains($matchType, $actionType);
         }
 
-
-        $cache = StaticContainer::get('Piwik\Tracker\TableLogAction\Cache');
-        return $cache->getIdActionFromSegment($valueToMatch, $sql);
+        return array(
+            // mark that the returned value is an sql-expression instead of a literal value
+            'SQL' => $sql,
+            'bind' => $valueToMatch,
+        );
     }
 
     /**
@@ -227,6 +232,8 @@ class TableLogAction
             'contentInteraction' => Action::TYPE_CONTENT_INTERACTION,
             'productName'        => Action::TYPE_ECOMMERCE_ITEM_NAME,
             'productSku'         => Action::TYPE_ECOMMERCE_ITEM_SKU,
+            'productViewName'    => Action::TYPE_ECOMMERCE_ITEM_NAME,
+            'productViewSku'     => Action::TYPE_ECOMMERCE_ITEM_SKU
         );
 
         if (!empty($exactMatch[$segmentName])) {
@@ -234,17 +241,15 @@ class TableLogAction
         }
 
         if (stripos($segmentName, 'pageurl') !== false) {
-            $actionType = Action::TYPE_PAGE_URL;
-            return $actionType;
+            return Action::TYPE_PAGE_URL;
         } elseif (stripos($segmentName, 'pagetitle') !== false) {
-            $actionType = Action::TYPE_PAGE_TITLE;
-            return $actionType;
+            return Action::TYPE_PAGE_TITLE;
         } elseif (stripos($segmentName, 'sitesearch') !== false) {
-            $actionType = Action::TYPE_SITE_SEARCH;
-            return $actionType;
-        } elseif (stripos($segmentName, 'productcategory') !== false) {
-            $actionType = Action::TYPE_ECOMMERCE_ITEM_CATEGORY;
-            return $actionType;
+            return Action::TYPE_SITE_SEARCH;
+        } elseif (
+            stripos($segmentName, 'productcategory') !== false
+            || stripos($segmentName, 'productviewcategory') !== false) {
+            return Action::TYPE_ECOMMERCE_ITEM_CATEGORY;
         } else {
             throw new \Exception("We cannot guess the action type from the segment $segmentName.");
         }
@@ -285,5 +290,46 @@ class TableLogAction
         );
 
         return in_array($actionType, $actionsTypesStoredUnsanitized);
+    }
+
+    public static function removeProtocolIfSegmentStoredWithoutIt($url, $actionType, $segmentName)
+    {
+        if ($actionType == Action::TYPE_PAGE_URL || $segmentName == 'eventUrl') {
+            // for urls trim protocol and www because it is not recorded in the db
+            $url = preg_replace('@^http[s]?://(www\.)?@i', '', $url);
+        }
+        return $url;
+    }
+
+    /**
+     * Returns an idaction value to match an idaction column by searching log_action, if $matchType is
+     * SegmentExpression::MATCH_EQUAL or SegmentExpression::MATCH_NOT_EQUAL. This method is used
+     * to optimize segment conditions involving idaction queries, avoiding a join by querying the log_action
+     * table beforehand.
+     *
+     * Should be used as the $sqlFilter property for idaction dimensions that use `ActionNameJoin`.
+     *
+     * @param string $value the value in the segment condition
+     * @param string $sqlField the table column of the segment condition
+     * @param string $matchType the SegmentExpression match type, eg, `SegmentExpression::MATCH_NOT_EQUAL`
+     * @param string $segmentName the name of the segment, ie, `pageUrl`
+     * @return array|null|string
+     */
+    public static function getOptimizedIdActionSqlMatch($value, $sqlField, $matchType, $segmentName)
+    {
+        if ($matchType == SegmentExpression::MATCH_EQUAL || $matchType == SegmentExpression::MATCH_NOT_EQUAL) {
+            $result = self::getIdActionFromSegment($value, $sqlField, $matchType, $segmentName);
+
+            if (is_numeric($result)) {
+                return ['value' => $result, 'joinTable' => false];
+            }
+
+            return $result;
+        }
+
+        $actionType = self::guessActionTypeFromSegment($segmentName);
+        $value = self::removeProtocolIfSegmentStoredWithoutIt($value, $actionType, $segmentName);
+
+        return $value;
     }
 }

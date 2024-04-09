@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,13 +11,12 @@ namespace Piwik\Tracker;
 use Piwik\Access;
 use Piwik\ArchiveProcessor\Rules;
 use Piwik\Cache as PiwikCache;
-use Piwik\Common;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Option;
 use Piwik\Piwik;
 use Piwik\Tracker;
-use Psr\Log\LoggerInterface;
+use Piwik\Log\LoggerInterface;
 
 /**
  * Simple cache mechanism used in Tracker to avoid requesting settings from mysql on every request
@@ -25,16 +24,28 @@ use Psr\Log\LoggerInterface;
  */
 class Cache
 {
+    /**
+     * {@see self::withDelegatedCacheClears()}
+     * @var bool
+     */
+    private static $delegatingCacheClears;
+
+    /**
+     * {@see self::withDelegatedCacheClears()}
+     * @var array
+     */
+    private static $delegatedClears = [];
+
     private static $cacheIdGeneral = 'general';
 
     /**
      * Public for tests only
-     * @var \Piwik\Cache\Lazy
+     * @var \Matomo\Cache\Lazy
      */
     public static $cache;
 
     /**
-     * @return \Piwik\Cache\Lazy
+     * @return \Matomo\Cache\Lazy
      */
     private static function getCache()
     {
@@ -58,11 +69,11 @@ class Cache
      */
     public static function getCacheWebsiteAttributes($idSite)
     {
-        if ('all' == $idSite) {
+        if ('all' === $idSite) {
             return array();
         }
 
-        $idSite = (int) $idSite;
+        $idSite = (int)$idSite;
         if ($idSite <= 0) {
             return array();
         }
@@ -139,6 +150,11 @@ class Cache
      */
     public static function clearCacheGeneral()
     {
+        if (self::$delegatingCacheClears) {
+            self::$delegatedClears[__FUNCTION__] = [__FUNCTION__, []];
+            return;
+        }
+
         self::getCache()->delete(self::$cacheIdGeneral);
     }
 
@@ -170,7 +186,7 @@ class Cache
         Tracker::initCorePiwikInTrackerMode();
         $cacheContent = array(
             'isBrowserTriggerEnabled' => Rules::isBrowserTriggerEnabled(),
-            'lastTrackerCronRun'      => Option::get('lastTrackerCronRun'),
+            'lastTrackerCronRun' => Option::get('lastTrackerCronRun'),
         );
 
         /**
@@ -241,7 +257,12 @@ class Cache
      */
     public static function deleteCacheWebsiteAttributes($idSite)
     {
-        self::getCache()->delete((int) $idSite);
+        if (self::$delegatingCacheClears) {
+            self::$delegatedClears[__FUNCTION__ . $idSite] = [__FUNCTION__, func_get_args()];
+            return;
+        }
+
+        self::getCache()->delete((int)$idSite);
     }
 
     /**
@@ -249,6 +270,47 @@ class Cache
      */
     public static function deleteTrackerCache()
     {
+        if (self::$delegatingCacheClears) {
+            self::$delegatedClears[__FUNCTION__] = [__FUNCTION__, []];
+            return;
+        }
+
         self::getCache()->flushAll();
+    }
+
+    /**
+     * Runs `$callback` without clearing any tracker cache, just collecting which delete methods were called.
+     * After `$callback` finishes, we clear caches, but just once per type of delete/clear method collected.
+     *
+     * Use this method if your code will create many cache clears in a short amount of time (eg, if you
+     * are invalidating a lot of archives at once).
+     *
+     * @param $callback
+     */
+    public static function withDelegatedCacheClears($callback)
+    {
+        try {
+            self::$delegatingCacheClears = true;
+            self::$delegatedClears = [];
+
+            return $callback();
+        } finally {
+            self::$delegatingCacheClears = false;
+
+            self::callAllDelegatedClears();
+
+            self::$delegatedClears = [];
+        }
+    }
+
+    private static function callAllDelegatedClears()
+    {
+        foreach (self::$delegatedClears as list($methodName, $params)) {
+            if (!method_exists(self::class, $methodName)) {
+                continue;
+            }
+
+            call_user_func_array([self::class, $methodName], $params);
+        }
     }
 }

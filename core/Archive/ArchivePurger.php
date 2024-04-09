@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,16 +9,13 @@
 namespace Piwik\Archive;
 
 use Piwik\ArchiveProcessor\Rules;
-use Piwik\Common;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\DataAccess\ArchiveTableCreator;
 use Piwik\DataAccess\Model;
 use Piwik\Date;
-use Piwik\Db;
 use Piwik\Piwik;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
+use Piwik\Log\LoggerInterface;
 
 /**
  * Service that purges temporary, error-ed, invalid and custom range archives from archive tables.
@@ -81,7 +78,7 @@ class ArchivePurger
         $this->yesterday = Date::factory('yesterday');
         $this->today = Date::factory('today');
         $this->now = time();
-        $this->logger = $logger ?: StaticContainer::get('Psr\Log\LoggerInterface');
+        $this->logger = $logger ?: StaticContainer::get(LoggerInterface::class);
     }
 
     /**
@@ -95,16 +92,7 @@ class ArchivePurger
     {
         $numericTable = ArchiveTableCreator::getNumericTable($date);
 
-        // we don't want to do an INNER JOIN on every row in a archive table that can potentially have tens to hundreds of thousands of rows,
-        // so we first look for sites w/ invalidated archives, and use this as a constraint in getInvalidatedArchiveIdsSafeToDelete() below.
-        // the constraint will hit an INDEX and speed up the inner join that happens in getInvalidatedArchiveIdsSafeToDelete().
-        $idSites = $this->model->getSitesWithInvalidatedArchive($numericTable);
-        if (empty($idSites)) {
-            $this->logger->debug("No sites with invalidated archives found in {table}.", array('table' => $numericTable));
-            return 0;
-        }
-
-        $archiveIds = $this->model->getInvalidatedArchiveIdsSafeToDelete($numericTable, $idSites);
+        $archiveIds = $this->model->getInvalidatedArchiveIdsSafeToDelete($numericTable);
         if (empty($archiveIds)) {
             $this->logger->debug("No invalidated archives found in {table} with newer, valid archives.", array('table' => $numericTable));
             return 0;
@@ -147,10 +135,10 @@ class ArchivePurger
             $this->logger->debug("No outdated archives found in archive numeric table for {date}.", array('date' => $dateStart));
         }
 
-        $this->logger->debug("Purging temporary archives: done [ purged archives older than {date} in {yearMonth} ] [Deleted IDs: {deletedIds}]", array(
+        $this->logger->debug("Purging temporary archives: done [ purged archives older than {date} in {yearMonth} ] [Deleted IDs count: {deletedIds}]", array(
             'date' => $purgeArchivesOlderThan,
             'yearMonth' => $dateStart->toString('Y-m'),
-            'deletedIds' => implode(',', $idArchivesToDelete)
+            'deletedIds' => count($idArchivesToDelete),
         ));
 
         return $deletedRowCount;
@@ -199,8 +187,8 @@ class ArchivePurger
                 )
             );
 
-            $this->logger->debug("[Deleted IDs: {deletedIds}]", array(
-                'deletedIds' => implode(',', $idArchivesToDelete)
+            $this->logger->debug("[Deleted IDs count: {deletedIds}]", array(
+                'deletedIds' => count($idArchivesToDelete),
             ));
         } else {
             $this->logger->debug(
@@ -216,7 +204,9 @@ class ArchivePurger
     {
         $archiveTable = ArchiveTableCreator::getNumericTable($date);
         return $this->model->getArchiveIdsForSegments(
-            $archiveTable, $deletedSegments, $this->getOldestTemporaryArchiveToKeepThreshold()
+            $archiveTable,
+            $deletedSegments,
+            $this->getOldestTemporaryArchiveToKeepThreshold()
         );
     }
 
@@ -248,10 +238,14 @@ class ArchivePurger
         $blobTable    = ArchiveTableCreator::getBlobTable($date);
 
         $deletedCount = $this->model->deleteArchivesWithPeriod(
-            $numericTable, $blobTable, Piwik::$idPeriods['range'], $this->purgeCustomRangesOlderThan);
+            $numericTable,
+            $blobTable,
+            Piwik::$idPeriods['range'],
+            $this->purgeCustomRangesOlderThan
+        );
 
-        $level = $deletedCount == 0 ? LogLevel::DEBUG : LogLevel::INFO;
-        $this->logger->log($level, "Purged {count} range archive rows from {numericTable} & {blobTable}.", array(
+        $level = $deletedCount == 0 ? 'debug' : 'info';
+        $this->logger->$level("Purged {count} range archive rows from {numericTable} & {blobTable}.", array(
             'count' => $deletedCount,
             'numericTable' => $numericTable,
             'blobTable' => $blobTable

@@ -1,13 +1,14 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\Annotations\tests\System;
 
 use Piwik\API\Request;
+use Piwik\Date;
 use Piwik\Plugins\Annotations\API;
 use Piwik\Tests\Framework\Mock\FakeAccess;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
@@ -21,6 +22,21 @@ use Exception;
 class AnnotationsTest extends SystemTestCase
 {
     public static $fixture = null;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        // Fixed time necessary for "last30" API tests.
+        Date::$now = strtotime('2012-03-03 12:00:00');
+    }
+
+    public function tearDown(): void
+    {
+        Date::$now = null;
+
+        parent::tearDown();
+    }
 
     public static function getOutputPrefix()
     {
@@ -60,6 +76,11 @@ class AnnotationsTest extends SystemTestCase
                                               'periods'                => array('range'),
                                               'otherRequestParameters' => array('lastN' => 6),
                                               'testSuffix'             => '_range')),
+            array('Annotations.getAll', array('idSite'                 => $idSite1,
+                                              'date'                   => 'last30',
+                                              'periods'                => array('range'),
+                                              'otherRequestParameters' => array('lastN' => 6),
+                                              'testSuffix'             => '_last30')),
             array('Annotations.getAll', array('idSite'     => 'all',
                                               'date'       => '2012-01-01',
                                               'periods'    => array('month'),
@@ -82,6 +103,11 @@ class AnnotationsTest extends SystemTestCase
                                                                   'periods'                => array('range'),
                                                                   'otherRequestParameters' => array('lastN' => 6),
                                                                   'testSuffix'             => '_range')),
+            array('Annotations.getAnnotationCountForDates', array('idSite'                 => $idSite1,
+                                                                  'date'                   => 'last30',
+                                                                  'periods'                => array('range'),
+                                                                  'otherRequestParameters' => array('lastN' => 6),
+                                                                  'testSuffix'             => '_last30')),
             array('Annotations.getAnnotationCountForDates', array('idSite'     => 'all',
                                                                   'date'       => '2012-01-01',
                                                                   'periods'    => array('month'),
@@ -99,98 +125,76 @@ class AnnotationsTest extends SystemTestCase
 
     public function testAddMultipleSitesFail()
     {
-        try {
-            API::getInstance()->add("1,2,3", "2012-01-01", "whatever");
-            $this->fail("add should fail when given multiple sites in idSite");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->add("1,2,3", "2012-01-01", "whatever");
     }
 
     public function testAddInvalidDateFail()
     {
-        try {
-            API::getInstance()->add(self::$fixture->idSite1, "invaliddate", "whatever");
-            $this->fail("add should fail when given invalid date");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->add(self::$fixture->idSite1, "invaliddate", "whatever");
     }
 
     public function testSaveMultipleSitesFail()
     {
-        try {
-            API::getInstance()->save("1,2,3", 0);
-            $this->fail("save should fail when given multiple sites");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->save("1,2,3", 0);
     }
 
     public function testSaveInvalidDateFail()
     {
-        try {
-            API::getInstance()->save(self::$fixture->idSite1, 0, "invaliddate");
-            $this->fail("save should fail when given an invalid date");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->save(self::$fixture->idSite1, 0, "invaliddate");
     }
 
     public function testSaveInvalidNoteIdFail()
     {
-        try {
-            API::getInstance()->save(self::$fixture->idSite1, -1);
-            $this->fail("save should fail when given an invalid note id");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->save(self::$fixture->idSite1, -1);
     }
 
     public function testDeleteMultipleSitesFail()
     {
-        try {
-            API::getInstance()->delete("1,2,3", 0);
-            $this->fail("delete should fail when given multiple site IDs");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->delete("1,2,3", 0);
     }
 
     public function testDeleteInvalidNoteIdFail()
     {
-        try {
-            API::getInstance()->delete(self::$fixture->idSite1, -1);
-            $this->fail("delete should fail when given an invalid site ID");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->delete(self::$fixture->idSite1, -1);
     }
 
     public function testGetMultipleSitesFail()
     {
-        try {
-            API::getInstance()->get("1,2,3", 0);
-            $this->fail("get should fail when given multiple site IDs");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->get("1,2,3", 0);
     }
 
     public function testGetInvalidNoteIdFail()
     {
-        try {
-            API::getInstance()->get(self::$fixture->idSite1, -1);
-            $this->fail("get should fail when given an invalid note ID");
-        } catch (Exception $ex) {
-            // pass
-        }
+        self::expectException(Exception::class);
+
+        API::getInstance()->get(self::$fixture->idSite1, -1);
     }
 
     public function testSaveSuccess()
     {
         API::getInstance()->save(
-            self::$fixture->idSite1, 0, $date = '2011-04-01', $note = 'new note text', $starred = 1);
+            self::$fixture->idSite1,
+            0,
+            $date = '2011-04-01',
+            $note = 'new note text',
+            $starred = 1
+        );
 
         $expectedAnnotation = array(
             'date'            => '2011-04-01',
@@ -220,14 +224,10 @@ class AnnotationsTest extends SystemTestCase
 
     public function testDeleteSuccess()
     {
-        API::getInstance()->delete(self::$fixture->idSite1, 1);
+        self::expectException(Exception::class);
 
-        try {
-            API::getInstance()->get(self::$fixture->idSite1, 1);
-            $this->fail("failed to delete annotation");
-        } catch (Exception $ex) {
-            // pass
-        }
+        API::getInstance()->delete(self::$fixture->idSite1, 1);
+        API::getInstance()->get(self::$fixture->idSite1, 1);
     }
 
     public function getPermissionsFailData()
@@ -264,29 +264,32 @@ class AnnotationsTest extends SystemTestCase
      */
     public function testMethodPermissions($hasAdminAccess, $hasViewAccess, $request, $checkException, $failMessage)
     {
+        if (true === $checkException) {
+            self::expectException(Exception::class);
+        } else {
+            self::expectNotToPerformAssertions();
+        }
+
         // create fake access that denies user access
-        FakeAccess::$superUser = false;
+        FakeAccess::clearAccess(false);
+        FakeAccess::$identity = 'user' . (int)$hasAdminAccess . (int)$hasViewAccess;
         FakeAccess::$idSitesAdmin = $hasAdminAccess ? array(self::$fixture->idSite1) : array();
         FakeAccess::$idSitesView = $hasViewAccess ? array(self::$fixture->idSite1) : array();
 
-        if ($checkException) {
-            try {
-                $request = new Request($request);
-                $request->process();
-                $this->fail($failMessage);
-            } catch (Exception $ex) {
-                // pass
-            }
-        } else {
-            $request = new Request($request);
-            $request->process();
-
-        }
+        $request = new Request($request . '&format=original');
+        $request->process();
     }
 
     public static function getPathToTestDirectory()
     {
         return dirname(__FILE__);
+    }
+
+    public function provideContainerConfig()
+    {
+        return array(
+            'Piwik\Access' => new FakeAccess()
+        );
     }
 }
 

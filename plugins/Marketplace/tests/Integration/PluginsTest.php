@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -41,7 +42,7 @@ class PluginsTest extends IntegrationTestCase
      */
     private $consumerService;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -57,19 +58,19 @@ class PluginsTest extends IntegrationTestCase
         );
     }
 
-    public function test_getAllAvailablePluginNames_noPluginsFound()
+    public function testGetAllAvailablePluginNamesNoPluginsFound()
     {
         $pluginNames = $this->plugins->getAllAvailablePluginNames();
-        $this->assertSame(array(), $pluginNames);
+        $this->assertSame([], $pluginNames);
     }
 
-    public function test_getAllAvailablePluginNames()
+    public function testGetAllAvailablePluginNames()
     {
-        $this->service->returnFixture(array(
+        $this->service->returnFixture([
             'v2.0_themes.json', 'v2.0_plugins.json'
-        ));
+        ]);
         $pluginNames = $this->plugins->getAllAvailablePluginNames();
-        $expected = array (
+        $expected =  [
             'AnotherBlackTheme',
             'Barometer',
             'Counter',
@@ -85,26 +86,26 @@ class PluginsTest extends IntegrationTestCase
             'SecurityInfo',
             'TasksTimetable',
             'TreemapVisualization',
-        );
+        ];
         foreach ($expected as $name) {
-            $this->assertContains($name, $pluginNames);
+            self::assertTrue(in_array($name, $pluginNames));
         }
     }
 
-    public function test_getAvailablePluginNames_noPluginsFound()
+    public function testGetAvailablePluginNamesNoPluginsFound()
     {
         $pluginNames = $this->plugins->getAvailablePluginNames($themesOnly = true);
-        $this->assertSame(array(), $pluginNames);
+        $this->assertSame([], $pluginNames);
 
         $pluginNames = $this->plugins->getAvailablePluginNames($themesOnly = false);
-        $this->assertSame(array(), $pluginNames);
+        $this->assertSame([], $pluginNames);
     }
 
-    public function test_getAvailablePluginNames_shouldReturnPluginNames()
+    public function testGetAvailablePluginNamesShouldReturnPluginNames()
     {
         $this->service->returnFixture('v2.0_themes.json');
         $pluginNames = $this->plugins->getAvailablePluginNames($themesOnly = true);
-        $this->assertSame(array(
+        $this->assertSame([
             'AnotherBlackTheme',
             'Darkness',
             'Proteus_Bold',
@@ -112,14 +113,14 @@ class PluginsTest extends IntegrationTestCase
             'CoffeeCup',
             'Vale',
             'ModernBlue',
-            'ModernGreen'), $pluginNames);
+            'ModernGreen'], $pluginNames);
 
         $this->service->returnFixture('v2.0_plugins.json');
         $pluginNames = $this->plugins->getAvailablePluginNames($themesOnly = false);
         $this->assertSame($this->getExpectedPluginNames(), $pluginNames);
     }
 
-    public function test_getAvailablePluginNames_shouldCallCorrectApi()
+    public function testGetAvailablePluginNamesShouldCallCorrectApi()
     {
         $this->plugins->getAvailablePluginNames($themesOnly = true);
         $this->assertSame('themes', $this->service->action);
@@ -128,74 +129,74 @@ class PluginsTest extends IntegrationTestCase
         $this->assertSame('plugins', $this->service->action);
     }
 
-    public function test_getLicenseValidInfo_noSuchPluginExists()
+    public function testGetLicenseValidInfoNoSuchPluginExists()
     {
         $plugin = $this->plugins->getPluginInfo('fooBarBaz');
-        $this->assertSame(array(), $plugin);
+        $this->assertSame([], $plugin);
     }
 
-    public function test_getLicenseValidInfo_shouldEnrichLicenseInformation()
+    public function testGetLicenseValidInfoShouldEnrichLicenseInformation()
     {
         $this->service->returnFixture('v2.0_plugins_Barometer_info.json');
         $plugin = $this->plugins->getLicenseValidInfo('PaidPlugin1');
 
         unset($plugin['versions']);
 
-        $expected = array (
+        $expected =  [
             'hasExceededLicense' => false,
             'isMissingLicense' => false,
-        );
+        ];
         $this->assertEquals($expected, $plugin);
     }
 
-    public function test_getLicenseValidInfo_missingLicense()
+    public function testGetLicenseValidInfoMissingLicense()
     {
         $this->service->returnFixture('v2.0_plugins_PaidPlugin1_info.json');
         $plugin = $this->plugins->getLicenseValidInfo('PaidPlugin1');
 
         unset($plugin['versions']);
 
-        $expected = array (
+        $expected =  [
             'hasExceededLicense' => false,
             'isMissingLicense' => true,
-        );
+        ];
         $this->assertEquals($expected, $plugin);
     }
 
-    public function test_getLicenseValidInfo_validLicense()
+    public function testGetLicenseValidInfoValidLicense()
     {
         $this->service->returnFixture('v2.0_consumer-access_token-consumer2_paid1.json');
         $plugin = $this->plugins->getLicenseValidInfo('Barometer');
 
         unset($plugin['versions']);
 
-        $expected = array (
+        $expected =  [
             'hasExceededLicense' => false,
             'isMissingLicense' => false,
-        );
+        ];
         $this->assertEquals($expected, $plugin);
     }
 
-    public function test_getLicenseValidInfo_notInstalledPlugin_shouldCallCorrectService()
+    public function testGetLicenseValidInfoNotInstalledPluginShouldCallCorrectService()
     {
         $this->plugins->getLicenseValidInfo('Barometer');
         $this->assertSame('plugins/Barometer/info', $this->service->action);
     }
 
-    public function test_getPluginInfo_noSuchPluginExists()
+    public function testGetPluginInfoNoSuchPluginExists()
     {
         $plugin = $this->plugins->getPluginInfo('fooBarBaz');
-        $this->assertSame(array(), $plugin);
+        $this->assertSame([], $plugin);
     }
 
-    public function test_getPluginInfo_notInstalledPlugin_shouldEnrichPluginInformation()
+    public function testGetPluginInfoNotInstalledPluginShouldEnrichPluginInformation()
     {
         $this->service->returnFixture('v2.0_plugins_Barometer_info.json');
         $plugin = $this->plugins->getPluginInfo('Barometer');
 
         unset($plugin['versions']);
 
-        $expected = array (
+        $expected =  [
             'name' => 'Barometer',
             'displayName' => 'Barometer',
             'owner' => 'halfdan',
@@ -203,128 +204,174 @@ class PluginsTest extends IntegrationTestCase
             'homepage' => 'http://github.com/halfdan/piwik-barometer-plugin',
             'createdDateTime' => '2014-12-23 00:38:20',
             'donate' =>
-                array (
+                 [
                     'flattr' => 'https://flattr.com/profile/test1',
                     'bitcoin' => NULL,
-                ),
+                ],
             'support' =>
-                array (
-                        array (
+                 [
+                         [
                             'name' => 'Documentation',
                             'key' => 'docs',
                             'value' => 'https://barometer.org/docs/',
                             'type' => 'url',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'Wiki',
                             'key' => 'wiki',
                             'value' => 'https://github.com/barometer/piwik/wiki',
                             'type' => 'url',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'Forum',
                             'key' => 'forum',
                             'value' => 'https://baromter.forum.org',
                             'type' => 'url',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'Email',
                             'key' => 'email',
                             'value' => 'barometer@example.com',
                             'type' => 'email',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'IRC',
                             'key' => 'irc',
                             'value' => 'irc://freenode/baromter',
                             'type' => 'text',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'Issues / Bugs',
                             'key' => 'issues',
                             'value' => 'https://github.com/barometer/issues',
                             'type' => 'url',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'Source',
                             'key' => 'source',
                             'value' => 'https://github.com/barometer/piwik/',
                             'type' => 'url',
-                        ),
-                        array (
+                         ],
+                         [
                             'name' => 'RSS',
                             'key' => 'rss',
                             'value' => 'https://barometer.org/feed/',
                             'type' => 'url',
-                        ),
-                ),
+                         ],
+                ],
             'isTheme' => false,
-            'keywords' => array ('barometer','live',),
+            'keywords' =>  ['barometer','live',],
             'basePrice' => 0,
             'authors' =>
-                array (array (
+                 [ [
                     'name' => 'Fabian Becker',
                     'email' => 'test8@example.com',
                     'homepage' => 'http://geekproject.eu',
-                ),),
+                 ],],
             'repositoryUrl' => 'https://github.com/halfdan/piwik-barometer-plugin',
             'lastUpdated' => 'Intl_4or41Intl_Time_AMt_357Intl_Time_AMt_S12ort',
             'latestVersion' => '0.5.0',
             'numDownloads' => 0,
             'screenshots' =>
-                array (
+                 [
                     'https://plugins.piwik.org/Barometer/images/0.5.0/piwik-barometer-01.png',
                     'https://plugins.piwik.org/Barometer/images/0.5.0/piwik-barometer-02.png',
-                ),
+                ],
+            'coverImage' => 'https://plugins.piwik.org/img/categories/insights.png',
             'previews' =>
-                array (array (
+                 [ [
                     'type' => 'demo',
                     'provider' => 'link',
                     'url' => 'https://demo.piwik.org',
-                ),),
+                 ],],
             'activity' =>
-                array (
+                 [
                     'numCommits' => '31',
                     'numContributors' => '3',
                     'lastCommitDate' => NULL,
-                ),
+                ],
             'featured' => false,
             'isFree' => true,
             'isPaid' => false,
             'isCustomPlugin' => false,
             'shop' => NULL,
             'isDownloadable' => true,
-            'consumer' => array ('license' => NULL,),
+            'consumer' =>  ['license' => NULL,],
             'isInstalled' => false,
             'isActivated' => false,
             'isInvalid' => true,
             'canBeUpdated' => false,
             'hasExceededLicense' => false,
-            'missingRequirements' =>array ( ),
+            'missingRequirements' => [],
             'isMissingLicense' => false,
-            'changelog' => array(
+            'changelog' => [
                 'url' => 'http://plugins.piwik.org/Barometer/changelog'
-            )
-        );
+            ],
+            'canBePurchased' => false,
+            'isEligibleForFreeTrial' => false,
+            'priceFrom' => null,
+            'numDownloadsPretty' => 0,
+            'category' => 'customisation',
+        ];
         $this->assertEquals($expected, $plugin);
     }
 
-    public function test_getPluginInfo_notInstalledPlugin_shouldCallCorrectService()
+    public function testGetPluginInfoNotInstalledPluginShouldCallCorrectService()
     {
         $this->plugins->getPluginInfo('Barometer');
         $this->assertSame('plugins/Barometer/info', $this->service->action);
     }
 
-    public function test_searchPlugins_WithSearchAndNoPluginsFound_shouldCallCorrectApi()
+    /**
+     * @dataProvider getPluginInfoShouldSetFreeTrialEligibilityTestData
+     */
+    public function testGetPluginInfoShouldSetFreeTrialEligibility(
+        string $pluginName,
+        string $fixtureName,
+        bool $isEligibleForFreeTrial
+    ): void {
+        $this->service->returnFixture($fixtureName);
+
+        $plugin = $this->plugins->getPluginInfo($pluginName);
+
+        self::assertArrayHasKey('isEligibleForFreeTrial', $plugin);
+        self::assertSame($isEligibleForFreeTrial, $plugin['isEligibleForFreeTrial']);
+    }
+
+    /**
+     * @return iterable<string, array<string>>
+     */
+    public function getPluginInfoShouldSetFreeTrialEligibilityTestData(): iterable
+    {
+        yield 'free plugin' => [
+            'Barometer',
+            'v2.0_plugins_Barometer_info.json',
+            false,
+        ];
+
+        yield 'paid plugin, no prior license' => [
+            'PaidPlugin1',
+            'v2.0_plugins_PaidPlugin1_info.json',
+            true,
+        ];
+
+        yield 'paid plugin, with prior license' => [
+            'PaidPlugin1',
+            'v2.0_plugins_PaidPlugin1_info-access_token-consumer3_paid1_custom2.json',
+            false,
+        ];
+    }
+
+    public function testSearchPlugins_WithSearchAndNoPluginsFound_shouldCallCorrectApi()
     {
         $this->service->returnFixture('v2.0_plugins-query-nomatchforthisquery.json');
-        $this->plugins->setPluginsHavingUpdateCache(array());
+        $this->plugins->setPluginsHavingUpdateCache([]);
         $plugins = $this->plugins->searchPlugins($query = 'nomatchforthisquery', $sort = Sort::DEFAULT_SORT, $themesOnly = false);
 
-        $this->assertSame(array(), $plugins);
+        $this->assertSame([], $plugins);
         $this->assertSame('plugins', $this->service->action);
 
-        $params = array(
+        $params = [
             'keywords' => '',
             'purchase_type' => '',
             'query' => 'nomatchforthisquery',
@@ -336,21 +383,21 @@ class PluginsTest extends IntegrationTestCase
             'mysql' => '5.7.1',
             'num_users' => 5,
             'num_websites' => 21,
-        );
+        ];
         $this->assertSame($params, $this->service->params);
     }
 
-    public function test_searchThemes_ShouldCallCorrectApi()
+    public function testSearchThemes_ShouldCallCorrectApi()
     {
         $this->service->returnFixture('v2.0_themes.json');
-        $this->plugins->setPluginsHavingUpdateCache(array());
+        $this->plugins->setPluginsHavingUpdateCache([]);
         $plugins = $this->plugins->searchPlugins($query = '', $sort = Sort::DEFAULT_SORT, $themesOnly = true);
 
         $this->assertCount(8, $plugins);
         $this->assertSame('AnotherBlackTheme', $plugins[0]['name']);
         $this->assertSame('themes', $this->service->action);
 
-        $params = array(
+        $params = [
             'keywords' => '',
             'purchase_type' => '',
             'query' => '',
@@ -362,16 +409,16 @@ class PluginsTest extends IntegrationTestCase
             'mysql' => '5.7.1',
             'num_users' => 5,
             'num_websites' => 21,
-        );
+        ];
         $this->assertSame($params, $this->service->params);
     }
 
-    public function test_searchPlugins_manyPluginsFound_shouldEnrichAll()
+    public function testSearchPluginsManyPluginsFoundShouldEnrichAll()
     {
         $this->service->returnFixture('v2.0_plugins.json');
         $plugins = $this->plugins->searchPlugins($query = '', $sort = Sort::DEFAULT_SORT, $themesOnly = false);
 
-        $this->assertCount(54, $plugins);
+        $this->assertCount(47, $plugins);
         $names = array_map(function ($plugin) {
             return $plugin['name'];
         }, $plugins);
@@ -387,10 +434,10 @@ class PluginsTest extends IntegrationTestCase
             if ($name === 'SecurityInfo') {
                 $this->assertTrue($plugin['isFree']);
                 $this->assertFalse($plugin['isPaid']);
-                $this->assertTrue(in_array($plugin['isInstalled'], array(true, false), true));
+                $this->assertTrue(in_array($plugin['isInstalled'], [true, false], true));
                 $this->assertFalse($plugin['isInvalid']);
                 $this->assertTrue(isset($plugin['canBeUpdated']));
-                $this->assertSame(array(), $plugin['missingRequirements']);
+                $this->assertSame([], $plugin['missingRequirements']);
                 $this->assertSame(Plugin\Manager::getInstance()->isPluginActivated('SecurityInfo'), $plugin['isActivated']);
             } elseif ($name === 'SimplePageBuilder') {
                 // should add campaign parameters if Piwik PRO plugin
@@ -398,14 +445,14 @@ class PluginsTest extends IntegrationTestCase
             }
 
             if ($plugin['owner'] === 'PiwikPRO') {
-                $this->assertContains($piwikProCampaign, $plugin['homepage']);
+                self::assertStringContainsString($piwikProCampaign, $plugin['homepage']);
             } else {
-                $this->assertNotContains($piwikProCampaign, $plugin['homepage']);
+                self::assertStringNotContainsString($piwikProCampaign, $plugin['homepage']);
             }
         }
     }
-    
-    public function test_getAllPaidPlugins_shouldFetchOnlyPaidPlugins()
+
+    public function testGetAllPaidPluginsShouldFetchOnlyPaidPlugins()
     {
         $this->plugins->getAllPaidPlugins();
         $this->assertSame('plugins', $this->service->action);
@@ -413,7 +460,7 @@ class PluginsTest extends IntegrationTestCase
         $this->assertSame('', $this->service->params['query']);
     }
 
-    public function test_getAllFreePlugins_shouldFetchOnlyFreePlugins()
+    public function testGetAllFreePluginsShouldFetchOnlyFreePlugins()
     {
         $this->plugins->getAllFreePlugins();
         $this->assertSame('plugins', $this->service->action);
@@ -421,7 +468,7 @@ class PluginsTest extends IntegrationTestCase
         $this->assertSame('', $this->service->params['query']);
     }
 
-    public function test_getAllPlugins_shouldFetchFreeAndPaidPlugins()
+    public function testGetAllPluginsShouldFetchFreeAndPaidPlugins()
     {
         $this->plugins->getAllPlugins();
         $this->assertSame('plugins', $this->service->action);
@@ -429,7 +476,7 @@ class PluginsTest extends IntegrationTestCase
         $this->assertSame('', $this->service->params['query']);
     }
 
-    public function test_getAllThemes_shouldFetchFreeAndPaidThemes()
+    public function testGetAllThemesShouldFetchFreeAndPaidThemes()
     {
         $this->plugins->getAllThemes();
         $this->assertSame('themes', $this->service->action);
@@ -437,9 +484,9 @@ class PluginsTest extends IntegrationTestCase
         $this->assertSame('', $this->service->params['query']);
     }
 
-    public function test_getPluginsHavingUpdate_shouldReturnEnrichedPluginUpdatesForPluginsFoundOnTheMarketplace()
+    public function testGetPluginsHavingUpdateShouldReturnEnrichedPluginUpdatesForPluginsFoundOnTheMarketplace()
     {
-        $this->service->returnFixture(array(
+        $this->service->returnFixture([
             'v2.0_plugins_checkUpdates-pluginspluginsnameAnonymousPi.json',
             'emptyObjectResponse.json',
             'emptyObjectResponse.json',
@@ -449,8 +496,8 @@ class PluginsTest extends IntegrationTestCase
             'emptyObjectResponse.json',
             'emptyObjectResponse.json',
             'v2.0_plugins_TreemapVisualization_info.json'
-        ));
-        $apis = array();
+        ]);
+        $apis = [];
         $this->service->setOnFetchCallback(function ($action, $params) use (&$apis) {
             $apis[] = $action;
         });
@@ -460,14 +507,14 @@ class PluginsTest extends IntegrationTestCase
         $pluginName = 'TreemapVisualization';
 
         $this->assertCount(1, $updates);
-        $plugin = $updates[0];
+        $plugin = $updates[$pluginName];
         $this->assertSame($pluginName, $plugin['name']);
         $this->assertSame($pluginManager->getLoadedPlugin($pluginName)->getVersion(), $plugin['currentVersion']);
         $this->assertSame($pluginManager->isPluginActivated($pluginName), $plugin['isActivated']);
-        $this->assertSame(array(), $plugin['missingRequirements']);
-         $this->assertSame('https://github.com/piwik/plugin-TreemapVisualization/commits/1.0.1', $plugin['repositoryChangelogUrl']);
+        $this->assertSame([], $plugin['missingRequirements']);
+        $this->assertSame('https://github.com/piwik/plugin-TreemapVisualization/commits/1.0.1', $plugin['repositoryChangelogUrl']);
 
-        $expectedApiCalls = array(
+        $expectedApiCalls = [
             'plugins/checkUpdates',
             'plugins/AnonymousPiwikUsageMeasurement/info',
             'plugins/CustomAlerts/info',
@@ -477,15 +524,14 @@ class PluginsTest extends IntegrationTestCase
             'plugins/SecurityInfo/info',
             'plugins/TasksTimetable/info',
             'plugins/TreemapVisualization/info'
-        );
+        ];
         $this->assertSame($expectedApiCalls, $apis);
     }
 
     private function getExpectedPluginNames()
     {
-        return array (
+        return  [
             'AdminNotification',
-            'AdvancedCampaignReporting',
             'AnonymousPiwikUsageMeasurement',
             'ApiGetWithSitesInfo',
             'Bandwidth',
@@ -496,14 +542,12 @@ class PluginsTest extends IntegrationTestCase
             'CustomAlerts',
             'CustomDimensions',
             'CustomOptOut',
-            'CustomTrackerJs',
             'ExcludeByDDNS',
             'FeedAnnotation',
             'FlagCounter',
             'FreeMobileMessaging',
             'GoogleAuthenticator',
             'GrabGravatar',
-            'InterSites',
             'IntranetGeoIP',
             'Ip2Hostname',
             'IP2Location',
@@ -519,7 +563,6 @@ class PluginsTest extends IntegrationTestCase
             'PaidPlugin1',
             'PerformanceInfo',
             'PerformanceMonitor',
-            'PlatformsReport',
             'QueuedTracking',
             'ReferrersManager',
             'RerUserDates',
@@ -527,17 +570,14 @@ class PluginsTest extends IntegrationTestCase
             'ServerMonitor',
             'ShibbolethLogin',
             'ShortcodeTracker',
-            'SimplePageBuilder',
             'SimpleSysMon',
-            'SiteMigration',
             'SnoopyBehavioralScoring',
             'TasksTimetable',
             'TopPagesByActions',
             'TrackingCodeCustomizer',
             'TreemapVisualization',
             'UptimeRobotMonitor',
-            'VisitorAvatar',
-            'WebsiteGroups'
-        );
+            'VisitorAvatar'
+        ];
     }
 }

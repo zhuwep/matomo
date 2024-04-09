@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,9 +17,15 @@ class Insight extends DataTable\Filter\CalculateEvolutionFilter
     private $considerDisappeared;
     private $currentDataTable;
 
-    public function __construct($table, $currentDataTable, $pastDataTable, $columnToRead,
-                                $considerMovers, $considerNew, $considerDisappeared)
-    {
+    public function __construct(
+        $table,
+        $currentDataTable,
+        $pastDataTable,
+        $columnToRead,
+        $considerMovers,
+        $considerNew,
+        $considerDisappeared
+    ) {
         parent::__construct($table, $pastDataTable, 'growth', $columnToRead, $quotientPrecision = 1);
 
         $this->currentDataTable = $currentDataTable;
@@ -95,8 +101,19 @@ class Insight extends DataTable\Filter\CalculateEvolutionFilter
         $this->addRow($table, $row, $growthPercentage, $newValue, $oldValue, $difference, $isDisappeared, $isNew, $isMover);
     }
 
+    protected function getPastRowFromCurrent($row)
+    {
+        if ($row->isSummaryRow()) {
+            return $this->pastDataTable->getSummaryRow();
+        }
+        return $this->pastDataTable->getRowFromLabel($row->getColumn('label'));
+    }
+
     private function getRowFromTable(DataTable $table, DataTable\Row $row)
     {
+        if ($row->isSummaryRow()) {
+            return $table->getSummaryRow();
+        }
         return $table->getRowFromLabel($row->getColumn('label'));
     }
 
@@ -105,7 +122,7 @@ class Insight extends DataTable\Filter\CalculateEvolutionFilter
         $columns = $row->getColumns();
         $columns['growth_percent'] = $growthPercentage;
         $columns['growth_percent_numeric'] = str_replace('%', '', $growthPercentage);
-        $columns['grown']      = '-' != substr($growthPercentage, 0 , 1);
+        $columns['grown']      = '-' != substr($growthPercentage, 0, 1);
         $columns['value_old']  = $oldValue;
         $columns['value_new']  = $newValue;
         $columns['difference'] = $difference;

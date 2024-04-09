@@ -1,16 +1,16 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * UI tests config
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 const path = require('path');
 const chai = require('chai');
 const { PageRenderer } = require('./page-renderer');
 
-module.exports = function setUpGlobals(config, page) {
+module.exports = function setUpGlobals(config, page, originalUserAgent) {
     global.config = config;
 
     global.PIWIK_INCLUDE_PATH = path.join(__dirname, '..', '..', '..', '..');
@@ -23,5 +23,8 @@ module.exports = function setUpGlobals(config, page) {
     global.testEnvironment = require('./test-environment').TestingEnvironment;
     global.app = require('./app').Application;
     global.expect = chai.expect;
-    global.page = new PageRenderer(config.piwikUrl + path.join("tests", "PHPUnit", "proxy"), page);
+    global.page = new PageRenderer(config.piwikUrl + path.join("tests", "PHPUnit", "proxy"), page, originalUserAgent);
+    // The following variables need to be in sync with Fixture::ADMIN_USER_LOGIN and Fixture::ADMIN_USER_PASSWORD
+    global.superUserLogin = 'superUserLogin';
+    global.superUserPassword = 'pas3!"§$%&/()=?\'ㄨ<|-_#*+~>word';
 };

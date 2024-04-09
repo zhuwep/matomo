@@ -1,16 +1,19 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
 namespace Piwik\Tests\Integration\Concurrency;
 
-
+use Piwik\Common;
 use Piwik\Concurrency\Lock;
 use Piwik\Concurrency\LockBackend\MySqlLockBackend;
+use Piwik\Date;
+use Piwik\Db;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
 /**
@@ -23,7 +26,7 @@ class LockTest extends IntegrationTestCase
      */
     public $lock;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -31,12 +34,19 @@ class LockTest extends IntegrationTestCase
         $this->lock = $this->createLock($mysql);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
     }
 
-    public function test_acquireLock_ShouldLockInCaseItIsNotLockedYet()
+    public function testTooLongNamespaceIsNotSupported()
+    {
+        $this->expectException(\Exception::class);
+
+        new Lock(new MySqlLockBackend(), 'aLongStringWithOver38CharactersIsNotSupported');
+    }
+
+    public function testAcquireLockShouldLockInCaseItIsNotLockedYet()
     {
         $this->assertTrue($this->lock->acquireLock(0));
         $this->assertFalse($this->lock->acquireLock(0));
@@ -47,7 +57,7 @@ class LockTest extends IntegrationTestCase
         $this->assertFalse($this->lock->acquireLock(0));
     }
 
-    public function test_acquireLock_ShouldBeAbleToLockMany()
+    public function testAcquireLockShouldBeAbleToLockMany()
     {
         $this->assertTrue($this->lock->acquireLock(0));
         $this->assertFalse($this->lock->acquireLock(0));
@@ -56,7 +66,7 @@ class LockTest extends IntegrationTestCase
         $this->assertFalse($this->lock->acquireLock(1));
     }
 
-    public function test_isLocked_ShouldDetermineWhetherALockIsLocked()
+    public function testIsLockedShouldDetermineWhetherALockIsLocked()
     {
         $this->assertFalse($this->lock->isLocked());
         $this->lock->acquireLock(0);
@@ -68,7 +78,7 @@ class LockTest extends IntegrationTestCase
         $this->assertFalse($this->lock->isLocked());
     }
 
-    public function test_unlock_OnlyUnlocksTheLastOne()
+    public function testUnlockOnlyUnlocksTheLastOne()
     {
         $this->assertTrue($this->lock->acquireLock(0));
         $this->assertTrue($this->lock->acquireLock(1));
@@ -81,24 +91,24 @@ class LockTest extends IntegrationTestCase
         $this->assertTrue($this->lock->acquireLock(2));
     }
 
-    public function test_expireLock_ShouldReturnTrueOnSuccess()
+    public function testExtendLockShouldReturnTrueOnSuccess()
     {
         $this->lock->acquireLock(0);
-        $this->assertTrue($this->lock->expireLock(2));
+        $this->assertTrue($this->lock->extendLock(2));
     }
 
-    public function test_expireLock_ShouldReturnFalseIfNoTimeoutGiven()
+    public function testExtendLockShouldReturnFalseIfNoTimeoutGiven()
     {
         $this->lock->acquireLock(0);
-        $this->assertFalse($this->lock->expireLock(0));
+        $this->assertFalse($this->lock->extendLock(0));
     }
 
-    public function test_expireLock_ShouldReturnFalseIfNotLocked()
+    public function testExtendLockShouldReturnFalseIfNotLocked()
     {
-        $this->assertFalse($this->lock->expireLock(2));
+        $this->assertFalse($this->lock->extendLock(2));
     }
 
-    public function test_getNumberOfAcquiredLocks_shouldReturnNumberOfLocks()
+    public function testGetNumberOfAcquiredLocksShouldReturnNumberOfLocks()
     {
         $this->assertNumberOfLocksEquals(0);
 
@@ -113,19 +123,67 @@ class LockTest extends IntegrationTestCase
         $this->assertNumberOfLocksEquals(2);
     }
 
-    public function test_getAllAcquiredLockKeys_shouldReturnUsedKeysThatAreLocked()
+    public function testGetAllAcquiredLockKeysShouldReturnUsedKeysThatAreLocked()
     {
-        $this->assertSame(array(), $this->lock->getAllAcquiredLockKeys());
+        $this->assertSame([], $this->lock->getAllAcquiredLockKeys());
 
         $this->lock->acquireLock(0);
-        $this->assertSame(array('TestLock0'), $this->lock->getAllAcquiredLockKeys());
+        $this->assertSame(['TestLock0'], $this->lock->getAllAcquiredLockKeys());
 
-        $this->lock->acquireLock(4);
+        $this->lock->acquireLock('veryverylongidthatwillgetshortenedasthereisamaximumof70charsinthedatabase');
         $this->lock->acquireLock(5);
 
         $locks = $this->lock->getAllAcquiredLockKeys();
         sort($locks);
-        $this->assertSame(array('TestLock0', 'TestLock4', 'TestLock5'), $locks);
+        $this->assertSame(['TestLock0', 'TestLock5', 'TestLockveryverylongidthatwillgetshorc93f8252040e73dacbeaaf93ae9c19d2'], $locks);
+    }
+
+    public function testReacquireOnlyReacquiresWhenCloseToOriginalExpirationTime()
+    {
+        Date::$now = strtotime('2015-03-04 03:04:05');
+
+        $this->lock->acquireLock(0);
+
+        $expireTime = $this->getLockExpirationTime();
+
+        sleep(1);
+        $this->lock->reacquireLock();
+        $newExpireTime = $this->getLockExpirationTime();
+        $this->assertEquals($expireTime, $newExpireTime);
+
+        // 30s after initial, no update
+        Date::$now = strtotime('2015-03-04 03:04:35');
+
+        sleep(1);
+        $this->lock->reacquireLock();
+        $newExpireTime = $this->getLockExpirationTime();
+        $this->assertEquals($expireTime, $newExpireTime);
+
+        // 50s after initial, update
+        Date::$now = strtotime('2015-03-04 03:04:55');
+
+        sleep(1);
+        $this->lock->reacquireLock();
+        $newExpireTime = $this->getLockExpirationTime();
+        $this->assertNotEquals($expireTime, $newExpireTime);
+
+        $expireTime = $newExpireTime;
+
+        // 60s after initial, no update
+        Date::$now = strtotime('2015-03-04 03:05:05');
+
+        sleep(1);
+        $this->lock->reacquireLock();
+        $newExpireTime = $this->getLockExpirationTime();
+        $this->assertEquals($expireTime, $newExpireTime);
+
+        // 1m 50s after initial, update
+        Date::$now = strtotime('2015-03-04 03:05:55');
+
+        sleep(1);
+        $this->lock->reacquireLock();
+        $newExpireTime = $this->getLockExpirationTime();
+        $this->assertNotEquals($expireTime, $newExpireTime);
     }
 
     private function assertNumberOfLocksEquals($numExpectedLocks)
@@ -138,4 +196,8 @@ class LockTest extends IntegrationTestCase
         return new Lock($mysql, 'TestLock');
     }
 
+    private function getLockExpirationTime()
+    {
+        return Db::fetchOne("SELECT expiry_time FROM `" . Common::prefixTable('locks') . "`");
+    }
 }

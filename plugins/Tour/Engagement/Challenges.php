@@ -38,8 +38,10 @@ class Challenges
     {
         /** @var Challenge[] $challenges */
         $challenges = array(
-            StaticContainer::get(ChallengeTrackingCode::class),
+           StaticContainer::get(ChallengeTrackingCode::class),
         );
+
+        $challenges[] = StaticContainer::get(ChallengeSetupConsentManager::class);
 
         if ($this->isActivePlugin('Goals')) {
             $challenges[] = StaticContainer::get(ChallengeCreatedGoal::class);
@@ -48,7 +50,7 @@ class Challenges
         $challenges[] = StaticContainer::get(ChallengeCustomLogo::class);
 
         if ($this->isActivePlugin('UsersManager') && UsersManager::isUsersAdminEnabled()) {
-            $challenges[] = StaticContainer::get(ChallengeAddedUser::class);
+            $challenges[] = StaticContainer::get(ChallengeInvitedUser::class);
         }
         if ($this->isActivePlugin('SitesManager') && SitesManager::isSitesAdminEnabled()) {
             $challenges[] = StaticContainer::get(ChallengeAddedWebsite::class);
@@ -113,6 +115,4 @@ class Challenges
 
         return $challenges;
     }
-
-
 }

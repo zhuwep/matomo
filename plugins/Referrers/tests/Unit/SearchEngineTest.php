@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,9 +14,9 @@ use Spyc;
 /**
  * @group SearchEngine
  */
-class SearchEngineTest extends \PHPUnit_Framework_TestCase
+class SearchEngineTest extends \PHPUnit\Framework\TestCase
 {
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         // inject definitions to avoid database usage
         $yml = file_get_contents(PIWIK_PATH_TEST_TO_ROOT . SearchEngine::DEFINITION_FILE);
@@ -26,7 +26,7 @@ class SearchEngineTest extends \PHPUnit_Framework_TestCase
 
     public function getSearchEngineUrls()
     {
-        return Spyc::YAMLLoad(PIWIK_PATH_TEST_TO_ROOT .'/tests/resources/extractSearchEngineInformationFromUrlTests.yml');
+        return Spyc::YAMLLoad(PIWIK_PATH_TEST_TO_ROOT . '/tests/resources/extractSearchEngineInformationFromUrlTests.yml');
     }
 
     /**
@@ -65,7 +65,6 @@ class SearchEngineTest extends \PHPUnit_Framework_TestCase
                 if (is_string($info['charsets'])) {
                     $this->assertTrue(trim($info['charsets']) !== '', $host . ' charsets cannot be an empty string');
                     $this->assertTrue(strpos($info['charsets'], ' ') === false, $host . ' charsets cannot contain spaces');
-
                 }
 
                 if (is_array($info['charsets'])) {
@@ -135,7 +134,7 @@ class SearchEngineTest extends \PHPUnit_Framework_TestCase
         $favicons = scandir(PIWIK_PATH_TEST_TO_ROOT . '/plugins/Morpheus/icons/dist/searchEngines/');
 
         // Get list of search engines and first appearing URL
-        static $searchEngines = array();
+        static $searchEngines = [];
 
         $name = parse_url('http://' . $url);
         if (!array_key_exists($searchEngine['name'], $searchEngines)) {
@@ -143,6 +142,8 @@ class SearchEngineTest extends \PHPUnit_Framework_TestCase
 
             $this->assertTrue(in_array($name['host'] . '.png', $favicons), $name['host']);
         }
+
+        $this->assertTrue(true); // ensure there is an assertion, to prevent warning
     }
 
     /**

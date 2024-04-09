@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -46,7 +46,7 @@ class HandlerTest extends IntegrationTestCase
      */
     private $requestSet;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -115,10 +115,11 @@ class HandlerTest extends IntegrationTestCase
 
     public function test_onException_ShouldNotRethrowAnException()
     {
+        self::expectNotToPerformAssertions();
+
         $exception = $this->buildException();
 
         $this->handler->onException($this->tracker, $this->requestSet, $exception);
-        $this->assertTrue(true);
     }
 
     public function test_onAllRequestsTracked_ShouldNeverTriggerScheduledTasksEvenIfEnabled()

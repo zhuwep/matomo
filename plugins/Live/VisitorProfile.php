@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
@@ -11,12 +11,15 @@ namespace Piwik\Plugins\Live;
 
 use Exception;
 use Piwik\DataTable;
+use Piwik\Plugins\Live\Exception\MaxExecutionTimeExceededException;
 
 class VisitorProfile
 {
     const VISITOR_PROFILE_MAX_VISITS_TO_SHOW = 10;
 
-    protected $profile = array();
+    protected $profile = [];
+
+    protected $idSite;
 
     public function __construct($idSite)
     {
@@ -24,7 +27,7 @@ class VisitorProfile
     }
 
     /**
-     * @param $visits
+     * @param DataTable $visits
      * @param $visitorId
      * @param $segment
      * @param $numLastVisits
@@ -90,10 +93,19 @@ class VisitorProfile
         $rows            = $visits->getRows();
         $latestVisitTime = reset($rows)->getColumn('lastActionDateTime');
 
-        $model                              = new Model();
-        $this->profile['nextVisitorId']     = $model->queryAdjacentVisitorId($this->idSite, $visitorId,
-            $latestVisitTime, $segment, $getNext = true);
-        $this->profile['previousVisitorId'] = $model->queryAdjacentVisitorId($this->idSite, $visitorId,
-            $latestVisitTime, $segment, $getNext = false);
+        $model = new Model();
+        try {
+            $this->profile['nextVisitorId'] = $model->queryAdjacentVisitorId($this->idSite, $visitorId, $latestVisitTime, $segment, $getNext = true);
+        } catch (MaxExecutionTimeExceededException $e) {
+            $this->profile['nextVisitorId'] = false;
+            $this->profile['previousVisitorId'] = false; // if query for next visitor is too slow, we assume query for previous visitor is too slow too
+            return;
+        }
+        try {
+            $this->profile['previousVisitorId'] = $model->queryAdjacentVisitorId($this->idSite, $visitorId, $latestVisitTime, $segment, $getNext = false);
+        } catch (MaxExecutionTimeExceededException $e) {
+            // we simply assume there is no previous visitor in that case
+            $this->profile['previousVisitorId'] = false;
+        }
     }
 }

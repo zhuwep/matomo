@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
@@ -27,14 +27,14 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
     const URL_IS_GOAL_WITH_CAMPAIGN_PARAMETERS = 'http://example.org/index.htm?pk_campaign=goal-matching-url-parameter';
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         self::setUpScheduledReports($this->idSite1);
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -49,7 +49,8 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
         }
 
         if (!self::siteCreated($idSite = 2)) {
-            self::createWebsite($this->dateTime, 0, "Site 2");
+            // set https url in website config, which should convert action urls to https in api response
+            self::createWebsite($this->dateTime, 0, "Site 2", ['http://piwik.net', 'http://example2.com', 'https://example2.com']);
         }
 
         if ($this->allowConversions) {
@@ -66,15 +67,39 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
         }
 
         APISitesManager::getInstance()->updateSite(
-            $this->idSite1, "Site 1", $urls = null, $ecommerce = null, $siteSearch = null,
-            $searchKeywordParameters = null, $searchCategoryParameters = null, $excludedIps = null,
-            $excludedQueryParameters = null, $timezone = null, $currency = null, $group = null,
-            $startDate = null, $excludedUserAgents = null, $keepURLFragments = 2); // KEEP_URL_FRAGMENT_NO No for idSite 1
+            $this->idSite1,
+            "Site 1",
+            $urls = null,
+            $ecommerce = null,
+            $siteSearch = null,
+            $searchKeywordParameters = null,
+            $searchCategoryParameters = null,
+            $excludedIps = null,
+            $excludedQueryParameters = null,
+            $timezone = null,
+            $currency = null,
+            $group = null,
+            $startDate = null,
+            $excludedUserAgents = null,
+            $keepURLFragments = 2
+        ); // KEEP_URL_FRAGMENT_NO No for idSite 1
         APISitesManager::getInstance()->updateSite(
-            $this->idSite2, "Site 2", $urls = null, $ecommerce = null, $siteSearch = null,
-            $searchKeywordParameters = null, $searchCategoryParameters = null, $excludedIps = null,
-            $excludedQueryParameters = null, $timezone = null, $currency = null, $group = null,
-            $startDate = null, $excludedUserAgents = null, $keepURLFragments = 1); // KEEP_URL_FRAGMENT_YES Yes for idSite 2
+            $this->idSite2,
+            "Site 2",
+            $urls = null,
+            $ecommerce = null,
+            $siteSearch = null,
+            $searchKeywordParameters = null,
+            $searchCategoryParameters = null,
+            $excludedIps = null,
+            $excludedQueryParameters = null,
+            $timezone = null,
+            $currency = null,
+            $group = null,
+            $startDate = null,
+            $excludedUserAgents = null,
+            $keepURLFragments = 1
+        ); // KEEP_URL_FRAGMENT_YES Yes for idSite 2
     }
 
     public function trackVisits()
@@ -100,13 +125,12 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
         $visitorA->setUrlReferrer('http://referrer.com/page.htm?param=valuewith some spaces');
         $visitorA->setUrl('http://example.org/index.htm#ignoredFragment');
         $visitorA->DEBUG_APPEND_URL = '&_idts=' . Date::factory($datetimeSpanOverTwoDays)->getTimestamp();
-        $visitorA->setGenerationTime(123);
+        $visitorA->setPerformanceTimings(36, 228, 335, 1015, 209, 301);
         self::checkResponse($visitorA->doTrackPageView('first page view'));
 
         $visitorA->setForceVisitDateTime(Date::factory($datetimeSpanOverTwoDays)->addHour(0.1)->getDatetime());
         // testing with empty URL and empty page title
         $visitorA->setUrl('  ');
-        $visitorA->setGenerationTime(223);
         self::checkResponse($visitorA->doTrackPageView('  '));
 
         // -
@@ -120,7 +144,7 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
         $visitorB->setUserAgent('Opera/9.63 (Windows NT 5.1; U; en) Presto/2.1.1');
         $visitorB->setUrl('http://example.org/products');
         $visitorB->DEBUG_APPEND_URL = '&_idts=' . Date::factory($dateTime)->addHour(1)->getTimestamp();
-        $visitorB->setGenerationTime(153);
+        $visitorB->setPerformanceTimings(62, 305, 440, 1159, 356, 440);
         self::assertTrue($visitorB->doTrackPageView('first page view'));
 
         // -
@@ -131,25 +155,22 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
             $hoursOffset = $days * 24;
 
             $visitorB->setForceVisitDateTime(Date::factory($dateTime)->addHour($hoursOffset)->getDatetime());
-            // visitor_returning is set to 1 only when visit count more than 1
-            // Temporary, until we implement 1st party cookies in PiwikTracker
-            $visitorB->DEBUG_APPEND_URL .= '&_idvc=2&_viewts=' . Date::factory($dateTime)->getTimestamp();
 
             $protocol = (0 === $days % 2) ? 'http' : 'https';
             $visitorB->setUrlReferrer($protocol . '://referrer.com/Other_Page.htm');
-            if( in_array($days, array(2,3,4,$daysToGenerateVisitsFor-1)) ) {
-                $visitorB->setUrl( self::URL_IS_GOAL_WITH_CAMPAIGN_PARAMETERS );
+            if( in_array($days, array(2,3,4,$daysToGenerateVisitsFor - 1))) {
+                $visitorB->setUrl(self::URL_IS_GOAL_WITH_CAMPAIGN_PARAMETERS);
             } else {
                 $visitorB->setUrl('http://example.org/index.htm');
             }
 
-            $visitorB->setGenerationTime(323);
+            $visitorB->setPerformanceTimings(27, 268, 356, 1025, 296, 335);
             self::assertTrue($visitorB->doTrackPageView('second visitor/two days later/a new visit'));
             // Second page view 6 minutes later
             $visitorB->setForceVisitDateTime(Date::factory($dateTime)->addHour($hoursOffset)->addHour(0.1)->getDatetime());
             $visitorB->setUrl('http://example.org/thankyou');
-            $visitorB->setGenerationTime(173);
-            self::assertTrue($visitorB->doTrackPageView('second visitor/two days later/second page view'));
+            $visitorB->setPerformanceTimings(0, 199, 289, 998, 198, 299);
+            self::assertTrue($visitorB->doTrackPageView('second visitor/two days later/second page view😀💩😀💩'));
 
             // testing a strange combination causing an error in r3767
             $visitorB->setForceVisitDateTime(Date::factory($dateTime)->addHour($hoursOffset)->addHour(0.2)->getDatetime());
@@ -159,7 +180,7 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
 
             // Actions.getPageTitle tested with this title
             $visitorB->setForceVisitDateTime(Date::factory($dateTime)->addHour($hoursOffset)->addHour(0.25)->getDatetime());
-            $visitorB->setGenerationTime(452);
+            $visitorB->setPerformanceTimings(33, 356, 452, 1499, 356, 269);
             self::assertTrue($visitorB->doTrackPageView('Checkout / Purchasing...'));
             self::checkBulkTrackingResponse($visitorB->doBulkTrack());
         }
@@ -178,18 +199,18 @@ class TwoSitesTwoVisitorsDifferentDays extends Fixture
         $visitorAsite2->setUrlReferrer('http://only-homepage-referrer.com/');
         $visitorAsite2->setUrl('http://example2.com/home#notIgnoredFragment#');
         $visitorAsite2->DEBUG_APPEND_URL = '&_idts=' . Date::factory($dateTime)->addHour(24)->getTimestamp();
-        $visitorAsite2->setGenerationTime(193);
+        $visitorAsite2->setPerformanceTimings(33, 144, 318, 289, 35, 50);
         self::checkResponse($visitorAsite2->doTrackPageView('Website 2 page view'));
 
         // test with invalid URL
         $visitorAsite2->setUrl('this is invalid url');
         // and an empty title
-        $visitorAsite2->setGenerationTime(203);
+        $visitorAsite2->setPerformanceTimings(0, 258, 444, 325, 999, 120);
         self::checkResponse($visitorAsite2->doTrackPageView(''));
 
         // track a page view with a domain alias to test the aggregation of both actions
         $visitorAsite2->setUrl('http://example2alias.org/home#notIgnoredFragment#');
-        $visitorAsite2->setGenerationTime(503);
+        $visitorAsite2->setPerformanceTimings(21, 344, 299, 245, 189, 350);
         self::checkResponse($visitorAsite2->doTrackPageView(''));
     }
 }

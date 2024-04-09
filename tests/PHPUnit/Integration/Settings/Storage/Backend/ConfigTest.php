@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Tests\Integration\Settings\Storage\Backend;
 
-use Piwik\Db;
 use Piwik\Settings\Storage\Backend\MeasurableSettingsTable;
 use Piwik\Settings\Storage\Backend\Config;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
@@ -20,7 +19,6 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
  */
 class ConfigTest extends IntegrationTestCase
 {
-
     /**
      * @var MeasurableSettingsTable
      */
@@ -41,7 +39,7 @@ class ConfigTest extends IntegrationTestCase
      */
     private $allBackends = array();
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -56,12 +54,11 @@ class ConfigTest extends IntegrationTestCase
         return new Config($plugin);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage No section given
-     */
     public function test_construct_shouldThrowAnException_IfSectionIsEmpty()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No section given');
+
         $this->createSettings('');
     }
 
@@ -212,6 +209,6 @@ class ConfigTest extends IntegrationTestCase
 
     private function getExampleValues()
     {
-        return array('Mysetting3' => 'value3', 'Mysetting4' . rand(4,99) => 'val' . rand(0, 10));
+        return array('Mysetting3' => 'value3', 'Mysetting4' . rand(4, 99) => 'val' . rand(0, 10));
     }
 }

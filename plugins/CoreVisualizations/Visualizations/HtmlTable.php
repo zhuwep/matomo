@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,9 @@ use Piwik\Common;
 use Piwik\DataTable\Row;
 use Piwik\Metrics;
 use Piwik\DataTable;
+use Piwik\NumberFormatter;
 use Piwik\Period;
+use Piwik\Piwik;
 use Piwik\Plugin\Visualization;
 
 /**
@@ -28,6 +30,8 @@ class HtmlTable extends Visualization
     const TEMPLATE_FILE     = "@CoreVisualizations/_dataTableViz_htmlTable.twig";
     const FOOTER_ICON       = 'icon-table';
     const FOOTER_ICON_TITLE = 'General_DisplaySimpleTable';
+
+    protected $siteSummary;
 
     public static function getDefaultConfig()
     {
@@ -45,7 +49,8 @@ class HtmlTable extends Visualization
 
         if ($this->isComparing()) {
             $request = $this->getRequestArray();
-            if (!empty($request['comparePeriods'])
+            if (
+                !empty($request['comparePeriods'])
                 && count($request['comparePeriods']) == 1
             ) {
                 $this->requestConfig->request_parameters_to_modify['invert_compare_change_compute'] = 1;
@@ -62,7 +67,8 @@ class HtmlTable extends Visualization
 
     public function beforeRender()
     {
-        if ($this->requestConfig->idSubtable
+        if (
+            $this->requestConfig->idSubtable
             && $this->config->show_embedded_subtable) {
 
             $this->config->show_visualization_only = true;
@@ -81,38 +87,17 @@ class HtmlTable extends Visualization
             }
         }
 
-        // we do not want to get a datatable\map
-        $period = Common::getRequestVar('period', 'day', 'string');
-        if (Period\Range::parseDateRange($period)) {
-            $period = 'range';
-        }
-
         if ($this->dataTable->getRowsCount()) {
-            $request = new ApiRequest(array(
-                'method' => 'API.get',
-                'module' => 'API',
-                'action' => 'get',
-                'format' => 'original',
-                'filter_limit'  => '-1',
-                'disable_generic_filters' => 1,
-                'expanded'      => 0,
-                'flat'          => 0,
-                'filter_offset' => 0,
-                'period'        => $period,
-                'showColumns'   => implode(',', $this->config->columns_to_display),
-                'columns'       => implode(',', $this->config->columns_to_display),
-                'pivotBy'       => ''
-            ));
-
-            $dataTable = $request->process();
-            $this->assignTemplateVar('siteSummary', $dataTable);
+            $siteTotalRow = $this->getSiteSummary() ? $this->getSiteSummary()->getFirstRow() : null;
+            $this->assignTemplateVar('siteTotalRow', $siteTotalRow);
         }
 
         if ($this->isPivoted()) {
             $this->config->columns_to_display = $this->dataTable->getColumns();
         }
 
-        if ($this->isComparing()
+        if (
+            $this->isComparing()
             && !empty($this->dataTable)
         ) {
             $this->assignTemplateVar('comparisonTotals', $this->dataTable->getMetadata('comparisonTotals'));
@@ -203,7 +188,7 @@ class HtmlTable extends Visualization
 
             if ($this->config->show_dimensions && $hasMultipleDimensions) {
 
-                $this->dataTable->filter(function($dataTable) use ($dimensions) {
+                $this->dataTable->filter(function ($dataTable) use ($dimensions) {
                     /** @var DataTable $dataTable */
                     $rows = $dataTable->getRows();
                     foreach ($rows as $row) {
@@ -215,9 +200,67 @@ class HtmlTable extends Visualization
 
                 # replace original label column with first dimension
                 $firstDimension = array_shift($dimensions);
-                $this->dataTable->filter('ColumnCallbackAddMetadata', array('label', 'combinedLabel', function ($label) { return $label; }));
+                $this->dataTable->filter('ColumnCallbackAddMetadata', array(
+                    'label',
+                    'combinedLabel',
+                    function ($label) {
+                        return $label;
+                    }
+                ));
                 $this->dataTable->filter('ColumnDelete', array('label'));
                 $this->dataTable->filter('ReplaceColumnNames', array(array($firstDimension => 'label')));
+            }
+        }
+    }
+
+    public function afterGenericFiltersAreAppliedToLoadedDataTable()
+    {
+        parent::afterGenericFiltersAreAppliedToLoadedDataTable();
+
+        $this->calculateTotalPercentages(); // this must be done before metrics are formatted
+    }
+
+    private function calculateTotalPercentages()
+    {
+        if (empty($this->report)) {
+            return;
+        }
+
+        $columnNamesToIndices = Metrics::getMappingFromNameToId();
+        $formatter = NumberFormatter::getInstance();
+
+        $totals = $this->dataTable->getMetadata('totalsUnformatted');
+
+        $siteSummary = $this->getSiteSummary();
+        $siteTotalRow = $siteSummary ? $siteSummary->getFirstRow() : null;
+
+        foreach ($this->dataTable->getRows() as $row) {
+            foreach ($this->report->getMetrics() as $column => $translation) {
+                // Try to check the column by it's index (not possible for all metrics, like custom columns)
+                $indexColumn = !empty($columnNamesToIndices[$column]) ? $columnNamesToIndices[$column] : null;
+
+                $value = (($indexColumn && $row->getColumn($indexColumn)) ? $row->getColumn($indexColumn) : $row->getColumn($column)) ?: 0;
+                if ($column == 'label') {
+                    continue;
+                }
+
+                $reportTotal = isset($totals[$column]) ? $totals[$column] : 0;
+
+                if (is_numeric($value)) {
+                    $percentageColumnName = $column . '_row_percentage';
+                    $rowPercentage = $formatter->formatPercent(Piwik::getPercentageSafe($value, $reportTotal, $precision = 1), $precision);
+                    $row->setMetadata($percentageColumnName, $rowPercentage);
+                }
+
+                if ($siteTotalRow) {
+                    $siteTotal = $siteTotalRow->getColumn($column) ?: 0;
+
+                    $siteTotalPercentage = $column . '_site_total_percentage';
+                    if ($siteTotal && $siteTotal > $reportTotal) {
+                        $rowPercentage = $formatter->formatPercent(Piwik::getPercentageSafe($value, $siteTotal, $precision = 1), $precision);
+                        $row->setMetadata($siteTotalPercentage, $rowPercentage);
+                    }
+                }
             }
         }
     }
@@ -247,5 +290,31 @@ class HtmlTable extends Visualization
     protected function isFlattened()
     {
         return $this->requestConfig->flat || Common::getRequestVar('flat', '');
+    }
+
+    private function getSiteSummary()
+    {
+        if (empty($this->siteSummary)) {
+            // we do not want to get a datatable\map
+            $period = Common::getRequestVar('period', 'day', 'string');
+            if (Period\Range::parseDateRange($period)) {
+                $period = 'range';
+            }
+
+            $this->siteSummary = ApiRequest::processRequest('API.get', [
+                'module' => 'API',
+                'action' => 'get',
+                'filter_limit'  => '-1',
+                'disable_generic_filters' => 1,
+                'filter_offset' => 0,
+                'date' => Common::getRequestVar('date', null, 'string'),
+                'idSite' => Common::getRequestVar('idSite', null, 'int'),
+                'period'        => $period,
+                'showColumns'   => implode(',', $this->config->columns_to_display),
+                'columns'       => implode(',', $this->config->columns_to_display),
+            ], $default = []);
+        }
+
+        return $this->siteSummary;
     }
 }

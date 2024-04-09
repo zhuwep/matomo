@@ -16,6 +16,9 @@
 		<processedMetrics>
 			<exit_rate>Exit rate</exit_rate>
 		</processedMetrics>
+		<metricTypes>
+			<exit_rate>percent</exit_rate>
+		</metricTypes>
 		<actionToLoadSubTables>getPageTitles</actionToLoadSubTables>
 		<relatedReports>
 			<row>
@@ -29,6 +32,23 @@
 				<action>getExitPageTitles</action>
 			</row>
 		</relatedReports>
+		<metricsGoal>
+			<nb_conversions>Conversions</nb_conversions>
+			<nb_conversions_attrib>Conversions</nb_conversions_attrib>
+			<revenue_attrib>Revenue</revenue_attrib>
+		</metricsGoal>
+		<processedMetricsGoal>
+			<revenue_per_visit>Revenue per Visit</revenue_per_visit>
+			<nb_conversions_page_rate>Viewed before conversion rate</nb_conversions_page_rate>
+		</processedMetricsGoal>
+		<metricTypesGoal>
+			<revenue_per_visit>money</revenue_per_visit>
+			<nb_conversions>number</nb_conversions>
+			<conversion_rate>percent</conversion_rate>
+			<nb_conversions_attrib>number</nb_conversions_attrib>
+			<revenue_attrib>money</revenue_attrib>
+			<nb_conversions_page_rate>percent</nb_conversions_page_rate>
+		</metricTypesGoal>
 		<imageGraphUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=Actions&amp;apiAction=getPageTitles&amp;period=day&amp;date=2010-03-06</imageGraphUrl>
 		<imageGraphEvolutionUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=Actions&amp;apiAction=getPageTitles&amp;period=day&amp;date=2010-02-05,2010-03-06</imageGraphEvolutionUrl>
 		<uniqueId>Actions_getPageTitles</uniqueId>
@@ -73,15 +93,64 @@
 	</reportMetadata>
 	<reportTotal>
 		<sum_time_spent>1080</sum_time_spent>
-		<sum_time_generation>0.615</sum_time_generation>
-		<min_time_generation>0.615</min_time_generation>
-		<max_time_generation>0.615</max_time_generation>
+		<sum_time_network>0.117</sum_time_network>
+		<nb_hits_with_time_network>4</nb_hits_with_time_network>
+		<min_time_network>0.117</min_time_network>
+		<max_time_network>0.117</max_time_network>
+		<sum_time_server>0.682</sum_time_server>
+		<nb_hits_with_time_server>4</nb_hits_with_time_server>
+		<min_time_server>0.682</min_time_server>
+		<max_time_server>0.682</max_time_server>
+		<sum_time_transfer>1.057</sum_time_transfer>
+		<nb_hits_with_time_transfer>4</nb_hits_with_time_transfer>
+		<min_time_transfer>1.057</min_time_transfer>
+		<max_time_transfer>1.057</max_time_transfer>
+		<sum_time_dom_processing>5.995</sum_time_dom_processing>
+		<nb_hits_with_time_dom_processing>4</nb_hits_with_time_dom_processing>
+		<min_time_dom_processing>5.995</min_time_dom_processing>
+		<max_time_dom_processing>5.995</max_time_dom_processing>
+		<sum_time_dom_completion>2.28</sum_time_dom_completion>
+		<nb_hits_with_time_dom_completion>4</nb_hits_with_time_dom_completion>
+		<min_time_dom_completion>2.28</min_time_dom_completion>
+		<max_time_dom_completion>2.28</max_time_dom_completion>
+		<sum_time_on_load>1.373</sum_time_on_load>
+		<nb_hits_with_time_on_load>4</nb_hits_with_time_on_load>
+		<min_time_on_load>1.373</min_time_on_load>
+		<max_time_on_load>1.373</max_time_on_load>
 		<sum_bandwidth>0</sum_bandwidth>
 		<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
 		<entry_nb_actions>8</entry_nb_actions>
 		<entry_sum_visit_length>1622</entry_sum_visit_length>
 		<entry_bounce_count>1</entry_bounce_count>
 		<exit_nb_visits>2</exit_nb_visits>
+		<goals>
+			<row idgoal="2">
+				<nb_conversions>1</nb_conversions>
+				<revenue>1</revenue>
+				<nb_conv_pages_before>1</nb_conv_pages_before>
+				<nb_conversions_attrib>1</nb_conversions_attrib>
+				<nb_conversions_page_uniq>1</nb_conversions_page_uniq>
+				<revenue_attrib>1</revenue_attrib>
+				<revenue_entry>1</revenue_entry>
+				<revenue_per_entry>1</revenue_per_entry>
+				<nb_conversions_entry>1</nb_conversions_entry>
+				<nb_conversions_page_rate>1</nb_conversions_page_rate>
+				<nb_conversions_entry_rate>1</nb_conversions_entry_rate>
+			</row>
+			<row idgoal="1">
+				<nb_conversions>2</nb_conversions>
+				<revenue>84</revenue>
+				<nb_conv_pages_before>4</nb_conv_pages_before>
+				<nb_conversions_attrib>1</nb_conversions_attrib>
+				<nb_conversions_page_uniq>2</nb_conversions_page_uniq>
+				<revenue_attrib>42</revenue_attrib>
+				<revenue_entry>42</revenue_entry>
+				<revenue_per_entry>42</revenue_per_entry>
+				<nb_conversions_entry>1</nb_conversions_entry>
+				<nb_conversions_page_rate>2</nb_conversions_page_rate>
+				<nb_conversions_entry_rate>1</nb_conversions_entry_rate>
+			</row>
+		</goals>
 		<nb_uniq_visitors>3</nb_uniq_visitors>
 		<entry_nb_uniq_visitors>1</entry_nb_uniq_visitors>
 		<exit_nb_uniq_visitors>1</exit_nb_uniq_visitors>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,9 +9,7 @@
 namespace Piwik\Plugins\CoreVisualizations\Visualizations;
 
 use Piwik\Common;
-use Piwik\DataTable;
 use Piwik\Plugin\Visualization;
-use Piwik\View;
 
 /**
  * Generates a tag cloud from a given data array.
@@ -33,25 +31,25 @@ class Cloud extends Visualization
     public static $debugDisableShuffle = false;
     public $truncatingLimit = 50;
 
-    protected $wordsArray = array();
+    protected $wordsArray = [];
+    private $rawValues = []; // Raw values stored before metric formatting
+    private $formattedValues = []; // Formatted values stored after metric formatting
 
     public static function getDefaultConfig()
     {
         return new Cloud\Config();
     }
 
-    public function beforeRender()
-    {
-        $this->config->show_exclude_low_population = false;
-        $this->config->show_offset_information     = false;
-        $this->config->show_limit_control          = false;
-    }
-
     public function beforeLoadDataTable()
     {
+        // request metrics unformatted, so we can calculate with them, formatting is applied manually before rendering
+        $this->requestConfig->request_parameters_to_modify['format_metrics'] = 0;
         $this->checkRequestIsNotForMultiplePeriods();
     }
 
+    /**
+     * First pass: metric formatting filters have not been applied, store the raw values for each word
+     */
     public function afterAllFiltersAreApplied()
     {
         if ($this->dataTable->getRowsCount() == 0) {
@@ -59,7 +57,31 @@ class Cloud extends Visualization
         }
 
         $columnToDisplay = isset($this->config->columns_to_display[1]) ? $this->config->columns_to_display[1] : 'nb_visits';
-        $labelMetadata   = array();
+        foreach ($this->dataTable->getRows() as $row) {
+            $label = $row->getColumn('label');
+            $this->rawValues[$label] = $row->getColumn($columnToDisplay);
+        }
+    }
+
+    public function beforeRender()
+    {
+        $this->config->show_exclude_low_population = false;
+        $this->config->show_offset_information     = false;
+        $this->config->show_limit_control          = false;
+
+        // manually apply metric formatting
+        $this->applyMetricsFormatting(true);
+        $this->generateCloudData();
+    }
+
+    private function generateCloudData()
+    {
+        if ($this->dataTable->getRowsCount() == 0) {
+            return;
+        }
+
+        $columnToDisplay = isset($this->config->columns_to_display[1]) ? $this->config->columns_to_display[1] : 'nb_visits';
+        $labelMetadata   = [];
 
         foreach ($this->dataTable->getRows() as $row) {
             $logo = false;
@@ -69,12 +91,14 @@ class Cloud extends Visualization
 
             $label = $row->getColumn('label');
 
-            $labelMetadata[$label] = array(
+            $labelMetadata[$label] = [
                 'logo' => $logo,
                 'url'  => $row->getMetadata('url'),
-            );
+            ];
 
-            $this->addWord($label, $row->getColumn($columnToDisplay));
+            $this->addWord($label, $this->rawValues[$label]);
+
+            $this->formattedValues[$label] = $row->getColumn($columnToDisplay);
         }
 
         $cloudValues = $this->getCloudValues();
@@ -107,25 +131,25 @@ class Cloud extends Visualization
         $this->shuffleCloud();
 
         if (empty($this->wordsArray)) {
-            return array();
+            return [];
         }
 
-        $return   = array();
         $maxValue = max($this->wordsArray);
 
+        $return = [];
         foreach ($this->wordsArray as $word => $popularity) {
 
             $wordTruncated = $this->truncateWordIfNeeded($word);
             $percent       = $this->getPercentage($popularity, $maxValue);
             $sizeRange     = $this->getClassFromPercent($percent);
 
-            $return[$word] = array(
+            $return[$word] = [
                 'word'          => $word,
                 'wordTruncated' => $wordTruncated,
-                'value'         => $popularity,
                 'size'          => $sizeRange,
+                'value'         => $this->formattedValues[$word],
                 'percent'       => $percent,
-            );
+            ];
         }
 
         return $return;
@@ -148,11 +172,10 @@ class Cloud extends Visualization
 
             $tmpArray = $this->wordsArray;
 
-            $this->wordsArray = array();
+            $this->wordsArray = [];
             foreach ($keys as $value) {
                 $this->wordsArray[$value] = $tmpArray[$value];
             }
-
         }
     }
 
@@ -165,7 +188,7 @@ class Cloud extends Visualization
      */
     protected function getClassFromPercent($percent)
     {
-        $mapping = array(95, 70, 50, 30, 15, 5, 0);
+        $mapping = [95, 70, 50, 30, 15, 5, 0];
         foreach ($mapping as $key => $value) {
             if ($percent >= $value) {
                 return $key;
@@ -182,8 +205,8 @@ class Cloud extends Visualization
     {
         $word = Common::unsanitizeInputValue($word);
 
-        if (Common::mb_strlen($word) > $this->truncatingLimit) {
-            return Common::mb_substr($word, 0, $this->truncatingLimit - 3) . '...';
+        if (mb_strlen($word) > $this->truncatingLimit) {
+            return mb_substr($word, 0, $this->truncatingLimit - 3) . '...';
         }
 
         return $word;

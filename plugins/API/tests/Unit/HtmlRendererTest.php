@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,14 +17,14 @@ use Piwik\Plugins\CoreHome\Columns\Metrics\AverageTimeOnSite;
  * @group Plugin
  * @group API
  */
-class HtmlRendererTest extends \PHPUnit_Framework_TestCase
+class HtmlRendererTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Html
      */
     private $builder;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->builder = $this->makeBuilder(array('method' => 'MultiSites_getAll'));
         DataTable\Manager::getInstance()->deleteAll();
@@ -279,6 +279,8 @@ message', $response);
             "(object) array(\n  )," :
             "stdClass::__set_state(array(\n  )),";
 
+        $isPHP82orNewer = version_compare(PHP_VERSION, 8.2, '>=');
+
         $this->assertEquals('<table id="MultiSites_getAll" border="1">
 <thead>
 	<tr>
@@ -293,12 +295,12 @@ message', $response);
 		<td>6</td>
 		<td>\'processedRows\' =&gt; array (
   0 =&gt; 
-  Piwik\Plugins\CoreHome\Columns\Metrics\AverageTimeOnSite::__set_state(array(
+  ' . ($isPHP82orNewer ? '\\' : '') . 'Piwik\Plugins\CoreHome\Columns\Metrics\AverageTimeOnSite::__set_state(array(
   )),
   1 =&gt; 
   ' . $stdClass . '
   2 =&gt; 
-  Piwik\Date::__set_state(array(
+  ' . ($isPHP82orNewer ? '\\' : '') . 'Piwik\Date::__set_state(array(
      \'timestamp\' =&gt; 1451606400,
      \'timezone\' =&gt; \'UTC\',
   )),
@@ -449,12 +451,14 @@ message', $response);
 ', $actual);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Data structure returned is not convertible in the requested format
-     */
     public function test_renderArray_ShouldConvertMultiDimensionalAssociativeArrayToJson()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Data structure returned is not convertible in the requested format: Only integer keys supported for array columns on base level. Unsupported string 'secondElement' found for row 'array (
+  'firstElement' => 'isFirst',
+  'secondElement' => 'isSecond',
+)'.");
+
         $input = array(
             "firstElement"  => "isFirst",
             "secondElement" => array(
@@ -466,12 +470,14 @@ message', $response);
         $this->builder->renderArray($input);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Data structure returned is not convertible in the requested format
-     */
     public function test_renderArray_ShouldConvertMultiDimensionalIndexArrayToJson()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Data structure returned is not convertible in the requested format: Multidimensional column values not supported. Found unexpected array value for column '1' in row '0': 'array (
+  0 => 'firstElement',
+  1 => 'secondElement',
+)'.");
+
         $input = array(array("firstElement",
             array(
                 "firstElement",
@@ -482,12 +488,14 @@ message', $response);
         $this->builder->renderArray($input);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Data structure returned is not convertible in the requested format
-     */
     public function test_renderArray_ShouldConvertMultiDimensionalMixedArrayToJson()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Data structure returned is not convertible in the requested format: Only integer keys supported for array columns on base level. Unsupported string 'thirdElement' found for row 'array (
+  'firstElement' => 'isFirst',
+  'secondElement' => 'isSecond',
+)'.");
+
         $input = array(
             "firstElement" => "isFirst",
             array(

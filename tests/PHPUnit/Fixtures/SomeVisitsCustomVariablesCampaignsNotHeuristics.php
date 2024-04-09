@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,7 @@ use Piwik\Date;
 use Piwik\Plugins\Goals\API;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestingEnvironmentVariables;
-use PiwikTracker;
+use MatomoTracker;
 
 /**
  * Add one site and track many visits with custom variables & campaign IDs and
@@ -22,16 +22,15 @@ class SomeVisitsCustomVariablesCampaignsNotHeuristics extends Fixture
     public $dateTime = '2009-01-04 00:11:42';
     public $idSite = 1;
     public $idGoal = 1;
-    private $tmpHost = '';
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setPiwikEnvironmentOverrides();
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
     }
 
@@ -182,12 +181,13 @@ class SomeVisitsCustomVariablesCampaignsNotHeuristics extends Fixture
         $t4->setUrl('http://example.org/index.html');
         self::checkResponse($t4->doTrackPageView('העלא וועלט'));
 
-        // test campaigns that are specified through _rcn
+        // test campaigns that are specified through _rcn (only conversion will be attributed to that campaign)
         $t5 = self::getTracker($idSite, $dateTime);
         $t5->setUrlReferrer('http://xavierinstitute.org');
         $t5->setUrl('http://mutantregistration.com/act.html');
         $t5->setAttributionInfo(json_encode(array('Gifted Search'))); // rcn supplied, nothing else
         self::checkResponse($t5->doTrackPageView('Mutant Registration'));
+        self::checkResponse($t5->doTrackEcommerceOrder('vg25gedefg', 17.4));
 
         $t5->setForceVisitDateTime(Date::factory($dateTime)->addHour(1)->getDatetime());
         $t5->setUrlReferrer('http://mutantrights.org');
@@ -196,6 +196,7 @@ class SomeVisitsCustomVariablesCampaignsNotHeuristics extends Fixture
         $t5->setAttributionInfo(json_encode(array('Recruiting Drive', 'am i a mutant?',
             urlencode(Date::factory($dateTime)->addHour(1)->getDatetime()), 'http://sentinelwatch.org')));
         self::checkResponse($t5->doTrackPageView('Fighting Back'));
+        self::checkResponse($t5->doTrackEcommerceOrder('32452435zdfg', 22.9));
 
         $t5->setForceVisitDateTime(Date::factory($dateTime)->addHour(2)->getDatetime());
         $t5->setUrlReferrer('http://apocalypsenow.org');
@@ -205,21 +206,22 @@ class SomeVisitsCustomVariablesCampaignsNotHeuristics extends Fixture
         $t5->setAttributionInfo(json_encode(array('GA Campaign', 'some keyword',
             urlencode(Date::factory($dateTime)->addHour(2)->getDatetime()))));
         self::checkResponse($t5->doTrackPageView('Mutant Registration'));
+        self::checkResponse($t5->doTrackEcommerceOrder('fsg5her35h', 5.33));
     }
 
     // see updateDomainHash() in piwik.js
     private function getFirstPartyCookieDomainHash()
     {
         $host = \Piwik\Url::getHost();
-        $cookiePath = PiwikTracker::DEFAULT_COOKIE_PATH;
-        return substr(sha1( $host . $cookiePath), 0, 4);
+        $cookiePath = MatomoTracker::DEFAULT_COOKIE_PATH;
+        return substr(sha1($host . $cookiePath), 0, 4);
     }
 
     /**
      * Test setting/getting the first party cookie via the PHP Tracking Client
      * @param $t
      */
-    private function testFirstPartyCookies(PiwikTracker $t)
+    private function testFirstPartyCookies(MatomoTracker $t)
     {
         $domainHash = $this->getFirstPartyCookieDomainHash();
         $idCookieName = '_pk_id_1_' . $domainHash;
@@ -228,12 +230,12 @@ class SomeVisitsCustomVariablesCampaignsNotHeuristics extends Fixture
 
         $viewts = '1302307497';
         $uuid = 'ca0afe7b6b692ff5';
-        $_COOKIE[$idCookieName] = $uuid . '.1302307497.1.' . $viewts . '.1302307497';
+        $_COOKIE[$idCookieName] = $uuid . '.' . $viewts;
         $_COOKIE[$refCookieName] = '["YEAH","RIGHT!",1302307497,"http://referrer.example.org/page/sub?query=test&test2=test3"]';
         $_COOKIE[$customVarCookieName] = '{"1":["VAR 1 set, var 2 not set","yes"],"3":["var 3 set","yes!!!!"]}';
 
         // test loading 'id' cookie
-        self::assertContains("_viewts=" . $viewts, $t->getUrlTrackPageView());
+        self::assertStringContainsString("_idts=" . $viewts, $t->getUrlTrackPageView());
         self::assertEquals($uuid, $t->getVisitorId());
         self::assertEquals($t->getAttributionInfo(), $_COOKIE[$refCookieName]);
         self::assertEquals(array("VAR 1 set, var 2 not set", "yes"), $t->getCustomVariable(1));

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -38,9 +38,13 @@ class MetadataCallbackReplace extends ColumnCallbackReplace
      * @param array $extraColumnParameters Extra column values that should be passed to the callback, but
      *                                     shouldn't be replaced.
      */
-    public function __construct($table, $metadataToFilter, $functionToApply, $functionParameters = null,
-                                $extraColumnParameters = array())
-    {
+    public function __construct(
+        $table,
+        $metadataToFilter,
+        $functionToApply,
+        $functionParameters = null,
+        $extraColumnParameters = array()
+    ) {
         parent::__construct($table, $metadataToFilter, $functionToApply, $functionParameters, $extraColumnParameters);
     }
 

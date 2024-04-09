@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -119,12 +119,15 @@ class FieldConfig
     public $uiControl = null;
 
     /**
-     * Defines a custom template file for a UI control. This file should render a UI control and expose the value in a
-     * "formField.value" angular model. For an example see "plugins/CorePluginsAdmin/angularjs/form-field/field-text.html"
+     * Defines a custom Vue component to use for the internal field UI control. This should be an array with two
+     * keys:
      *
-     * @var string
+     * - plugin: the name of the plugin that the UI control exists in.
+     * - name: the name of the export for the component in the plugin's Vue UMD module.
+     *
+     * @var string[]
      */
-    public $customUiControlTemplateFile = '';
+    public $customFieldComponent;
 
     /**
      * Name-value mapping of HTML attributes that will be added HTML form control, eg,
@@ -133,6 +136,14 @@ class FieldConfig
      * @var array
      */
     public $uiControlAttributes = array();
+
+    /**
+     * Makes field full width.
+     * Useful for `$field->uiControl = FieldConfig::UI_CONTROL_MULTI_TUPLE;`
+     *
+     * @var bool
+     */
+    public $fullWidth = false;
 
     /**
      * The list of all available values for this setting. If null, the setting can have any value.
@@ -177,6 +188,20 @@ class FieldConfig
      * @var null|string
      */
     public $inlineHelp = null;
+
+    /**
+     * A closure that prepares the setting value. If supplied, this closure will be executed before
+     * the setting has been validated.
+     *
+     * **Example**
+     *
+     *     $setting->prepare = function ($value, Setting $setting) {
+     *         return mb_strtolower($value);
+     *     }
+     *
+     * @var null|\Closure
+     */
+    public $prepare = null;
 
     /**
      * A closure that does some custom validation on the setting before the setting is persisted.
@@ -258,5 +283,4 @@ class FieldConfig
      * @var BaseValidator[]
      */
     public $validators = [];
-
 }

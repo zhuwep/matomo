@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,12 +10,11 @@
 namespace Piwik;
 
 use Piwik\Container\StaticContainer;
-use Piwik\Plugins\CustomPiwikJs\Exception\AccessDeniedException;
-use Piwik\Plugins\CustomPiwikJs\TrackerUpdater;
+use Piwik\Plugins\CustomJsTracker\Exception\AccessDeniedException;
+use Piwik\Plugins\CustomJsTracker\TrackerUpdater;
 
 class FileIntegrity
 {
-
     /**
      * Get file integrity information
      *
@@ -25,11 +24,7 @@ class FileIntegrity
     {
         $messages = array();
 
-        $manifest = PIWIK_INCLUDE_PATH . '/config/manifest.inc.php';
-
-        if (file_exists($manifest)) {
-            require_once $manifest;
-        }
+        self::loadManifest();
 
         if (!class_exists('Piwik\\Manifest')) {
             $messages[] = Piwik::translate('General_WarningFileIntegrityNoManifest')
@@ -53,6 +48,32 @@ class FileIntegrity
             $success = empty($messages),
             $messages
         );
+    }
+
+    /**
+     * Return just a list of the unexpected files
+     *
+     * @return array
+     */
+    public static function getUnexpectedFilesList(): array
+    {
+        self::loadManifest();
+        $files = self::getFilesFoundButNotExpected();
+        return $files;
+    }
+
+    /**
+     * Include the manifest
+     *
+     * @return void
+     */
+    private static function loadManifest(): void
+    {
+        $manifest = PIWIK_INCLUDE_PATH . '/config/manifest.inc.php';
+
+        if (file_exists($manifest)) {
+            require_once $manifest;
+        }
     }
 
     protected static function getFilesNotInManifestButExpectedAnyway()
@@ -98,7 +119,6 @@ class FileIntegrity
                 . '<br/>'
                 . implode('<br />', $deleteAllAtOnce)
                 . '<br/><br/>';
-
         }
 
         return $messages;
@@ -148,7 +168,6 @@ class FileIntegrity
                 . '<br/><br/>';
 
             return $messages;
-
         }
         return $messages;
     }
@@ -336,7 +355,8 @@ class FileIntegrity
                     // convert end-of-line characters and re-test text files
                     $content = @file_get_contents($file);
                     $content = str_replace("\r\n", "\n", $content);
-                    if ((strlen($content) != $props[0])
+                    if (
+                        (strlen($content) != $props[0])
                         || (@md5($content) !== $props[1])
                     ) {
                         $messagesMismatch[] = Piwik::translate('General_ExceptionFilesizeMismatch', array($file, $props[0], filesize($file)));
@@ -372,7 +392,7 @@ class FileIntegrity
             // as trivial because piwik.js might be already updated, or updated on the next request. We cannot define
             // 2 or 3 different filesizes and md5 hashes for one file so we check it here.
 
-            if (Plugin\Manager::getInstance()->isPluginActivated('CustomPiwikJs')) {
+            if (Plugin\Manager::getInstance()->isPluginActivated('CustomJsTracker')) {
                 $trackerUpdater = new TrackerUpdater();
 
                 if ($trackerUpdater->getCurrentTrackerFileContent() === $trackerUpdater->getUpdatedTrackerFileContent()) {
@@ -383,7 +403,7 @@ class FileIntegrity
 
                 try {
                     // the piwik.js tracker file was not updated yet, but may be updated just after the update by
-                    // one of the events CustomPiwikJs is listening to or by a scheduled task.
+                    // one of the events CustomJsTracker is listening to or by a scheduled task.
                     // In this case, we check whether such an update will succeed later and if it will, the file is
                     // valid as well as it will be updated on the next request
                     $trackerUpdater->checkWillSucceed();
@@ -391,7 +411,6 @@ class FileIntegrity
                 } catch (AccessDeniedException $e) {
                     return false;
                 }
-
             }
         }
 
@@ -460,5 +479,4 @@ class FileIntegrity
         }
         return null;
     }
-
 }

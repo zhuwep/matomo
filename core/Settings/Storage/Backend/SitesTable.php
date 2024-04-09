@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -28,14 +28,15 @@ class SitesTable implements BackendInterface
         'sitesearch_category_parameters',
         'excluded_user_agents',
         'excluded_parameters',
-        'excluded_ips'
+        'excluded_ips',
+        'excluded_referrers'
     );
 
     // these fields are standard fields of a site and cannot be adjusted via a setting
     private $allowedNames = array(
         'ecommerce', 'sitesearch', 'sitesearch_keyword_parameters',
         'sitesearch_category_parameters', 'exclude_unknown_urls',
-        'excluded_ips', 'excluded_parameters',
+        'excluded_ips', 'excluded_parameters', 'excluded_referrers',
         'excluded_user_agents', 'keep_url_fragment', 'urls'
     );
 
@@ -118,5 +119,4 @@ class SitesTable implements BackendInterface
     public function delete()
     {
     }
-
 }

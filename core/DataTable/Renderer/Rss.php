@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -43,7 +43,8 @@ class Rss extends Renderer
      */
     protected function renderTable($table)
     {
-        if (!($table instanceof DataTable\Map)
+        if (
+            !($table instanceof DataTable\Map)
             || $table->getKeyName() != 'date'
         ) {
             throw new Exception("RSS feeds can be generated for one specific website &idSite=X." .
@@ -108,7 +109,7 @@ class Rss extends Renderer
      */
     protected function getRssHeader()
     {
-        $generationDate = date('r');
+        $generationDate = date('r', Date::getNowTimestamp());
         $header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <rss version=\"2.0\">
   <channel>
@@ -118,7 +119,7 @@ class Rss extends Renderer
     <pubDate>$generationDate</pubDate>
     <generator>matomo</generator>
     <language>en</language>
-    <lastBuildDate>$generationDate</lastBuildDate>";
+    <lastBuildDate>$generationDate</lastBuildDate>\n";
         return $header;
     }
 
@@ -140,14 +141,15 @@ class Rss extends Renderer
          * table = array
          * ROW1 = col1 | col2 | col3 | metadata | idSubTable
          * ROW2 = col1 | col2 (no value but appears) | col3 | metadata | idSubTable
-         * 		subtable here
+         *         subtable here
          */
         $allColumns = array();
         foreach ($table->getRows() as $row) {
             foreach ($row->getColumns() as $column => $value) {
                 // for example, goals data is array: not supported in export RSS
                 // in the future we shall reuse ViewDataTable for html exports in RSS anyway
-                if (is_array($value)
+                if (
+                    is_array($value)
                     || is_object($value)
                 ) {
                     continue;

@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Export link screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -13,19 +13,21 @@ describe("ReportExporting", function () {
         visitsSummaryGetUrl = baseUrl + "&moduleToWidgetize=VisitsSummary&actionToWidgetize=get&forceView=1&viewDataTable=graphEvolution";
 
     function normalReportTest(format) {
-        it("should export a normal report correctly when the " + format + " export is chosen", async function () {
+        it(`should export a normal report correctly when the ${format} export is chosen`, async function () {
             if (await page.url() !== referrersGetWebsitesUrl) {
                 await page.goto(referrersGetWebsitesUrl);
                 await page.click('.activateExportSelection');
             }
 
-            await page.waitForSelector('[name="format"] input[value="'+format+'"] + label');
+            await page.waitForSelector('[name="format"] input[value="'+format+'"]');
 
-            await page.click('[name="format"] input[value="' + format + '"] + label');
-            await page.click('[name="filter_limit_all"] input[value="no"] + label');
+            await page.click('[name="format"] input[value="' + format + '"]');
+            await page.click('[name="filter_limit_all"] input[value="no"]');
+            await page.click('input[name="option_format_metrics"]');
             await page.evaluate(function () {
                 $('[name=filter_limit] input').val(100).trigger('change');
             });
+            await page.waitForTimeout(250);
 
             var url = await page.evaluate(function () {
                 return $('#reportExport a.btn').attr('href');
@@ -37,19 +39,21 @@ describe("ReportExporting", function () {
     }
 
     function evolutionReportTest(format) {
-        it("should export an evolution graph report correctly when the " + format + " export is chosen", async function () {
+        it(`should export an evolution graph report correctly when the ${format} export is chosen`, async function () {
             if (await page.url() !== visitsSummaryGetUrl) {
                 await page.goto(visitsSummaryGetUrl);
                 await page.click('.activateExportSelection');
             }
 
-            await page.waitForSelector('[name="format"] input[value="'+format+'"] + label');
+            await page.waitForSelector('[name="format"] input[value="'+format+'"]');
 
-            await page.click('[name="format"] input[value="'+format+'"] + label');
-            await page.click('[name="filter_limit_all"] input[value="no"] + label');
+            await page.click('[name="format"] input[value="'+format+'"]');
+            await page.click('[name="filter_limit_all"] input[value="no"]');
+            await page.click('input[name="option_format_metrics"]');
             await page.evaluate(function(){
                 $('[name=filter_limit] input').val(100).trigger('change');
             });
+            await page.waitForTimeout(250);
 
             var url = await page.evaluate(function() {
                 return $('#reportExport a.btn').attr('href');
@@ -61,7 +65,7 @@ describe("ReportExporting", function () {
     }
 
     function rowEvolutionReportTest(format) {
-        it("should export an row evolution graph report correctly when the " + format + " export link is clicked", async function () {
+        it(`should export an row evolution graph report correctly when the ${format} export link is clicked`, async function () {
             if (!page.url() || page.url().indexOf('popover') === -1) {
                 await page.goto(referrersGetWebsitesUrl);
 
@@ -77,13 +81,15 @@ describe("ReportExporting", function () {
                 await page.click('.ui-dialog .activateExportSelection');
             }
 
-            await page.waitForSelector('[name="format"] input[value="'+format+'"] + label');
+            await page.waitForSelector('[name="format"] input[value="'+format+'"]');
 
-            await page.click('[name="format"] input[value="'+format+'"] + label');
-            await page.click('[name="filter_limit_all"] input[value="no"] + label');
+            await page.click('[name="format"] input[value="'+format+'"]');
+            await page.click('[name="filter_limit_all"] input[value="no"]');
+            await page.click('input[name="option_format_metrics"]');
             await page.evaluate(function(){
                 $('[name=filter_limit] input').val(100).trigger('change');
             });
+            await page.waitForTimeout(250);
 
             var url = await page.evaluate(function() {
                 return $('#reportExport a.btn').attr('href');
@@ -94,7 +100,7 @@ describe("ReportExporting", function () {
         });
     }
 
-    var formats = ['CSV', 'TSV', 'XML', 'JSON', 'PHP'];
+    var formats = ['CSV', 'TSV', 'XML', 'JSON'];
     formats.forEach(normalReportTest);
     formats.forEach(evolutionReportTest);
     formats.forEach(rowEvolutionReportTest);

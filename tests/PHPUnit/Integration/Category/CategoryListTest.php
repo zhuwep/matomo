@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -45,9 +45,17 @@ class CategoryListTest extends IntegrationTestCase
             'Events_Events',
             'UserCountry_VisitLocation',
             'Live!',
-            'CustomVariables_CustomVariables',
             'Marketplace_Marketplace',
-            'ExampleUI_UiFramework'
+            'ProfessionalServices_PromoAbTesting',
+            'ProfessionalServices_PromoCrashAnalytics',
+            'ProfessionalServices_PromoCustomReports',
+            'ProfessionalServices_PromoFormAnalytics',
+            'ProfessionalServices_PromoFunnels',
+            'ProfessionalServices_PromoHeatmaps',
+            'ProfessionalServices_PromoMediaAnalytics',
+            'ProfessionalServices_PromoSessionRecording',
+            'ExampleUI_UiFramework',
+            'CustomVariables_CustomVariables'
         ), array_keys($list->getCategories()));
     }
 

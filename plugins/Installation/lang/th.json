@@ -32,7 +32,6 @@
         "SuperUserSetupSuccess": "Super User สร้างขึ้นเสร็จแล้ว!",
         "SystemCheck": "ตรวจสอบระบบ",
         "SystemCheckAutoUpdateHelp": "หมายเหตุ: โปรแกรมอัพเดตหนึ่งคลิกของ Matomo ต้องใช้สิทธิ์การเขียนไปยังโฟลเดอร์ Matomo และเนื้อหา",
-        "SystemCheckCreateFunctionHelp": "Matomo ใช้ฟังก์ชันแบบไม่ระบุชื่อสำหรับการเรียกกลับ",
         "SystemCheckDatabaseHelp": "Matomo ต้องมีนามสกุล mysqli หรือนามสกุล PDO และ pdo_mysql",
         "SystemCheckDebugBacktraceHelp": "View::factory จะไม่สามารถสร้างมุมมองสำหรับเรียกโมดูล",
         "SystemCheckError": "เกิดข้อผิดพลาดขึ้น - ต้องแก้ไขก่อนดำเนินการต่อไป",
@@ -44,9 +43,7 @@
         "SystemCheckGlobHelp": "ฟังก์ชันที่มีอยู่ภายในนี้ได้ถูกปิดการใช้งานบนโฮสต์ของคุณ Matomo จะพยายามทำการจำลองฟังก์ชันนี้ แต่อาจพบเพิ่มเติมข้อบังคับด้านความปลอดภัย ฟังก์ชันการทำงานอาจจะโดนผลกระทบ",
         "SystemCheckGzcompressHelp": "คุณต้องเปิดใช้ส่วนขยาย zlib และฟังก์ชั่น gzcompress",
         "SystemCheckGzuncompressHelp": "คุณต้องเปิดใช้ส่วนขยาย zlib และฟังก์ชั่น gzuncompress",
-        "SystemCheckIconvHelp": "คุณจำเป็นต้องตั้งค่าคอนฟิก และสร้างใหม่ PHP ด้วย \"iconv\" เปิดใช้งานการสนับสนุน --with-iconv.",
         "SystemCheckMailHelp": "ความคิดเห็นและลืมรหัสผ่านจะไม่สามารถส่งข้อความโดยไม่ต้องรวมกับ mail()",
-        "SystemCheckMbstring": "mbstring",
         "SystemCheckMemoryLimit": "ขีดจำกัดของหน่วยความจำ",
         "SystemCheckMemoryLimitHelp": "บนเว็บไซต์การรับส่งข้อมูลสูง กระบวนการเก็บถาวรอาจต้องใช้หน่วยความจำเพิ่มเติมมากกว่าที่ได้รับอนุญาตในขณะนี้ ถ้าจำเป็น เปลี่ยนคำสั่ง memory_limit ในไฟล์ php.ini ของคุณ",
         "SystemCheckOpenURL": "เปิด URL",
@@ -58,14 +55,12 @@
         "SystemCheckPdoAndMysqliHelp": "บน Linux server คุณสามารถคอมไพล์ php ด้วยตัวเลือกต่อไปนี้: %1$s ใน php.ini ของคุณเพิ่มบรรทัดต่อไปนี้: %2$s",
         "SystemCheckPhp": "เวอร์ชั่น PHP",
         "SystemCheckPhpPdoAndMysqli": "ข้อมูลเพิ่มเติมเกี่ยวกับ: %1$sPHP PDO%2$s และ %3$sMYSQLI%4$s",
-        "SystemCheckSplHelp": "คุณจำเป็นต้องตั้งค่าคอนฟิก และสร้างใหม่ PHP ด้วยการมาตรฐาน PHP Library (SPL) เปิดใช้งาน (โดยค่าเริ่มต้น)",
         "SystemCheckTimeLimitHelp": "บนเว็บไซต์การรับส่งข้อมูลสูง การดำเนินกระบวนการเก็บถาวรอาจต้องใช้เวลามากขึ้นกว่าในปัจจุบันได้รับอนุญาต ถ้าจำเป็น เปลี่ยนคำสั่ง max_execution_time ในแฟ้ม php.ini ของคุณ",
         "SystemCheckTracker": "สถานะ Tracker",
-        "SystemCheckWarnDomHelp": "คุณควรเปิดใช้ส่วนขยาย \"dom\" (เช่นการติดตั้ง \"php-dom\" และ\/หรือแพคเกจ \"php-xml\")",
-        "SystemCheckWarning": "Matomo จะทำงานได้ปกติแต่ฟีเจอร์บางอย่างอาจทำงานผิดพลาด",
-        "SystemCheckWarnJsonHelp": "คุณควรเปิดใช้งานส่วนขยาย \"json\" (เช่นการติดตั้ง \"php-json\" แพคเกจ) เพื่อประสิทธิภาพที่ดีขึ้น",
+        "SystemCheckWarnDomHelp": "คุณควรเปิดใช้ส่วนขยาย \"dom\" (เช่นการติดตั้ง \"php-dom\" และ/หรือแพคเกจ \"php-xml\")",
         "SystemCheckWarnLibXmlHelp": "คุณควรเปิดใช้ส่วนขยาย \"libxml\" (เช่น \"ติดตั้ง PHP - libxml\" แพคเกจ) ตามที่จำเป็นต้องใช้นามสกุลอื่นๆ",
-        "SystemCheckWarnSimpleXMLHelp": "คุณควรเปิดใช้ส่วนขยาย \"SimpleXML\" (เช่นการติดตั้ง \"php-simplexml\" และ\/หรือแพคเกจ \"php-xml\")",
+        "SystemCheckWarnSimpleXMLHelp": "คุณควรเปิดใช้ส่วนขยาย \"SimpleXML\" (เช่นการติดตั้ง \"php-simplexml\" และ/หรือแพคเกจ \"php-xml\")",
+        "SystemCheckWarning": "Matomo จะทำงานได้ปกติแต่ฟีเจอร์บางอย่างอาจทำงานผิดพลาด",
         "SystemCheckWinPdoAndMysqliHelp": "บนเซิร์ฟเวอร์ของ Windows คุณสามารถเพิ่มบรรทัดต่อไปนี้เพื่อให้ php.ini ของคุณ: %s",
         "SystemCheckWriteDirs": "ไดเร็กทอรีสามารถเขียนได้",
         "SystemCheckWriteDirsHelp": "เพื่อแก้ปัญหานี้สำหรับระบบ Linux ลองพิมพ์คำสั่งต่อไปนี้ (s)",
@@ -78,6 +73,6 @@
         "TablesReuse": "ใช้ตารางที่มีอยู่",
         "TablesWarningHelp": "เลือกอันอื่นเพื่อใช้ฐานข้อมูลที่มีอยู่อีกครั้ง หรือเลือกติดตั้งใหม่ เพื่อลบข้อมูลที่มีอยู่ในฐานข้อมูล",
         "TablesWithSameNamesFound": "บางตาราง %1$s ในฐานข้อมูลของคุณ %2$s มีชื่อเดียวกันกับตารางที่ Matomo พยายามจะสร้าง",
-        "Welcome": "ยินดีต้อนรับ!"
+        "Welcome": "ยินดีต้อนรับ"
     }
 }

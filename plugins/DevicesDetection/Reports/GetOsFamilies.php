@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -20,7 +20,7 @@ class GetOsFamilies extends Base
         parent::init();
         $this->dimension     = new Os();
         $this->name          = Piwik::translate('DevicesDetection_OperatingSystemFamilies');
-        $this->documentation = ''; // TODO
+        $this->documentation = Piwik::translate('DevicesDetection_OperatingSystemFamiliesReportDocumentation');
         $this->order = 8;
 
         $this->subcategoryId = 'DevicesDetection_Software';
@@ -31,7 +31,6 @@ class GetOsFamilies extends Base
         $view->config->title = $this->name;
         $view->config->show_search = false;
         $view->config->show_exclude_low_population = false;
-        $view->config->addTranslation('label', $this->dimension->getName());
     }
 
     public function getRelatedReports()
@@ -40,5 +39,4 @@ class GetOsFamilies extends Base
             ReportsProvider::factory('DevicesDetection', 'getOsVersions'),
         );
     }
-
 }

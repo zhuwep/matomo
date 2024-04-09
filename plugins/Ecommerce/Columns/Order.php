@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\Ecommerce\Columns;
 use Piwik\Columns\DimensionMetricFactory;
 use Piwik\Columns\Discriminator;
 use Piwik\Columns\MetricsList;
-use Piwik\Piwik;
 use Piwik\Plugin\ArchivedMetric;
 use Piwik\Tracker\GoalManager;
 
@@ -28,7 +27,6 @@ class Order extends BaseConversion
     public function configureMetrics(MetricsList $metricsList, DimensionMetricFactory $dimensionMetricFactory)
     {
         $metric = $dimensionMetricFactory->createMetric(ArchivedMetric::AGGREGATION_UNIQUE);
-        $metric->setTranslatedName(Piwik::translate('Ecommerce_OrderId'));
         $metricsList->addMetric($metric);
     }
 
@@ -36,5 +34,4 @@ class Order extends BaseConversion
     {
         return new Discriminator($this->dbTableName, 'idgoal', GoalManager::IDGOAL_ORDER);
     }
-
 }

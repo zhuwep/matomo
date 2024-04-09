@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,6 +18,7 @@ use Piwik\Plugins\Live\Model;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\Mock\FakeAccess;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
+use Piwik\Tests\Framework\TestCase\SystemTestCase;
 use Piwik\Tests\Integration\SegmentTest;
 
 /**
@@ -27,7 +28,7 @@ use Piwik\Tests\Integration\SegmentTest;
  */
 class ModelTest extends IntegrationTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -50,7 +51,7 @@ class ModelTest extends IntegrationTestCase
     public function test_getStandAndEndDate_usesNowWhenEndDateOutOfRange()
     {
         $model = new Model();
-        list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'year', date('Y').'-01-01');
+        list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'year', date('Y') . '-01-01');
 
         $validDates = $this->getValidNowDates();
 
@@ -73,56 +74,83 @@ class ModelTest extends IntegrationTestCase
 
     public function test_handleMaxExecutionTimeError_doesNotThrowExceptionWhenNotExceededTime()
     {
-    	$db = Db::get();
-    	$e = new \Exception('foo bar baz');
-	    $sql = 'SELECT 1';
-	    $bind = array();
-	    $segment =  '';
-	    $dateStart = Date::now()->subDay(1);
-	    $dateEnd = Date::now();
-	    $minTimestamp = 1;
-	    $limit = 50;
-        $model = new Model();
-        $model->handleMaxExecutionTimeError($db, $e, $sql, $bind, $segment, $dateStart, $dateEnd, $minTimestamp, $limit);
-        $this->assertTrue(true);
+        self::expectNotToPerformAssertions();
+
+        $db           = Db::get();
+        $e            = new \Exception('foo bar baz');
+        $sql          = 'SELECT 1';
+        $bind         = [];
+        $segment      = '';
+        $dateStart    = Date::now()->subDay(1);
+        $dateEnd      = Date::now();
+        $minTimestamp = 1;
+        $limit        = 50;
+        Model::handleMaxExecutionTimeError($db, $e, $segment, $dateStart, $dateEnd, $minTimestamp, $limit, [$sql, $bind]);
     }
 
-	/**
-	 * @expectedException \Piwik\Plugins\Live\Exception\MaxExecutionTimeExceededException
-	 * @expectedExceptionMessage Live_QueryMaxExecutionTimeExceeded  Live_QueryMaxExecutionTimeExceededReasonUnknown
-	 */
     public function test_handleMaxExecutionTimeError_whenTimeIsExceeded_noReasonFound()
     {
-    	$db = Db::get();
-    	$e = new \Exception('[3024] Query execution was interrupted, maximum statement execution time exceeded');
-	    $sql = 'SELECT 1';
-	    $bind = array();
-	    $segment = '';
-	    $dateStart = Date::now()->subDay(1);
-	    $dateEnd = Date::now();
-	    $minTimestamp = null;
-	    $limit = 50;
-        $model = new Model();
-        $model->handleMaxExecutionTimeError($db, $e, $sql, $bind, $segment, $dateStart, $dateEnd, $minTimestamp, $limit);
+        $this->expectException(\Piwik\Plugins\Live\Exception\MaxExecutionTimeExceededException::class);
+        $this->expectExceptionMessage('Live_QueryMaxExecutionTimeExceeded  Live_QueryMaxExecutionTimeExceededReasonUnknown');
+
+        $db = Db::get();
+        $e = new \Exception('[3024] Query execution was interrupted, maximum statement execution time exceeded');
+        $sql = 'SELECT 1';
+        $bind = array();
+        $segment = '';
+        $dateStart = Date::now()->subDay(1);
+        $dateEnd = Date::now();
+        $minTimestamp = null;
+        $limit = 50;
+        Model::handleMaxExecutionTimeError($db, $e, $segment, $dateStart, $dateEnd, $minTimestamp, $limit, [$sql, $bind]);
     }
 
-	/**
-	 * @expectedException \Piwik\Plugins\Live\Exception\MaxExecutionTimeExceededException
-	 * @expectedExceptionMessage Live_QueryMaxExecutionTimeExceeded  Live_QueryMaxExecutionTimeExceededReasonDateRange Live_QueryMaxExecutionTimeExceededReasonSegment Live_QueryMaxExecutionTimeExceededLimit
-	 */
     public function test_handleMaxExecutionTimeError_whenTimeIsExceeded_manyReasonsFound()
     {
-    	$db = Db::get();
-    	$e = new \Exception('Query execution was interrupted, maximum statement execution time exceeded');
-	    $sql = 'SELECT 1';
-	    $bind = array();
-	    $segment = 'userId>=1';
-	    $dateStart = Date::now()->subDay(10);
-	    $dateEnd = Date::now();
-	    $minTimestamp = null;
-	    $limit = 5000;
+        $this->expectException(\Piwik\Plugins\Live\Exception\MaxExecutionTimeExceededException::class);
+        $this->expectExceptionMessage('Live_QueryMaxExecutionTimeExceeded  Live_QueryMaxExecutionTimeExceededReasonDateRange Live_QueryMaxExecutionTimeExceededReasonSegment Live_QueryMaxExecutionTimeExceededLimit');
+
+        $db = Db::get();
+        $e = new \Exception('Query execution was interrupted, maximum statement execution time exceeded');
+        $segment = 'userId>=1';
+        $dateStart = Date::now()->subDay(10);
+        $dateEnd = Date::now();
+        $minTimestamp = null;
+        $limit = 5000;
+        Model::handleMaxExecutionTimeError($db, $e, $segment, $dateStart, $dateEnd, $minTimestamp, $limit, ['param' => 'value']);
+    }
+
+    public function test_getLastMinutesCounterForQuery_maxExecutionTime()
+    {
+        if (SystemTestCase::isMysqli()) {
+            $this->markTestSkipped('max_execution_time not supported on mysqli');
+            return;
+        }
+        $this->expectException(MaxExecutionTimeExceededException::class);
+        $this->expectExceptionMessage('Live_QueryMaxExecutionTimeExceeded');
+        $this->setLowestMaxExecutionTime();
+
+        $this->trackPageView();
+
         $model = new Model();
-        $model->handleMaxExecutionTimeError($db, $e, $sql, $bind, $segment, $dateStart, $dateEnd, $minTimestamp, $limit);
+        $model->queryAndWhereSleepTestsOnly = true;
+        $model->getNumVisits(1, 999999, '');
+    }
+
+    public function test_queryAdjacentVisitorId_maxExecutionTime()
+    {
+        if (SystemTestCase::isMysqli()) {
+            $this->markTestSkipped('max_execution_time not supported on mysqli');
+            return;
+        }
+        $this->expectException(MaxExecutionTimeExceededException::class);
+        $this->expectExceptionMessage('Live_QueryMaxExecutionTimeExceeded');
+        $this->setLowestMaxExecutionTime();
+
+        $this->trackPageView();
+        $model = new Model();
+        $model->queryAndWhereSleepTestsOnly = true;
+        $model->queryAdjacentVisitorId(1, '1234567812345678', Date::yesterday()->getDatetime(), '', true);
     }
 
     public function test_getStandAndEndDate()
@@ -187,15 +215,15 @@ class ModelTest extends IntegrationTestCase
         $model = new Model();
         list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'month', '2010-01-01');
         list($sql, $bind) = $model->makeLogVisitsQueryString(
-                $idSite = 1,
-                $dateStart,
-                $dateEnd,
-                $segment = false,
-                $offset = 0,
-                $limit = 100,
-                $visitorId = false,
-                $minTimestamp = false,
-                $filterSortOrder = false
+            $idSite = 1,
+            $dateStart,
+            $dateEnd,
+            $segment = false,
+            $offset = 0,
+            $limit = 100,
+            $visitorId = false,
+            $minTimestamp = false,
+            $filterSortOrder = false
         );
         $expectedSql = ' SELECT log_visit.*
                     FROM ' . Common::prefixTable('log_visit') . ' AS log_visit
@@ -222,15 +250,15 @@ class ModelTest extends IntegrationTestCase
         $model = new Model();
         list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'month', '2010-01-01');
         list($sql, $bind) = $model->makeLogVisitsQueryString(
-                $idSite = 1,
-                $dateStart,
-                $dateEnd,
-                $segment = false,
-                $offset = 0,
-                $limit = 100,
-                $visitorId = false,
-                $minTimestamp = false,
-                $filterSortOrder = false
+            $idSite = 1,
+            $dateStart,
+            $dateEnd,
+            $segment = false,
+            $offset = 0,
+            $limit = 100,
+            $visitorId = false,
+            $minTimestamp = false,
+            $filterSortOrder = false
         );
         $expectedSql = ' SELECT log_visit.*
                     FROM ' . Common::prefixTable('log_visit') . ' AS log_visit
@@ -256,15 +284,15 @@ class ModelTest extends IntegrationTestCase
 
         list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'month', '2010-01-01');
         list($sql, $bind) = $model->makeLogVisitsQueryString(
-                $idSite = 1,
-                $dateStart,
-                $dateEnd,
-                $segment = false,
-                $offset = 15,
-                $limit = 100,
-                $visitorId = false,
-                $minTimestamp = false,
-                $filterSortOrder = false
+            $idSite = 1,
+            $dateStart,
+            $dateEnd,
+            $segment = false,
+            $offset = 15,
+            $limit = 100,
+            $visitorId = false,
+            $minTimestamp = false,
+            $filterSortOrder = false
         );
         $expectedSql = ' SELECT log_visit.*
                     FROM ' . Common::prefixTable('log_visit') . ' AS log_visit
@@ -291,7 +319,7 @@ class ModelTest extends IntegrationTestCase
             $idSite = 1,
             $dateStart,
             $dateEnd,
-            $segment = 'customVariablePageName1==Test',
+            $segment = 'siteSearchCategory==Test',
             $offset = 10,
             $limit = 100,
             $visitorId = 'abc',
@@ -306,7 +334,7 @@ class ModelTest extends IntegrationTestCase
                             AND log_visit.idvisitor = ? 
                             AND log_visit.visit_last_action_time >= ? 
                             AND log_visit.visit_last_action_time <= ? ) 
-                            AND ( log_link_visit_action.custom_var_k1 = ? ) 
+                            AND ( log_link_visit_action.search_cat = ? ) 
                         GROUP BY log_visit.idvisit 
                         ORDER BY log_visit.idsite DESC, log_visit.visit_last_action_time DESC
                          LIMIT 10, 100';
@@ -323,10 +351,7 @@ class ModelTest extends IntegrationTestCase
 
     public function test_makeLogVisitsQueryString_addsMaxExecutionHintIfConfigured()
     {
-        $config = Config::getInstance();
-        $general = $config->General;
-        $general['live_query_max_execution_time'] = 30;
-        $config->General = $general;
+        $this->setMaxExecutionTime(30);
 
         $model = new Model();
         list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'month', '2010-01-01');
@@ -344,18 +369,14 @@ class ModelTest extends IntegrationTestCase
         $expectedSql = 'SELECT  /*+ MAX_EXECUTION_TIME(30000) */ 
 				log_visit.*';
 
-        $general['live_query_max_execution_time'] = -1;
-        $config->General = $general;
+        $this->setMaxExecutionTime(-1);
 
         $this->assertStringStartsWith($expectedSql, trim($sql));
     }
 
     public function test_makeLogVisitsQueryString_doesNotAddsMaxExecutionHintForVisitorIds()
     {
-        $config = Config::getInstance();
-        $general = $config->General;
-        $general['live_query_max_execution_time'] = 30;
-        $config->General = $general;
+        $this->setMaxExecutionTime(30);
 
         $model = new Model();
         list($dateStart, $dateEnd) = $model->getStartAndEndDate($idSite = 1, 'month', '2010-01-01');
@@ -373,8 +394,7 @@ class ModelTest extends IntegrationTestCase
         $expectedSql = 'SELECT
 				log_visit.*';
 
-        $general['live_query_max_execution_time'] = -1;
-        $config->General = $general;
+        $this->setMaxExecutionTime(-1);
 
         $this->assertStringStartsWith($expectedSql, trim($sql));
     }
@@ -386,12 +406,25 @@ class ModelTest extends IntegrationTestCase
         $this->assertEquals(array('2010-01-01 00:00:00 2010-01-02 00:00:00'), $dates);
     }
 
+    public function test_splitDatesIntoMultipleQueries_notMoreThanADayUsesOnlyOneQueryDesc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-01-02 00:00:00', $limit = 5, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 00:00:00 2010-01-02 00:00:00'), $dates);
+    }
 
     public function test_splitDatesIntoMultipleQueries_moreThanADayLessThanAWeek()
     {
         $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-01-02 00:01:00', $limit = 5, $offset = 0);
 
         $this->assertEquals(array('2010-01-01 00:01:00 2010-01-02 00:01:00', '2010-01-01 00:00:00 2010-01-01 00:00:59'), $dates);
+    }
+
+    public function test_splitDatesIntoMultipleQueries_moreThanADayLessThanAWeekAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-01-02 00:01:00', $limit = 5, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 00:00:00 2010-01-01 23:59:59', '2010-01-02 00:00:00 2010-01-02 00:01:00'), $dates);
     }
 
     public function test_splitDatesIntoMultipleQueries_moreThanAWeekLessThanMonth()
@@ -401,11 +434,25 @@ class ModelTest extends IntegrationTestCase
         $this->assertEquals(array('2010-01-19 04:01:00 2010-01-20 04:01:00', '2010-01-12 04:01:00 2010-01-19 04:00:59', '2010-01-01 00:00:00 2010-01-12 04:00:59'), $dates);
     }
 
+    public function test_splitDatesIntoMultipleQueries_moreThanAWeekLessThanMonthAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-01-20 04:01:00', $limit = 5, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 00:00:00 2010-01-01 23:59:59', '2010-01-02 00:00:00 2010-01-08 23:59:59', '2010-01-09 00:00:00 2010-01-20 04:01:00'), $dates);
+    }
+
     public function test_splitDatesIntoMultipleQueries_moreThanMonthLessThanYear()
     {
         $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-02-20 04:01:00', $limit = 5, $offset = 0);
 
         $this->assertEquals(array('2010-02-19 04:01:00 2010-02-20 04:01:00', '2010-02-12 04:01:00 2010-02-19 04:00:59', '2010-01-13 04:01:00 2010-02-12 04:00:59', '2010-01-01 00:00:00 2010-01-13 04:00:59'), $dates);
+    }
+
+    public function test_splitDatesIntoMultipleQueries_moreThanMonthLessThanYearAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2010-02-20 04:01:00', $limit = 5, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 00:00:00 2010-01-01 23:59:59', '2010-01-02 00:00:00 2010-01-08 23:59:59', '2010-01-09 00:00:00 2010-02-07 23:59:59', '2010-02-08 00:00:00 2010-02-20 04:01:00'), $dates);
     }
 
     public function test_splitDatesIntoMultipleQueries_moreThanYear()
@@ -415,11 +462,25 @@ class ModelTest extends IntegrationTestCase
         $this->assertEquals(array('2012-02-19 04:01:00 2012-02-20 04:01:00', '2012-02-12 04:01:00 2012-02-19 04:00:59', '2012-01-13 04:01:00 2012-02-12 04:00:59', '2011-01-01 04:01:00 2012-01-13 04:00:59', '2010-01-01 00:00:00 2011-01-01 04:00:59'), $dates);
     }
 
+    public function test_splitDatesIntoMultipleQueries_moreThanYearAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2012-02-20 04:01:00', $limit = 5, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 00:00:00 2010-01-01 23:59:59', '2010-01-02 00:00:00 2010-01-08 23:59:59', '2010-01-09 00:00:00 2010-02-07 23:59:59', '2010-02-08 00:00:00 2011-02-07 23:59:59', '2011-02-08 00:00:00 2012-02-20 04:01:00'), $dates);
+    }
+
     public function test_splitDatesIntoMultipleQueries_moreThanYear_withOffsetUsesLessQueries()
     {
         $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 00:00:00', '2012-02-20 04:01:00', $limit = 5, $offset = 5);
 
         $this->assertEquals(array('2012-02-19 04:01:00 2012-02-20 04:01:00', '2012-02-12 04:01:00 2012-02-19 04:00:59', '2010-01-01 00:00:00 2012-02-12 04:00:59'), $dates);
+    }
+
+    public function test_splitDatesIntoMultipleQueries_moreThanYear_withOffsetUsesLessQueriesAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 04:01:00', '2012-02-20 00:00:00', $limit = 5, $offset = 5, 'asc');
+
+        $this->assertEquals(array('2010-01-01 04:01:00 2010-01-02 04:00:59', '2010-01-02 04:01:00 2010-01-09 04:00:59', '2010-01-09 04:01:00 2012-02-20 00:00:00'), $dates);
     }
 
     public function test_splitDatesIntoMultipleQueries_moreThanYear_noLimitDoesntUseMultipleQueries()
@@ -429,6 +490,13 @@ class ModelTest extends IntegrationTestCase
         $this->assertEquals(array('2010-01-01 00:00:00 2012-02-20 04:01:00'), $dates);
     }
 
+    public function test_splitDatesIntoMultipleQueries_moreThanYear_noLimitDoesntUseMultipleQueriesAsc()
+    {
+        $dates = $this->splitDatesIntoMultipleQueries('2010-01-01 04:01:00', '2012-02-20 00:00:00', $limit = 0, $offset = 0, 'asc');
+
+        $this->assertEquals(array('2010-01-01 04:01:00 2012-02-20 00:00:00'), $dates);
+    }
+
     public function test_splitDatesIntoMultipleQueries_noStartDate()
     {
         $dates = $this->splitDatesIntoMultipleQueries(false, '2012-02-20 04:01:00', $limit = 5, $offset = 0);
@@ -436,7 +504,7 @@ class ModelTest extends IntegrationTestCase
         $this->assertEquals(array('2012-02-19 04:01:00 2012-02-20 04:01:00', '2012-02-12 04:01:00 2012-02-19 04:00:59', '2012-01-13 04:01:00 2012-02-12 04:00:59', '2011-01-01 04:01:00 2012-01-13 04:00:59', ' 2011-01-01 04:00:59'), $dates);
     }
 
-    private function splitDatesIntoMultipleQueries($startDate, $endDate, $limit, $offset)
+    private function splitDatesIntoMultipleQueries($startDate, $endDate, $limit, $offset, $order = 'desc')
     {
         if ($startDate) {
             $startDate = Date::factory($startDate);
@@ -445,9 +513,11 @@ class ModelTest extends IntegrationTestCase
             $endDate = Date::factory($endDate);
         }
         $model = new Model();
-        $queries = $model->splitDatesIntoMultipleQueries($startDate, $endDate, $limit, $offset);
+        $queries = $model->splitDatesIntoMultipleQueries($startDate, $endDate, $limit, $offset, $order);
 
-        return array_map(function ($query) { return ($query[0] ? $query[0]->getDatetime() : '') . ' ' . ($query[1] ? $query[1]->getDatetime() : ''); }, $queries);
+        return array_map(function ($query) {
+            return ($query[0] ? $query[0]->getDatetime() : '') . ' ' . ($query[1] ? $query[1]->getDatetime() : '');
+        }, $queries);
     }
 
     protected function setSuperUser()
@@ -460,5 +530,28 @@ class ModelTest extends IntegrationTestCase
         return array(
             'Piwik\Access' => new FakeAccess()
         );
+    }
+
+    private function setLowestMaxExecutionTime(): void
+    {
+        $this->setMaxExecutionTime(0.001);
+    }
+
+    private function setMaxExecutionTime($time): void
+    {
+        $config = Config::getInstance();
+        $general = $config->General;
+        $general['live_query_max_execution_time'] = $time;
+        $config->General = $general;
+    }
+
+    private function trackPageView(): void
+    {
+        // Needed for the tests that may execute a sleep() to test max execution time. Otherwise if the table is empty
+        // the sleep would not be executed making the tests fail randomly
+        $t = Fixture::getTracker(1, Date::now()->getDatetime(), $defaultInit = true);
+        $t->setTokenAuth(Fixture::getTokenAuth());
+        $t->setVisitorId(substr(sha1('X4F66G776HGI'), 0, 16));
+        $t->doTrackPageView('foo');
     }
 }

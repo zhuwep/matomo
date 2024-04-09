@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,15 +8,15 @@
  */
 namespace Piwik\Plugins\UserCountry;
 
-use Piwik\Cache\Cache;
-use Piwik\Cache\Transient;
+use Matomo\Cache\Cache;
+use Matomo\Cache\Transient;
 use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\DataAccess\RawLogDao;
-use Piwik\Network\IPUtils;
-use Piwik\Plugins\UserCountry\LocationProvider\DefaultProvider;
+use Matomo\Network\IPUtils;
+use Piwik\Plugins\UserCountry\LocationProvider\DisabledProvider;
 use Piwik\Tracker\Visit;
-use Psr\Log\LoggerInterface;
+use Piwik\Log\LoggerInterface;
 
 require_once PIWIK_INCLUDE_PATH . "/plugins/UserCountry/LocationProvider.php";
 
@@ -81,16 +81,20 @@ class VisitorGeolocator
      */
     protected $logger;
 
-    public function __construct(LocationProvider $provider = null, LocationProvider $backupProvider = null, Cache $locationCache = null,
-                                RawLogDao $dao = null, LoggerInterface $logger = null)
-    {
+    public function __construct(
+        LocationProvider $provider = null,
+        LocationProvider $backupProvider = null,
+        Cache $locationCache = null,
+        RawLogDao $dao = null,
+        LoggerInterface $logger = null
+    ) {
         if ($provider === null) {
             // note: Common::getCurrentLocationProviderId() uses the tracker cache, which is why it's used here instead
             // of accessing the option table
             $provider = LocationProvider::getProviderById(Common::getCurrentLocationProviderId());
 
             if (empty($provider)) {
-                Common::printDebug("GEO: no current location provider sent, falling back to default '" . DefaultProvider::ID . "' one.");
+                Common::printDebug("GEO: no current location provider sent, falling back to '" . LocationProvider::getDefaultProviderId() . "' one.");
 
                 $provider = $this->getDefaultProvider();
             }
@@ -100,13 +104,14 @@ class VisitorGeolocator
         $this->backupProvider = $backupProvider ?: $this->getDefaultProvider();
         $this->locationCache = $locationCache ?: self::getDefaultLocationCache();
         $this->dao = $dao ?: new RawLogDao();
-        $this->logger = $logger ?: StaticContainer::get('Psr\Log\LoggerInterface');
+        $this->logger = $logger ?: StaticContainer::get(LoggerInterface::class);
     }
 
     public function getLocation($userInfo, $useClassCache = true)
     {
         $userInfoKey = md5(implode(',', $userInfo));
-        if ($useClassCache
+        if (
+            $useClassCache
             && $this->locationCache->contains($userInfoKey)
         ) {
             return $this->locationCache->fetch($userInfoKey);
@@ -118,7 +123,8 @@ class VisitorGeolocator
             $providerId = $this->provider->getId();
             Common::printDebug("GEO: couldn't find a location with Geo Module '$providerId'");
 
-            if ($providerId != $this->backupProvider->getId()) {
+            // Only use the default provider as fallback if the configured one isn't "disabled"
+            if ($providerId != DisabledProvider::ID && $providerId != $this->backupProvider->getId()) {
                 Common::printDebug("Using default provider as fallback...");
 
                 $location = $this->getLocationObject($this->backupProvider, $userInfo);
@@ -286,7 +292,8 @@ class VisitorGeolocator
 
     private function areLocationPropertiesEqual($locationKey, $locationPropertyValue, $existingPropertyValue)
     {
-        if (($locationKey == LocationProvider::LATITUDE_KEY
+        if (
+            ($locationKey == LocationProvider::LATITUDE_KEY
              || $locationKey == LocationProvider::LONGITUDE_KEY)
             && $existingPropertyValue != 0
         ) {
@@ -299,13 +306,18 @@ class VisitorGeolocator
 
     private function getDefaultProvider()
     {
-        return LocationProvider::getProviderById(DefaultProvider::ID);
+        return LocationProvider::getProviderById(LocationProvider::getDefaultProviderId());
     }
 
     public static function getDefaultLocationCache()
     {
         if (self::$defaultLocationCache === null) {
-            self::$defaultLocationCache = new Transient();
+            if (class_exists('\Piwik\Cache\Transient')) {
+                // during the oneclickupdate from 3.x => greater, this class will be loaded, so we have to use it instead of the Matomo namespaced one
+                self::$defaultLocationCache = new \Piwik\Cache\Transient();
+            } else {
+                self::$defaultLocationCache = new Transient();
+            }
         }
         return self::$defaultLocationCache;
     }

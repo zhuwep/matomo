@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,14 +15,13 @@ use Piwik\DataTable\Row;
 /**
  * @group DataTableTest
  */
-class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
+class TruncateTest extends \PHPUnit\Framework\TestCase
 {
-
     public function testUnrelatedDataTableNotFiltered()
     {
         // remark: this unit test would become invalid and would need to be rewritten if
         // Truncate filter stops calling getRowsCount() on the DataTable being filtered.
-        $mockedDataTable = $this->getMock('\Piwik\DataTable', array('getRowsCount'));
+        $mockedDataTable = $this->createPartialMock('\Piwik\DataTable', array('getRowsCount'));
         $mockedDataTable->expects($this->never())->method('getRowsCount');
 
         $dataTableBeingFiltered = new DataTable();
@@ -46,7 +45,7 @@ class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
 
         // remark: this unit test would become invalid and would need to be rewritten if
         // Truncate filter stops calling getIdSubDataTable() on rows associated with a SubDataTable
-        $rowBeingFiltered = $this->getMock('\Piwik\DataTable\Row', array('getIdSubDataTable'));
+        $rowBeingFiltered = $this->createPartialMock('\Piwik\DataTable\Row', array('getIdSubDataTable'));
         $rowBeingFiltered->expects($this->never())->method('getIdSubDataTable');
 
         $dataTableBeingFiltered->addRow($rowBeingFiltered);
@@ -121,7 +120,7 @@ class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
         $filter->filter($table2);
 
         // we expect row0+row0, row1+row1, row2, rowSummary1+rowSummary2
-        $expectedTable = new DataTable;
+        $expectedTable = new DataTable();
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'amazon', 'nb' => 20000))));
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'yahoo', 'nb' => 2000))));
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'piwik', 'nb' => 100))));
@@ -143,7 +142,7 @@ class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
         $table2 = $this->getDataTableCount5();
 
         // we expect row0+row0, row1+row1, row2+row2, row3, row4, rowSummary1
-        $expectedTable = new DataTable;
+        $expectedTable = new DataTable();
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'amazon', 'nb' => 20000))));
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'yahoo', 'nb' => 2000))));
         $expectedTable->addRow(new Row(array(Row::COLUMNS => array('label' => 'piwik', 'nb' => 200))));
@@ -153,13 +152,12 @@ class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
 
         $table1->addDataTable($table2);
         $this->assertTrue(DataTable::isEqual($expectedTable, $table1));
-
     }
 
 
     public function testWhenRowsInRandomOrderButSortSpecifiedShouldComputeSummaryRowAfterSort()
     {
-        $table = new DataTable;
+        $table = new DataTable();
         $table->addRow($this->getRow3());
         $table->addRow($this->getRow2());
         $table->addRow($this->getRow4());
@@ -180,7 +178,7 @@ class DataTable_Filter_TruncateTest extends \PHPUnit_Framework_TestCase
      */
     protected function getDataTableCount5()
     {
-        $table = new DataTable;
+        $table = new DataTable();
         $table->addRow($this->getRow0());
         $table->addRow($this->getRow1());
         $table->addRow($this->getRow2());

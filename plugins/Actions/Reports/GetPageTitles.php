@@ -1,13 +1,16 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\Actions\Reports;
 
+use Piwik\DbHelper;
 use Piwik\Piwik;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\API\Request;
@@ -17,8 +20,6 @@ use Piwik\Plugins\Actions\Columns\Metrics\AverageTimeOnPage;
 use Piwik\Plugins\Actions\Columns\Metrics\BounceRate;
 use Piwik\Plugins\Actions\Columns\Metrics\ExitRate;
 use Piwik\Plugin\ReportsProvider;
-use Piwik\Report\ReportWidgetFactory;
-use Piwik\Widget\WidgetsList;
 
 class GetPageTitles extends Base
 {
@@ -28,8 +29,10 @@ class GetPageTitles extends Base
 
         $this->dimension     = new PageTitle();
         $this->name          = Piwik::translate('Actions_SubmenuPageTitles');
-        $this->documentation = Piwik::translate('Actions_PageTitlesReportDocumentation',
-                                                array('<br />', htmlentities('<title>', ENT_COMPAT | ENT_HTML401, 'UTF-8')));
+        $this->documentation = Piwik::translate(
+            'Actions_PageTitlesReportDocumentation',
+            ['<br />', htmlentities('<title>', ENT_COMPAT | ENT_HTML401, 'UTF-8')]
+        );
 
         $this->order   = 5;
         $this->metrics = array('nb_hits', 'nb_visits');
@@ -37,12 +40,12 @@ class GetPageTitles extends Base
             new AverageTimeOnPage(),
             new BounceRate(),
             new ExitRate(),
-            new AveragePageGenerationTime()
+            new AveragePageGenerationTime(),
         );
 
         $this->actionToLoadSubTables = $this->action;
-
         $this->subcategoryId = 'Actions_SubmenuPageTitles';
+        $this->hasGoalMetrics = true;
     }
 
     public function getMetrics()
@@ -71,12 +74,17 @@ class GetPageTitles extends Base
 
         $view->config->title = $this->name;
 
-        $view->config->addTranslation('label', $this->dimension->getName());
         $view->config->columns_to_display = array('label', 'nb_hits', 'nb_visits', 'bounce_rate',
-                                                  'avg_time_on_page', 'exit_rate', 'avg_time_generation');
+                                                  'avg_time_on_page', 'exit_rate');
+
+        if (version_compare(DbHelper::getInstallVersion(), '4.0.0-b1', '<')) {
+            $view->config->columns_to_display[] = 'avg_time_generation';
+        }
 
         $this->addPageDisplayProperties($view);
         $this->addBaseDisplayProperties($view);
+
+        $view->config->show_goals = true;
     }
 
     public function getRelatedReports()

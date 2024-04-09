@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,7 @@ namespace Piwik\Settings\FieldConfig;
  *
  * Usage:
  *
- * $field->uiControl = FieldConfig::UI_CONTROL_MULTI_PAIR;
+ * $field->uiControl = FieldConfig::UI_CONTROL_MULTI_TUPLE;
  * $field1 = new FieldConfig\MultiPair('Index', 'index', FieldConfig::UI_CONTROL_TEXT);
  * $field2 = new FieldConfig\MultiPair('Value', 'value', FieldConfig::UI_CONTROL_TEXT);
  * $field->uiControlAttributes['field1'] = $field1->toArray();
@@ -40,12 +40,12 @@ class MultiPair
     public $uiControl = null;
 
     /**
-     * Defines a custom template file for a UI control. This file should render a UI control and expose the value in a
-     * "formField.value" angular model. For an example see "plugins/CorePluginsAdmin/angularjs/form-field/field-text.html"
+     * Array like ['plugin' => 'MyPlugin', 'component' => 'MyExportedCustomFieldComponent']. For an example see
+     * "plugins/CorePluginsAdmin/vue/src/FormField/FieldText.vue"
      *
-     * @var string
+     * @var string[]
      */
-    public $customUiControlTemplateFile = '';
+    public $customFieldComponent = null;
 
     /**
      * This setting's display name, for example, `'Refresh Interval'`.
@@ -81,9 +81,8 @@ class MultiPair
             'key' => $this->key,
             'title' => $this->title,
             'uiControl' => $this->uiControl,
-            'templateFile' => $this->customUiControlTemplateFile,
+            'component' => $this->customFieldComponent,
             'availableValues' => $this->availableValues,
         );
     }
-
 }

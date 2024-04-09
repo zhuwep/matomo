@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Tests\Unit\Category;
 
-use Piwik\Cache;
 use Piwik\Category\Subcategory;
 
 /**
@@ -16,14 +15,14 @@ use Piwik\Category\Subcategory;
  * @group Subcategory
  * @group SubcategoryTest
  */
-class SubcategoryTest extends \PHPUnit_Framework_TestCase
+class SubcategoryTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Subcategory
      */
     private $subcategory;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->subcategory = new Subcategory();
@@ -85,5 +84,4 @@ class SubcategoryTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertSame('', $this->subcategory->getId());
     }
-
 }

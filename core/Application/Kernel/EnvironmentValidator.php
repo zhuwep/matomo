@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,8 +9,6 @@
 namespace Piwik\Application\Kernel;
 
 use Piwik\Common;
-use Piwik\Config;
-use Piwik\Exception\InvalidRequestParameterException;
 use Piwik\Exception\NotYetInstalledException;
 use Piwik\Filechecks;
 use Piwik\Piwik;
@@ -44,7 +42,7 @@ class EnvironmentValidator
     {
         $this->checkConfigFileExists($this->settingsProvider->getPathGlobal());
 
-        if(SettingsPiwik::isPiwikInstalled()) {
+        if(SettingsPiwik::isMatomoInstalled()) {
             $this->checkConfigFileExists($this->settingsProvider->getPathLocal(), $startInstaller = false);
             return;
         }
@@ -63,7 +61,6 @@ class EnvironmentValidator
 
         // Start the installation when config file not found
         $this->checkConfigFileExists($this->settingsProvider->getPathLocal(), $startInstaller);
-
     }
 
     /**
@@ -79,7 +76,8 @@ class EnvironmentValidator
 
         $general = $this->settingsProvider->getSection('General');
 
-        if (isset($general['enable_installer'])
+        if (
+            isset($general['enable_installer'])
             && !$general['enable_installer']
         ) {
             throw new NotYetInstalledException('Matomo is not set up yet');
@@ -123,9 +121,13 @@ class EnvironmentValidator
             $format = "\n » %s \n";
         }
 
-        return sprintf($format,
-            $this->translator->translate('General_ExceptionConfigurationFilePleaseCheckReadableByUser',
-                array($path, Filechecks::getUser())));
+        return sprintf(
+            $format,
+            $this->translator->translate(
+                'General_ExceptionConfigurationFilePleaseCheckReadableByUser',
+                array($path, Filechecks::getUser())
+            )
+        );
     }
 
     /**
@@ -140,8 +142,10 @@ class EnvironmentValidator
                 $message .= $this->getMessageWhenFileExistsButNotReadable($path);
             }
         } else {
-            $message = $this->translator->translate('General_ExceptionConfigurationFileExistsButNotReadable',
-                array($path));
+            $message = $this->translator->translate(
+                'General_ExceptionConfigurationFileExistsButNotReadable',
+                array($path)
+            );
             $message .= $this->getMessageWhenFileExistsButNotReadable($path);
         }
 

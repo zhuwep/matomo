@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,9 +9,7 @@
 namespace Piwik\Tests\Integration\Plugin;
 
 use Piwik\Container\StaticContainer;
-use Piwik\Db;
 use Piwik\Plugin\WidgetsProvider;
-use Piwik\Settings\Storage;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Widget\WidgetConfig;
@@ -28,7 +26,7 @@ class WidgetsProviderTest extends IntegrationTestCase
      */
     private $widgets;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -40,7 +38,7 @@ class WidgetsProviderTest extends IntegrationTestCase
         $this->widgets = new WidgetsProvider(StaticContainer::get('Piwik\Plugin\Manager'));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         unset($_GET['idSite']);

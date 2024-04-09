@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Plugins\BulkTracking\BulkTracking;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Plugins\BulkTracking\tests\Framework\Mock\Tracker\Requests;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
-use Piwik\Tracker\Handler as DefaultHandler;
 use Piwik\Tracker\RequestSet;
 
 /**
@@ -31,7 +30,7 @@ class BulkTrackingTestCase extends IntegrationTestCase
 
     private $pluginBackup;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -41,7 +40,7 @@ class BulkTrackingTestCase extends IntegrationTestCase
         Plugin\Manager::getInstance()->addLoadedPlugin('BulkTracking', $this->bulk);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         Plugin\Manager::getInstance()->addLoadedPlugin('BulkTracking', $this->pluginBackup);
         parent::tearDown();

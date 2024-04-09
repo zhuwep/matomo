@@ -1,13 +1,15 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Integration\Tracker;
 
+use Matomo\Network\IPUtils;
 use Piwik\Common;
+use Piwik\Date;
 use Piwik\Db;
 use Piwik\Tests\Fixtures\OneVisitorTwoVisits;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
@@ -28,11 +30,35 @@ class ModelTest extends IntegrationTestCase
      */
     private $model;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         $this->model = new Model();
+    }
+
+    public function test_hasVisit()
+    {
+        $this->model->createVisit(array(
+            'idvisitor' => hex2bin('1234567812345678'),
+            'config_id' => '1234567',
+            'location_ip' => IPUtils::binaryToStringIP('10.10.10.10'),
+            'idvisit' => '4',
+            'idsite' => '3',
+            'visitor_count_visits' => 0,
+            'visit_total_time' => 0,
+            'visit_first_action_time' => Date::now()->getDatetime(),
+            'visit_last_action_time' => Date::now()->getDatetime(),
+        ));
+
+        $this->assertTrue($this->model->hasVisit(3, 4));
+        $this->assertTrue($this->model->hasVisit('3', '4'));
+
+        // idsite not match
+        $this->assertFalse($this->model->hasVisit(9, 4));
+
+        // idvisit not match
+        $this->assertFalse($this->model->hasVisit(3, 8));
     }
 
     public function test_createNewIdAction_CreatesNewAction_WhenNoActionWithSameNameAndType()
@@ -196,9 +222,11 @@ class ModelTest extends IntegrationTestCase
     private function insertSingleDuplicateAction()
     {
         $logActionTable = Common::prefixTable('log_action');
-        Db::query("INSERT INTO $logActionTable (idaction, name, type, url_prefix, hash) VALUES (?, ?, ?, ?, CRC32(?))",
+        Db::query(
+            "INSERT INTO $logActionTable (idaction, name, type, url_prefix, hash) VALUES (?, ?, ?, ?, CRC32(?))",
             array(5, self::TEST_ACTION_NAME, self::TEST_ACTION_TYPE, self::TEST_ACTION_URL_PREFIX,
-                  self::TEST_ACTION_NAME));
+            self::TEST_ACTION_NAME)
+        );
     }
 
     private function insertManyActions()

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -21,7 +21,6 @@ use Piwik\Validators\BaseValidator;
  */
 class Setting
 {
-
     /**
      * The name of the setting
      * @var string
@@ -221,6 +220,10 @@ class Setting
 
         $config = $this->configureField();
 
+        if ($config->prepare && $config->prepare instanceof \Closure) {
+            $value = call_user_func($config->prepare, $value, $this);
+        }
+
         $this->validateValue($value);
 
         if ($config->transform && $config->transform instanceof \Closure) {
@@ -252,8 +255,10 @@ class Setting
             }
 
             // TODO move error message creation to a subclass, eg in MeasurableSettings we do not want to mention plugin name
-            $errorMsg = Piwik::translate('CoreAdminHome_PluginSettingsValueNotAllowed',
-                                         array(strip_tags($config->title), $this->pluginName));
+            $errorMsg = Piwik::translate(
+                'CoreAdminHome_PluginSettingsValueNotAllowed',
+                array(strip_tags($config->title), $this->pluginName)
+            );
 
             if (is_array($value) && $this->type === FieldConfig::TYPE_ARRAY) {
                 foreach ($value as $val) {
@@ -269,16 +274,19 @@ class Setting
         } elseif ($this->type === FieldConfig::TYPE_INT || $this->type === FieldConfig::TYPE_FLOAT) {
 
             if (!is_numeric($value)) {
-                $errorMsg = Piwik::translate('CoreAdminHome_PluginSettingsValueNotAllowed',
-                                             array(strip_tags($config->title), $this->pluginName));
+                $errorMsg = Piwik::translate(
+                    'CoreAdminHome_PluginSettingsValueNotAllowed',
+                    array(strip_tags($config->title), $this->pluginName)
+                );
                 throw new \Exception($errorMsg);
             }
-
         } elseif ($this->type === FieldConfig::TYPE_BOOL) {
 
             if (!in_array($value, array(true, false, '0', '1', 0, 1), true)) {
-                $errorMsg = Piwik::translate('CoreAdminHome_PluginSettingsValueNotAllowed',
-                                             array(strip_tags($config->title), $this->pluginName));
+                $errorMsg = Piwik::translate(
+                    'CoreAdminHome_PluginSettingsValueNotAllowed',
+                    array(strip_tags($config->title), $this->pluginName)
+                );
                 throw new \Exception($errorMsg);
             }
         }
@@ -316,12 +324,14 @@ class Setting
 
     private function checkType(FieldConfig $field)
     {
-        if ($field->uiControl === FieldConfig::UI_CONTROL_MULTI_SELECT &&
+        if (
+            $field->uiControl === FieldConfig::UI_CONTROL_MULTI_SELECT &&
             $this->type !== FieldConfig::TYPE_ARRAY) {
             throw new Exception('Type must be an array when using a multi select');
         }
 
-        if ($field->uiControl === FieldConfig::UI_CONTROL_MULTI_TUPLE &&
+        if (
+            $field->uiControl === FieldConfig::UI_CONTROL_MULTI_TUPLE &&
             $this->type !== FieldConfig::TYPE_ARRAY) {
             throw new Exception('Type must be an array when using a multi pair');
         }
@@ -338,5 +348,4 @@ class Setting
             throw new Exception('Type does not exist');
         }
     }
-
 }

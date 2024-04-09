@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -25,7 +25,7 @@ use Piwik\Version;
 class CoreUpdater extends \Piwik\Plugin
 {
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
@@ -35,36 +35,23 @@ class CoreUpdater extends \Piwik\Plugin
         );
     }
 
-    /**
-     * @deprecated
-     */
-    public static function updateComponents(PiwikCoreUpdater $updater, $componentsWithUpdateFile)
-    {
-        return $updater->updateComponents($componentsWithUpdateFile);
-    }
-
-    /**
-     * @deprecated
-     */
-    public static function getComponentUpdates(PiwikCoreUpdater $updater)
-    {
-        return $updater->getComponentUpdates();
-    }
-
     public function dispatch()
     {
         if (!SettingsPiwik::isAutoUpdateEnabled()) {
             return;
         }
 
-        $module = Common::getRequestVar('module', '', 'string');
-        $action = Common::getRequestVar('action', '', 'string');
+        $module = Piwik::getModule();
+        $action = Piwik::getAction();
 
-        if ($module == 'CoreUpdater'
+        if (
+            $module == 'CoreUpdater'
             // Proxy module is used to redirect users to piwik.org, should still work when Piwik must be updated
             || $module == 'Proxy'
             // Do not show update page during installation.
             || $module == 'Installation'
+            || ($module == 'CorePluginsAdmin' && $action == 'deactivate')
+            || ($module == 'CorePluginsAdmin' && $action == 'uninstall')
             || ($module == 'LanguagesManager' && $action == 'saveLanguage')) {
             return;
         }
@@ -88,7 +75,6 @@ class CoreUpdater extends \Piwik\Plugin
                 echo $response->getResponseException($e);
                 Common::sendResponseCode(503);
                 exit;
-
             } else {
                 Piwik::redirectToModule('CoreUpdater');
             }

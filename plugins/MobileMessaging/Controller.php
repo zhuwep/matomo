@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,6 +10,7 @@
 namespace Piwik\Plugins\MobileMessaging;
 
 use Piwik\Common;
+use Piwik\DataTable\Renderer\Json;
 use Piwik\Intl\Data\Provider\RegionDataProvider;
 use Piwik\IP;
 use Piwik\Piwik;
@@ -63,6 +64,7 @@ class Controller extends ControllerAdmin
         $view->isSuperUser = Piwik::hasUserSuperUserAccess();
 
         $mobileMessagingAPI = API::getInstance();
+        $model = new Model();
         $view->delegatedManagement = $mobileMessagingAPI->getDelegatedManagement();
         $view->credentialSupplied = $mobileMessagingAPI->areSMSAPICredentialProvided();
         $view->accountManagedByCurrentUser = $view->isSuperUser || $view->delegatedManagement;
@@ -131,7 +133,7 @@ class Controller extends ControllerAdmin
         }
         $view->countries = $countries;
 
-        $view->phoneNumbers = $mobileMessagingAPI->getPhoneNumbers();
+        $view->phoneNumbers = $model->getPhoneNumbers(Piwik::getCurrentUserLogin());
 
         $this->setBasicVariablesView($view);
     }
@@ -149,10 +151,7 @@ class Controller extends ControllerAdmin
             }
         }
 
-        $view = new View('@MobileMessaging/credentials');
-
-        $view->credentialfields = $credentialFields;
-
-        return $view->render();
+        Json::sendHeaderJSON();
+        return json_encode($credentialFields);
     }
 }

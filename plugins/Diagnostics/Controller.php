@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,11 +8,8 @@
 
 namespace Piwik\Plugins\Diagnostics;
 
-use Piwik\Config;
 use Piwik\Piwik;
 use Piwik\Plugin\SettingsProvider;
-use Piwik\View;
-use Piwik\Settings;
 
 class Controller extends \Piwik\Plugin\ControllerAdmin
 {
@@ -64,5 +61,4 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
         return $configValues;
     }
-
 }

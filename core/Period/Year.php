@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -66,9 +66,8 @@ class Year extends Period
         $year = $this->date->toString("Y");
         for ($i = 1; $i <= 12; $i++) {
             $this->addSubperiod(new Month(
-                    Date::factory("$year-$i-01")
-                )
-            );
+                Date::factory("$year-$i-01")
+            ));
         }
     }
 

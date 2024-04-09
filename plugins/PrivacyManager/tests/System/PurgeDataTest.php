@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\PrivacyManager\tests\System;
@@ -22,21 +22,19 @@ class PurgeDataTest extends SystemTestCase
 {
     public static $fixture = null; // initialized below class definition
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
-
     }
     public static function tearDownBeforeClass()
     {
-
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUpBeforeClass();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDownAfterClass();
     }
@@ -141,12 +139,34 @@ class PurgeDataTest extends SystemTestCase
         $this->assertHasNoDownload('year');
     }
 
+    public function test_purgeData_shouldPurgeEverything_IfNoPeriodToKeepIsGivenAndBasicMetricsNotKeptSegmentsKept()
+    {
+        $this->assertHasOneDownload('day');
+        $this->assertHasOneDownload('week');
+        $this->assertHasOneDownload('month');
+        $this->assertHasOneDownload('year');
+
+        $deleteReportsOlderThan = 1;
+        $keepBasicMetrics       = false;
+        $reportPeriodsToKeep    = array();
+        $this->purgeData($deleteReportsOlderThan, $reportPeriodsToKeep, $keepBasicMetrics, true);
+
+        $this->assertNumVisits(0, 'day');
+        $this->assertNumVisits(0, 'week');
+        $this->assertNumVisits(0, 'month');
+        $this->assertNumVisits(0, 'year');
+        $this->assertHasNoDownload('day');
+        $this->assertHasNoDownload('week');
+        $this->assertHasNoDownload('month');
+        $this->assertHasNoDownload('year');
+    }
+
     private function assertNumVisits($expectedNumVisits, $period)
     {
         $url = 'method=VisitsSummary.getVisits'
              . '&idSite=' . self::$fixture->idSite
              . '&date=' . self::$fixture->dateTime
-             . '&period='. $period
+             . '&period=' . $period
              . '&format=original';
         $api   = new Request($url);
         $table = $api->process();
@@ -172,18 +192,24 @@ class PurgeDataTest extends SystemTestCase
         return 'method=Actions.getDownloads'
              . '&idSite=' . self::$fixture->idSite
              . '&date=' . self::$fixture->dateTime
-             . '&period='. $period
+             . '&period=' . $period
              . '&format=original';
     }
 
-    private function purgeData($deleteReportsOlderThan, $reportPeriodsToKeep, $keepBasicMetrics)
+    private function purgeData($deleteReportsOlderThan, $reportPeriodsToKeep, $keepBasicMetrics, $keepSegmentReports = false)
     {
         $metricsToKeep           = PrivacyManager::getAllMetricsToKeep();
         $maxRowsToDeletePerQuery = 100000;
-        $keepSegmentReports      = false;
 
-        $purger = new ReportsPurger($deleteReportsOlderThan, $keepBasicMetrics, $reportPeriodsToKeep,
-                                    $keepSegmentReports, $metricsToKeep, $maxRowsToDeletePerQuery);
+        $purger = new ReportsPurger(
+            $deleteReportsOlderThan,
+            $keepBasicMetrics,
+            $reportPeriodsToKeep,
+            $keepSegmentReports,
+            $metricsToKeep,
+            $maxRowsToDeletePerQuery
+        );
+        $purger->getPurgeEstimate();
         $purger->purgeData();
     }
 }

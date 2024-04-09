@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
@@ -25,7 +25,9 @@ class VisitorDetails extends VisitorDetailsAbstract
         $visitor['visitEcommerceStatus']        = $this->getVisitEcommerceStatus();
         $visitor['visitEcommerceStatusIcon']    = $this->getVisitEcommerceStatusIcon();
         $visitor['daysSinceFirstVisit']         = $this->getDaysSinceFirstVisit();
+        $visitor['secondsSinceFirstVisit']      = $this->getSecondsSinceFirstVisit();
         $visitor['daysSinceLastEcommerceOrder'] = $this->getDaysSinceLastEcommerceOrder();
+        $visitor['secondsSinceLastEcommerceOrder'] = $this->getSecondsSinceLastEcommerceOrder();
         $visitor['visitDuration']               = $this->getVisitLength();
         $visitor['visitDurationPretty']         = $this->getVisitLengthPretty();
     }
@@ -62,12 +64,22 @@ class VisitorDetails extends VisitorDetailsAbstract
 
     protected function getDaysSinceFirstVisit()
     {
-        return $this->details['visitor_days_since_first'];
+        return floor($this->details['visitor_seconds_since_first'] / 86400);
+    }
+
+    protected function getSecondsSinceFirstVisit()
+    {
+        return $this->details['visitor_seconds_since_first'];
     }
 
     protected function getDaysSinceLastEcommerceOrder()
     {
-        return $this->details['visitor_days_since_order'];
+        return floor($this->details['visitor_seconds_since_order'] / 86400);
+    }
+
+    protected function getSecondsSinceLastEcommerceOrder()
+    {
+        return $this->details['visitor_seconds_since_order'];
     }
 
     protected function getVisitorReturning()
@@ -83,7 +95,8 @@ class VisitorDetails extends VisitorDetailsAbstract
     protected function getVisitorReturningIcon()
     {
         $type = $this->getVisitorReturning();
-        if ($type == 'returning'
+        if (
+            $type == 'returning'
             || $type == 'returningCustomer'
         ) {
             return "plugins/Live/images/returningVisitor.png";
@@ -109,7 +122,8 @@ class VisitorDetails extends VisitorDetailsAbstract
 
     protected function getUserId()
     {
-        if (isset($this->details['user_id'])
+        if (
+            isset($this->details['user_id'])
             && strlen($this->details['user_id']) > 0
         ) {
             return $this->details['user_id'];

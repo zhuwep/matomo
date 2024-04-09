@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
@@ -28,11 +28,12 @@ class ManySitesImportedLogsWithXssAttempts extends ManySitesImportedLogs
         $this->now = Date::factory('now');
     }
 
-    public function setUp()
+    public function setUp(): void
     {
+        $this->addCustomDimensions();
+
         parent::setUp();
 
-        $this->addCustomDimensions();
         $this->trackVisitWithActionsXss();
 
         $this->trackVisitsForRealtimeMap(Date::factory('2012-08-11 11:22:33'), $createSeperateVisitors = false);
@@ -71,22 +72,48 @@ class ManySitesImportedLogsWithXssAttempts extends ManySitesImportedLogs
 
         if (!self::goalExists($idSite = 1, $idGoal = 1)) {
             APIGoals::getInstance()->addGoal(
-                $this->idSite, $xssTesting->forTwig("goal name"), 'url', 'http', 'contains', false, 5, false, $xssTesting->forTwig("goal description"));
+                $this->idSite,
+                $xssTesting->forTwig("goal name"),
+                'url',
+                'http',
+                'contains',
+                false,
+                5,
+                false,
+                $xssTesting->forTwig("goal description")
+            );
         }
 
         if (!self::siteCreated($idSite = 2)) {
-            self::createWebsite($this->dateTime, $ecommerce = 0, $siteName = $xssTesting->forAngular('Piwik test two'),
-                $siteUrl = 'http://example-site-two.com');
+            self::createWebsite(
+                $this->dateTime,
+                $ecommerce = 0,
+                $siteName = $xssTesting->forAngular('Piwik test two'),
+                $siteUrl = 'http://example-site-two.com'
+            );
         }
 
         if (!self::goalExists($idSite = 2, $idGoal = 2)) {
             APIGoals::getInstance()->addGoal(
-                $this->idSite, $xssTesting->forAngular("second goal"), 'url', 'http', 'contains', false, 5, false, $xssTesting->forAngular("goal description"));
+                $this->idSite,
+                $xssTesting->forAngular("second goal"),
+                'url',
+                'http',
+                'contains',
+                false,
+                5,
+                false,
+                $xssTesting->forAngular("goal description")
+            );
         }
 
         if (!self::siteCreated($idSite = 3)) {
-            self::createWebsite($this->dateTime, $ecommerce = 0, $siteName = 'Piwik test three',
-                $siteUrl = 'http://example-site-three.com');
+            self::createWebsite(
+                $this->dateTime,
+                $ecommerce = 0,
+                $siteName = 'Piwik test three',
+                $siteUrl = 'http://example-site-three.com'
+            );
         }
     }
 
@@ -95,7 +122,11 @@ class ManySitesImportedLogsWithXssAttempts extends ManySitesImportedLogs
         $xssTesting = new XssTesting();
         APIAnnotations::getInstance()->add($this->idSite, '2012-08-09', "Note 1", $starred = 1);
         APIAnnotations::getInstance()->add(
-            $this->idSite, '2012-08-08', $xssTesting->forTwig("annotation"), $starred = 0);
+            $this->idSite,
+            '2012-08-08',
+            $xssTesting->forTwig("annotation"),
+            $starred = 0
+        );
         APIAnnotations::getInstance()->add($this->idSite, '2012-08-10', $xssTesting->forAngular("Annotation note 3"), $starred = 1);
     }
 
@@ -170,10 +201,10 @@ class ManySitesImportedLogsWithXssAttempts extends ManySitesImportedLogs
 
             $dateTime = $baseDay->addDay($index);
 
-            $t = self::getTracker($this->idSite, $dateTime, $defaultInit= true);
+            $t = self::getTracker($this->idSite, $dateTime, $defaultInit = true);
             $t->setUrl('http://example.org/' . urlencode($urlXss));
             $t->setUrlReferrer($referrerUrlXss);
-            $t->setCustomTrackingParameter('dimension1', $xssTesting->$type('customdimension'));
+            $t->setCustomDimension('1', $xssTesting->$type('customdimension'));
             $t->setCustomVariable(1, $xssTesting->$type('customvarname'), $xssTesting->$type('customvarval'));
             $t->setUserId($xssTesting->$type('userid'));
             $t->setBrowserLanguage($xssTesting->$type('lang'));

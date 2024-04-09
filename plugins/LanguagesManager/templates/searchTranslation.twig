@@ -4,8 +4,6 @@
 
 {% block content %}
 
-    <div piwik-content-block content-title="{{ title|e('html_attr') }}" feature="true">
-        <div piwik-translation-search></div>
-    </div>
+    <div vue-entry="LanguagesManager.TranslationSearchPage"></div>
 
 {% endblock %}

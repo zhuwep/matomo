@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -64,7 +64,8 @@ class DimensionMetadataProvider
 
         $dimensionIdActionColumns = $this->getVisitActionTableActionReferences();
         $result['log_link_visit_action'] = array_unique(
-            array_merge($result['log_link_visit_action'], $dimensionIdActionColumns));
+            array_merge($result['log_link_visit_action'], $dimensionIdActionColumns)
+        );
 
         foreach ($this->actionReferenceColumnsOverride as $table => $columns) {
             if (empty($result[$table])) {

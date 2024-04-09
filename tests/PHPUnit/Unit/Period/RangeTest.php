@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +10,6 @@ namespace Piwik\Tests\Unit\Period;
 
 use Exception;
 use Piwik\Date;
-use Piwik\Period;
 use Piwik\Period\Month;
 use Piwik\Period\Range;
 use Piwik\Period\Week;
@@ -21,6 +20,41 @@ use Piwik\Period\Year;
  */
 class RangeTest extends BasePeriodTest
 {
+    public function setUp(): void
+    {
+        parent::setUp();
+        Date::$now = null;
+    }
+
+    /**
+     * @dataProvider getDateXPeriodsAgoProvider
+     */
+    public function testGetDateXPeriodsAgo($expected, $subXPeriods, $date, $period)
+    {
+        $result = Range::getDateXPeriodsAgo($subXPeriods, $date, $period);
+        $day = [$expected,$expected];
+        if ($period === 'range') {
+            $day = [$expected, false];
+        }
+        $this->assertEquals($day, $result);
+    }
+
+    public function getDateXPeriodsAgoProvider()
+    {
+        return [
+            ['2019-05-14', '1', '2019-05-15', 'day'],
+            ['2018-05-15', '1', '2019-05-15', 'year'],
+            ['2019-05-08', '1', '2019-05-15', 'week'],
+            ['2019-04-15', '1', '2019-05-15', 'month'],
+            ['2019-02-15', '3', '2019-05-15', 'month'],
+            ['2018-05-15', '365', '2019-05-15', 'day'],
+            ['2018-05-15', '1', '2019-05-15', 'year'],
+            ['2017-05-15', '2', '2019-05-15', 'year'],
+            ['2019-06-04,2019-06-09', '1', '2019-06-10,2019-06-15', 'range'],
+            ['2019-06-10,2019-06-12', '1', '2019-06-13,2019-06-15', 'range'],
+        ];
+    }
+
     // test range 1
     public function testRangeToday()
     {
@@ -155,6 +189,42 @@ class RangeTest extends BasePeriodTest
     }
 
     // test range date1,date2
+    public function testRangeComma4_EndDateIncludesTodayWithTimezone()
+    {
+        Date::$now = strtotime('2020-08-01 03:00:00');
+        $range = new Range('day', '2008-01-01,today', 'Europe/Berlin');
+        $subPeriods = $range->getSubperiods();
+        $this->assertEquals('2008-01-01', $subPeriods[0]->toString());
+        $this->assertEquals('2008-01-02', $subPeriods[1]->toString());
+        $this->assertEquals('2008-01-03', $subPeriods[2]->toString());
+        $this->assertEquals('2020-08-01', end($subPeriods)->toString());
+    }
+
+    // test range date1,date2
+    public function testRangeComma5_EndDateIncludesTodayWithTimezoneAfterCurrentUTCDate()
+    {
+        Date::$now = strtotime('2020-08-01 03:00:00');
+        $range = new Range('day', '2008-01-01,today', 'Pacific/Auckland');
+        $subPeriods = $range->getSubperiods();
+        $this->assertEquals('2008-01-01', $subPeriods[0]->toString());
+        $this->assertEquals('2008-01-02', $subPeriods[1]->toString());
+        $this->assertEquals('2008-01-03', $subPeriods[2]->toString());
+        $this->assertEquals('2020-08-01', end($subPeriods)->toString());
+    }
+
+    // test range date1,date2
+    public function testRangeComma6_EndDateIncludesTodayWithTimezoneBeforeCurrentUTCDate()
+    {
+        Date::$now = strtotime('2020-08-01 03:00:00');
+        $range = new Range('day', '2008-01-01,today', 'America/New_York');
+        $subPeriods = $range->getSubperiods();
+        $this->assertEquals('2008-01-01', $subPeriods[0]->toString());
+        $this->assertEquals('2008-01-02', $subPeriods[1]->toString());
+        $this->assertEquals('2008-01-03', $subPeriods[2]->toString());
+        $this->assertEquals('2020-07-31', end($subPeriods)->toString());
+    }
+
+    // test range date1,date2
     public function testRangeWeekcomma1()
     {
         $range = new Range('week', '2007-12-22,2008-01-03');
@@ -195,7 +265,7 @@ class RangeTest extends BasePeriodTest
         $this->assertEquals(count($correct), $range2->getNumberOfSubperiods());
         $this->assertEquals($correct, $range->toString());
         $this->assertEquals($correct, $range2->toString());
-        $this->assertEquals('2007-12-17,2008-01-06' , $range2->getRangeString());
+        $this->assertEquals('2007-12-17,2008-01-06', $range2->getRangeString());
     }
 
     // test range date1,date2
@@ -203,37 +273,36 @@ class RangeTest extends BasePeriodTest
     {
         $range = new Range('year', '2006-12-22,2007-01-03');
 
-        $correct = array(
-            implode(',', array(
-                0  => '2006-01-01',
-                1  => '2006-02-01',
-                2  => '2006-03-01',
-                3  => '2006-04-01',
-                4  => '2006-05-01',
-                5  => '2006-06-01',
-                6  => '2006-07-01',
-                7  => '2006-08-01',
-                8  => '2006-09-01',
-                9  => '2006-10-01',
+        $correct = [
+            implode(',', [
+                0 => '2006-01-01',
+                1 => '2006-02-01',
+                2 => '2006-03-01',
+                3 => '2006-04-01',
+                4 => '2006-05-01',
+                5 => '2006-06-01',
+                6 => '2006-07-01',
+                7 => '2006-08-01',
+                8 => '2006-09-01',
+                9 => '2006-10-01',
                 10 => '2006-11-01',
                 11 => '2006-12-01',
-            )),
-            1 =>
-                implode(',', array(
-                0  => '2007-01-01',
-                1  => '2007-02-01',
-                2  => '2007-03-01',
-                3  => '2007-04-01',
-                4  => '2007-05-01',
-                5  => '2007-06-01',
-                6  => '2007-07-01',
-                7  => '2007-08-01',
-                8  => '2007-09-01',
-                9  => '2007-10-01',
+            ]),
+            1 => implode(',', [
+                0 => '2007-01-01',
+                1 => '2007-02-01',
+                2 => '2007-03-01',
+                3 => '2007-04-01',
+                4 => '2007-05-01',
+                5 => '2007-06-01',
+                6 => '2007-07-01',
+                7 => '2007-08-01',
+                8 => '2007-09-01',
+                9 => '2007-10-01',
                 10 => '2007-11-01',
                 11 => '2007-12-01',
-            )),
-        );
+            ]),
+        ];
         $this->assertEquals(count($correct), $range->getNumberOfSubperiods());
         $this->assertEquals($correct, $range->toString());
         $this->assertEquals('2006-01-01,2007-12-31', $range->getRangeString());
@@ -1136,16 +1205,13 @@ class RangeTest extends BasePeriodTest
 
     public function testCustomRangeBeforeIsAfterYearRight()
     {
-        try {
-            $range = new Range('range', '2007-02-09,2007-02-01');
-            $this->assertEquals(0, $range->getNumberOfSubperiods());
-            $this->assertEquals(array(), $range->toString());
+        $this->expectException(Exception::class);
 
-            $range->getPrettyString();
-        } catch (Exception $e) {
-            return;
-        }
-        $this->fail('Expected exception not raised');
+        $range = new Range('range', '2007-02-09,2007-02-01');
+        $this->assertEquals(0, $range->getNumberOfSubperiods());
+        $this->assertEquals(array(), $range->toString());
+
+        $range->getPrettyString();
     }
 
     public function testCustomRangeLastN()
@@ -1189,26 +1255,23 @@ class RangeTest extends BasePeriodTest
 
     public function testInvalidRangeThrows()
     {
-        try {
-            $range = new Range('range', '0001-01-01,today');
-            $range->getLocalizedLongString();
-        } catch (Exception $e) {
-            return;
-        }
-        $this->fail('Expected exception not raised');
+        $this->expectException(Exception::class);
+
+        $range = new Range('range', '0001-01-01,today');
+        $range->getLocalizedLongString();
     }
 
     public function testGetLocalizedShortString()
     {
         $month = new Range('range', '2000-12-09,2001-02-01');
-        $shouldBe = 'Dec 9, 2000 – Feb 1, 2001';
+        $shouldBe = 'Dec 9, 2000 – Feb 1, 2001';
         $this->assertEquals($shouldBe, $month->getLocalizedShortString());
     }
 
     public function testGetLocalizedLongString()
     {
         $month = new Range('range', '2023-05-09,2023-05-21');
-        $shouldBe = 'May 8 – 21, 2023';
+        $shouldBe = 'May 9 – 21, 2023';
         $this->assertEquals($shouldBe, $month->getLocalizedLongString());
     }
 

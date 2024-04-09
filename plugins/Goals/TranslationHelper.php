@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,6 @@ use Piwik\Piwik;
 
 class TranslationHelper
 {
-
     public function translateGoalMetricCategory($category)
     {
         // Return either "Goals by %s" or "Goals %s", depending on the category
@@ -90,19 +89,22 @@ class TranslationHelper
     {
         switch ($patternType) {
             case 'regex':
-                return sprintf('%s %s',
+                return sprintf(
+                    '%s %s',
                     Piwik::translate('Goals_Pattern'),
                     Piwik::translate('Goals_MatchesExpression', array($pattern))
                 );
 
             case 'contains':
-                return sprintf('%s %s',
+                return sprintf(
+                    '%s %s',
                     Piwik::translate('Goals_Pattern'),
                     Piwik::translate('Goals_Contains', array($pattern))
                 );
 
             case 'exact':
-                return sprintf('%s %s',
+                return sprintf(
+                    '%s %s',
                     Piwik::translate('Goals_Pattern'),
                     Piwik::translate('Goals_IsExactly', array($pattern))
                 );

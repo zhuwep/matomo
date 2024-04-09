@@ -1,13 +1,12 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\CoreUpdater\tests\Integration\Commands;
 
-use Piwik\Config;
 use Piwik\DataAccess\ArchiveTableCreator;
 use Piwik\Date;
 use Piwik\Db;
@@ -16,7 +15,6 @@ use Piwik\Option;
 use Piwik\Tests\Framework\TestCase\ConsoleCommandTestCase;
 use Piwik\Updates\Updates_2_10_0_b5;
 use Piwik\Version;
-use Symfony\Component\Console\Helper\QuestionHelper;
 
 require_once PIWIK_INCLUDE_PATH . '/core/Updates/2.10.0-b5.php';
 
@@ -30,7 +28,7 @@ class UpdateTest extends ConsoleCommandTestCase
 
     private $oldScriptName = null;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -44,7 +42,7 @@ class UpdateTest extends ConsoleCommandTestCase
         Updates_2_10_0_b5::$archiveBlobTables = null;
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $_SERVER['SCRIPT_NAME'] = $this->oldScriptName;
 
@@ -68,9 +66,7 @@ class UpdateTest extends ConsoleCommandTestCase
 
     public function test_UpdateCommand_DoesntExecuteSql_WhenUserSaysNo()
     {
-        /** @var QuestionHelper $dialog */
-        $dialog = $this->application->getHelperSet()->get('question');
-        $dialog->setInputStream($this->getInputStream("N\n"));
+        $this->applicationTester->setInputs(['N']);
 
         $result = $this->applicationTester->run(array(
             'command' => 'core:update'
@@ -96,7 +92,7 @@ class UpdateTest extends ConsoleCommandTestCase
         $this->assertEquals(0, $result, $this->getCommandDisplayOutputErrorMessage());
 
         // check no update occurred
-        $this->assertContains("Everything is already up to date.", $this->applicationTester->getDisplay());
+        self::assertStringContainsString("Everything is already up to date.", $this->applicationTester->getDisplay());
         $this->assertEquals(Version::VERSION, Option::get('version_core'));
     }
 
@@ -112,12 +108,12 @@ class UpdateTest extends ConsoleCommandTestCase
         ));
 
         $this->assertEquals(1, $result, $this->getCommandDisplayOutputErrorMessage());
-        $this->assertContains("Matomo could not be updated! See above for more information.", $this->applicationTester->getDisplay());
+        self::assertStringContainsString("Matomo could not be updated! See above for more information.", $this->applicationTester->getDisplay());
     }
 
     private function assertDryRunExecuted($output)
     {
-        $this->assertContains("Note: this is a Dry Run", $output);
-        $this->assertContains(self::EXPECTED_SQL_FROM_2_10, $output);
+        self::assertStringContainsString("Note: this is a Dry Run", $output);
+        self::assertStringContainsString(self::EXPECTED_SQL_FROM_2_10, $output);
     }
 }

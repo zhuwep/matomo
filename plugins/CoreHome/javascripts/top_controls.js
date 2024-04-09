@@ -1,7 +1,7 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 function initTopControls() {
@@ -43,15 +43,21 @@ function initTopControls() {
         });
 
         if (allRendered) {
+            var alreadyRendered = $('.top_controls').css('visibility') === 'visible';
+
             // we make top controls visible only after all selectors are rendered
             $('.top_controls').css('visibility', 'visible');
             $('.top_controls').css('opacity', '1');
+
+            if (!alreadyRendered) {
+              window.CoreHome.Matomo.postEvent('Matomo.topControlsRendered');
+            }
         }
 
     }
 }
 
-//Keyboard controls for Top Controls Calendar through tab and enter. 
+//Keyboard controls for Top Controls Calendar through tab and enter.
 $( document ).ready(function() {
     $('.periodSelector').keydown(function(e){
         toggleCalendar(e);
@@ -67,7 +73,7 @@ $( document ).ready(function() {
     })
 });
 
-//Keyboard controls for Top Controls Calendar through tab and enter. 
+//Keyboard controls for Top Controls Calendar through tab and enter.
 $( document ).ready(function() {
     $('.periodSelector').keydown(function(e){
         toggleCalendar(e);
@@ -85,7 +91,7 @@ $( document ).ready(function() {
 
 function toggleCalendar(e){
     var calendarOpen = $('.periodSelector').hasClass('expanded');
-    
+
     if(e.which==13){
         if(calendarOpen){
             $('.periodSelector').removeClass('expanded');
@@ -108,3 +114,22 @@ function blockPropegation(){
         e.stopPropagation();
     })
 }
+
+//refresh page short cut 'r'
+$(function () {
+  piwikHelper.registerShortcut('r', _pk_translate('CoreHome_ShortcutRefresh'), function (event) {
+    if (event.altKey) {
+      return;
+    }
+    if (event.preventDefault) {
+      event.preventDefault();
+    } else {
+      event.returnValue = false; // IE
+    }
+
+    var Matomo = window.CoreHome.Matomo;
+    var hashParsed = window.CoreHome.MatomoUrl.hashParsed.value;
+
+    Matomo.postEvent('loadPage', hashParsed.category, hashParsed.subcategory);
+  });
+});

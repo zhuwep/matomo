@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,11 +9,14 @@
 namespace Piwik\Plugins\CoreHome\Columns;
 
 use Piwik\Cache;
+use Piwik\Columns\DimensionSegmentFactory;
 use Piwik\DataTable;
 use Piwik\DataTable\Map;
 use Piwik\Metrics;
+use Piwik\Plugin;
 use Piwik\Plugin\Dimension\VisitDimension;
-use Piwik\Plugins\VisitsSummary\API as VisitsSummaryApi;
+use Piwik\Plugins\Live\Live;
+use Piwik\Segment\SegmentsList;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\Visitor;
 use Piwik\Tracker\Action;
@@ -23,6 +26,8 @@ use Piwik\Tracker\Action;
  */
 class UserId extends VisitDimension
 {
+    const MAXLENGTH = 200;
+
     /**
      * @var string
      */
@@ -34,10 +39,22 @@ class UserId extends VisitDimension
     protected $namePlural = 'General_UserIds';
     protected $acceptValues = 'any non empty unique string identifying the user (such as an email address or a username).';
 
-    /**
-     * @var string
-     */
-    protected $columnType = 'VARCHAR(200) NULL';
+    public function __construct()
+    {
+        $this->columnType = 'VARCHAR(' . self::MAXLENGTH . ') NULL';
+
+        if (Plugin\Manager::getInstance()->isPluginActivated('UserId')) {
+            $this->suggestedValuesApi = 'UserId.getUsers';
+        }
+    }
+
+    public function configureSegments(SegmentsList $segmentsList, DimensionSegmentFactory $dimensionSegmentFactory)
+    {
+        // Configure userId segment only if visitor profile is available
+        if (Live::isVisitorProfileEnabled()) {
+            parent::configureSegments($segmentsList, $dimensionSegmentFactory);
+        }
+    }
 
     /**
      * @param Request $request
@@ -47,7 +64,11 @@ class UserId extends VisitDimension
      */
     public function onNewVisit(Request $request, Visitor $visitor, $action)
     {
-        return $request->getForcedUserId();
+        $value = $request->getForcedUserId();
+        if (!empty($value)) {
+            return mb_substr($value, 0, self::MAXLENGTH);
+        }
+        return $value;
     }
 
     /**
@@ -59,7 +80,7 @@ class UserId extends VisitDimension
      */
     public function onExistingVisit(Request $request, Visitor $visitor, $action)
     {
-        return $request->getForcedUserId();
+        return $this->onNewVisit($request, $visitor, $action);
     }
 
     public function isUsedInAtLeastOneSite($idSites, $period, $date)
@@ -135,5 +156,4 @@ class UserId extends VisitDimension
 
         return !empty($numUsers);
     }
-
 }

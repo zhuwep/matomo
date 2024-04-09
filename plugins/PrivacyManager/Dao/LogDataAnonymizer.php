@@ -11,13 +11,12 @@ namespace Piwik\Plugins\PrivacyManager\Dao;
 use Piwik\Common;
 use Piwik\Db;
 use Piwik\DbHelper;
-use Piwik\Network\IP;
+use Matomo\Network\IP;
 use Piwik\Plugins\PrivacyManager\Config;
 use Piwik\Plugins\PrivacyManager\IPAnonymizer;
 use Piwik\Plugins\PrivacyManager\Tracker\RequestProcessor;
 use Piwik\Plugins\UserCountry\LocationProvider;
 use Piwik\Plugins\UserCountry\VisitorGeolocator;
-use Piwik\SettingsPiwik;
 use Piwik\Tracker\Model;
 use Exception;
 
@@ -270,5 +269,4 @@ class LogDataAnonymizer
         }
         return $idSites;
     }
-
 }

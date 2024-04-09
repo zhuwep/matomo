@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,11 +18,11 @@ use Piwik\Config as PiwikConfig;
 use Piwik\Container\StaticContainer;
 use Piwik\Development;
 use Piwik\EventDispatcher;
-use Piwik\Exception\Exception;
 use Piwik\Exception\PluginDeactivatedException;
 use Piwik\Filesystem;
 use Piwik\Log;
 use Piwik\Notification;
+use Piwik\Option;
 use Piwik\Piwik;
 use Piwik\Plugin;
 use Piwik\Plugin\Dimension\ActionDimension;
@@ -40,6 +40,9 @@ use Piwik\Updater;
  */
 class Manager
 {
+    const LAST_PLUGIN_ACTIVATION_TIME_OPTION_PREFIX = 'LastPluginActivation.';
+    const LAST_PLUGIN_DEACTIVATION_TIME_OPTION_PREFIX = 'LastPluginDeactivation.';
+
     /**
      * @return self
      */
@@ -70,6 +73,8 @@ class Manager
 
     // These are always activated and cannot be deactivated
     protected $pluginToAlwaysActivate = array(
+        'BulkTracking',
+        'CoreVue',
         'CoreHome',
         'CoreUpdater',
         'CoreAdminHome',
@@ -108,7 +113,7 @@ class Manager
     {
         $pluginsToLoad = $this->getActivatedPluginsFromConfig();
         if (!SettingsPiwik::isInternetEnabled()) {
-            $pluginsToLoad = array_filter($pluginsToLoad, function($name) {
+            $pluginsToLoad = array_filter($pluginsToLoad, function ($name) {
                 $plugin = Manager::makePluginClass($name);
                 return !$plugin->requiresInternetConnection();
             });
@@ -375,8 +380,9 @@ class Manager
         if (!empty($envCopyDir)) {
             $GLOBALS['MATOMO_PLUGIN_COPY_DIR'] = $envCopyDir;
         }
-        
-        if (!empty($GLOBALS['MATOMO_PLUGIN_COPY_DIR'])
+
+        if (
+            !empty($GLOBALS['MATOMO_PLUGIN_COPY_DIR'])
             && !in_array($GLOBALS['MATOMO_PLUGIN_COPY_DIR'], self::getPluginsDirectories())
         ) {
             throw new \Exception('"MATOMO_PLUGIN_COPY_DIR" dir must be one of "MATOMO_PLUGIN_DIRS" directories');
@@ -421,6 +427,17 @@ class Manager
     public function getWebRootDirectoriesForCustomPluginDirs()
     {
         return array_intersect_key(self::$pluginsToWebRootDirCache, array_flip($this->pluginsToLoad));
+    }
+
+    public function getPluginUmdsToLoadOnDemand()
+    {
+        $pluginsToLoadOnDemand = [];
+        foreach ($this->getPluginsLoadedAndActivated() as $plugin) {
+            if (method_exists($plugin, 'shouldLoadUmdOnDemand') && $plugin->shouldLoadUmdOnDemand()) {
+                $pluginsToLoadOnDemand[] = $plugin->getPluginName();
+            }
+        }
+        return $pluginsToLoadOnDemand;
     }
 
     /**
@@ -483,7 +500,7 @@ class Manager
             $path = $dir . $pluginName;
             if (is_dir($path)) {
                 self::$pluginsToPathCache[$pluginName] = self::getPluginRealPath($path);
-                self::$pluginsToWebRootDirCache[$pluginName] = $relative;
+                self::$pluginsToWebRootDirCache[$pluginName] = rtrim($relative, '/');
                 return $path;
             }
         }
@@ -493,9 +510,37 @@ class Manager
     }
 
     /**
+     * Returns the plugin directory path relative to Matomo's root directory.
+     *
+     * @param string $pluginName
+     * @return string
+     */
+    public static function getRelativePluginDirectory(string $pluginName): string
+    {
+        $result = self::getPluginDirectory($pluginName);
+
+        $matomoPath = rtrim(PIWIK_INCLUDE_PATH, '/') . '/';
+        $webroots = array_merge(
+            Manager::getAlternativeWebRootDirectories(),
+            [$matomoPath => '/']
+        );
+
+        foreach ($webroots as $webrootAbsolute => $webrootRelative) {
+            if (strpos($result, $webrootAbsolute) === 0) {
+                $result = str_replace($webrootAbsolute, $webrootRelative, $result);
+                break;
+            }
+        }
+
+        $result = ltrim($result, '/');
+
+        return $result;
+    }
+
+    /**
      * Returns the path to the directory where core plugins are located. Please note since Matomo 3.9
      * plugins may also be located in other directories and therefore this method has been deprecated.
-     * @deprecated since Matomo 3.9.0 use {@link (getPluginsDirectories())} or {@link getPluginDirectory($pluginName)} instead
+     * @internal since Matomo 3.9.0 use {@link (getPluginsDirectories())} or {@link getPluginDirectory($pluginName)} instead
      * @return string
      */
     public static function getPluginsDirectory()
@@ -512,10 +557,18 @@ class Manager
      */
     public function deactivatePlugin($pluginName)
     {
+        $plugins = $this->pluginList->getActivatedPlugins();
+        if (!in_array($pluginName, $plugins)) {
+            // plugin is already deactivated
+            return;
+        }
+
         $this->clearCache($pluginName);
 
         // execute deactivate() to let the plugin do cleanups
         $this->executePluginDeactivate($pluginName);
+
+        $this->savePluginTime(self::LAST_PLUGIN_DEACTIVATION_TIME_OPTION_PREFIX, $pluginName);
 
         $this->unloadPluginFromMemory($pluginName);
 
@@ -647,7 +700,7 @@ class Manager
     public function installLoadedPlugins()
     {
         Log::debug("Loaded plugins: " . implode(", ", array_keys($this->getLoadedPlugins())));
-        
+
         foreach ($this->getLoadedPlugins() as $plugin) {
             $this->installPluginIfNecessary($plugin);
         }
@@ -679,6 +732,8 @@ class Manager
         }
         $this->installPluginIfNecessary($plugin);
         $plugin->activate();
+
+        $this->savePluginTime(self::LAST_PLUGIN_ACTIVATION_TIME_OPTION_PREFIX, $pluginName);
 
         EventDispatcher::getInstance()->postPendingEventsTo($plugin);
 
@@ -720,7 +775,8 @@ class Manager
         $theme = false;
         foreach ($plugins as $plugin) {
             /* @var $plugin Plugin */
-            if ($plugin->isTheme()
+            if (
+                $plugin->isTheme()
                 && $this->isPluginActivated($plugin->getPluginName())
             ) {
                 if ($plugin->getPluginName() != self::DEFAULT_THEME) {
@@ -755,7 +811,8 @@ class Manager
 
         $pluginNames = $this->getLoadedPluginsName();
         foreach ($pluginNames as $pluginName) {
-            if ($this->isPluginActivated($pluginName)
+            if (
+                $this->isPluginActivated($pluginName)
                 && !$this->isPluginAlwaysActivated($pluginName)) {
                 $counter++;
             }
@@ -870,7 +927,7 @@ class Manager
         }
 
         $path = self::getPluginDirectory($pluginName);
-      
+
         if (!$this->isManifestFileFound($path)) {
             return true;
         }
@@ -1082,7 +1139,8 @@ class Manager
             return $pluginsToPostPendingEventsTo;
         }
 
-        if ($newPlugin->isPremiumFeature()
+        if (
+            $newPlugin->isPremiumFeature()
             && SettingsPiwik::isInternetEnabled()
             && !Development::isEnabled()
             && $this->isPluginActivated('Marketplace')
@@ -1108,7 +1166,7 @@ class Manager
                 $cache->save($cacheKey, $pluginLicenseInfo, $sixHours);
             } else {
                 // tracker mode, we assume it is not missing until cache is written
-                $pluginLicenseInfo = array('missing' => false); 
+                $pluginLicenseInfo = array('missing' => false);
             }
 
             if (!empty($pluginLicenseInfo['missing']) && (!defined('PIWIK_TEST_MODE') || !PIWIK_TEST_MODE)) {
@@ -1169,6 +1227,7 @@ class Manager
         if (isset($this->loadedPlugins[$pluginName])) {
             return $this->loadedPlugins[$pluginName];
         }
+
         $newPlugin = $this->makePluginClass($pluginName);
 
         $this->addLoadedPlugin($pluginName, $newPlugin);
@@ -1177,7 +1236,7 @@ class Manager
 
     public function isValidPluginName($pluginName)
     {
-        return (bool) preg_match('/^[a-zA-Z]([a-zA-Z0-9_]*)$/D', $pluginName);
+        return (bool) preg_match('/^[a-zA-Z]([a-zA-Z0-9_]){0,59}$/D', $pluginName);
     }
 
     /**
@@ -1208,7 +1267,7 @@ class Manager
         if (!class_exists($namespacedClass, false)) {
             throw new \Exception("The class $pluginClassName couldn't be found in the file '$path'");
         }
-        $newPlugin = new $namespacedClass;
+        $newPlugin = new $namespacedClass();
 
         if (!($newPlugin instanceof Plugin)) {
             throw new \Exception("The plugin $pluginClassName in the file $path must inherit from Plugin.");
@@ -1322,7 +1381,8 @@ class Manager
 
         foreach ($plugins as $pluginName) {
             // if a plugin is listed in the config, but is not loaded, it does not exist in the folder
-            if (!$this->isPluginLoaded($pluginName) && !$this->isPluginBogus($pluginName) &&
+            if (
+                !$this->isPluginLoaded($pluginName) && !$this->isPluginBogus($pluginName) &&
                 !($this->doesPluginRequireInternetConnection($pluginName) && !SettingsPiwik::isInternetEnabled())) {
                 $missingPlugins[] = $pluginName;
             }
@@ -1373,7 +1433,7 @@ class Manager
         if (!$this->isPluginInstalled($plugin->getPluginName())) {
             return false;
         }
-        
+
         if ($plugin->isTrackerPlugin()) {
             return true;
         }
@@ -1388,7 +1448,7 @@ class Manager
             return true;
         }
 
-        $hooks = $plugin->getListHooksRegistered();
+        $hooks = $plugin->registerEvents();
         $hookNames = array_keys($hooks);
         foreach ($hookNames as $name) {
             if (strpos($name, self::TRACKER_EVENT_PREFIX) === 0) {
@@ -1451,6 +1511,7 @@ class Manager
             'PluginMarketplace', //defines a plugin.json but 1.x Piwik plugin
             'DoNotTrack', // Removed in 2.0.3
             'AnonymizeIP', // Removed in 2.0.3
+            'wp-optimize', // a WP plugin that has a plugin.json file but is not a matomo plugin
         );
         return in_array($pluginName, $bogusPlugins);
     }
@@ -1459,7 +1520,8 @@ class Manager
     {
         // Only one theme enabled at a time
         $themeEnabled = $this->getThemeEnabled();
-        if ($themeEnabled
+        if (
+            $themeEnabled
             && $themeEnabled->getPluginName() != self::DEFAULT_THEME) {
             $themeAlreadyEnabled = $themeEnabled->getPluginName();
 
@@ -1559,7 +1621,8 @@ class Manager
         $columnName = $dimension->getColumnName();
 
         foreach ($allDimensions as $dim) {
-            if ($dim->getColumnName() === $columnName &&
+            if (
+                $dim->getColumnName() === $columnName &&
                 $dim->hasColumnType() &&
                 $dim->getModule() !== $module) {
                 return true;
@@ -1584,13 +1647,22 @@ class Manager
     }
 
     /**
-     * @param $pluginName
+     * @param string $pluginName
+     * @param bool $checkPluginExistsInFilesystem if enabled, it won't rely on the information in the config file only
+     *                                            but also check the filesystem if the plugin really is installed.
+     *                                            For performance reasons this is not the case by default.
      * @return bool
      */
-    public function isPluginInstalled($pluginName)
+    public function isPluginInstalled($pluginName, $checkPluginExistsInFilesystem = false)
     {
         $pluginsInstalled = $this->getInstalledPluginsName();
-        return in_array($pluginName, $pluginsInstalled);
+        $isInstalledInConfig = in_array($pluginName, $pluginsInstalled);
+
+        if ($isInstalledInConfig && $checkPluginExistsInFilesystem) {
+            return $this->isPluginInFilesystem($pluginName);
+        }
+
+        return $isInstalledInConfig;
     }
 
     private function removeInstalledVersionFromOptionTable($name)
@@ -1654,5 +1726,44 @@ class Manager
             $translator->addDirectory(self::getPluginDirectory($pluginName) . '/lang');
         }
     }
-}
 
+    public function hasPremiumFeatures()
+    {
+        foreach ($this->getPluginsLoadedAndActivated() as $activatedPlugin) {
+            if ($activatedPlugin->isPremiumFeature()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function savePluginTime($timingName, $pluginName)
+    {
+        $optionName = $timingName . $pluginName;
+
+        try {
+            Option::set($optionName, time());
+        } catch (\Exception $e) {
+            if (SettingsPiwik::isMatomoInstalled()) {
+                throw $e;
+            }
+            // we ignore any error while Matomo is not installed yet. refs #16741
+        }
+    }
+
+    public function getVersion(string $pluginName): ?string
+    {
+        if ($this->isPluginLoaded($pluginName)) {
+            return (string) $this->getLoadedPlugin($pluginName)->getVersion();
+        } elseif (!$this->isPluginInFilesystem($pluginName)) {
+            return null;
+        } else {
+            try {
+                $plugin = new Plugin($pluginName);
+                return (string) $plugin->getVersion();
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+    }
+}

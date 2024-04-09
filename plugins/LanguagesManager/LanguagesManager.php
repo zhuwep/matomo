@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,15 +11,15 @@ namespace Piwik\Plugins\LanguagesManager;
 
 use Exception;
 use Piwik\API\Request;
+use Piwik\AssetManager\UIAssetFetcher\PluginUmdAssetFetcher;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Cookie;
-use Piwik\Db;
 use Piwik\Intl\Locale;
+use Piwik\Nonce;
 use Piwik\Piwik;
 use Piwik\ProxyHttp;
-use Piwik\Translate;
 use Piwik\Translation\Translator;
 use Piwik\View;
 
@@ -28,28 +28,40 @@ use Piwik\View;
  */
 class LanguagesManager extends \Piwik\Plugin
 {
+    const LANGUAGE_SELECTION_NONCE = 'LanguagesManager.selection';
+
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
         return array(
-            'AssetManager.getJavaScriptFiles'            => 'getJsFiles',
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Config.NoConfigurationFile'                 => 'initLanguage',
             'Request.dispatchCoreAndPluginUpdatesScreen' => 'initLanguage',
             'Request.dispatch'                           => 'initLanguage',
             'Platform.initialized'                       => 'initLanguage',
             'UsersManager.deleteUser'                    => 'deleteUserLanguage',
             'Template.topBar'                            => 'addLanguagesManagerToOtherTopBar',
-            'Template.jsGlobalVariables'                 => 'jsGlobalVariables'
+            'Template.jsGlobalVariables'                 => 'jsGlobalVariables',
+            'Db.getTablesInstalled'                      => 'getTablesInstalled'
         );
     }
 
-    public function getJsFiles(&$jsFiles)
+    public function getClientSideTranslationKeys(&$translations)
     {
-        $jsFiles[] = "plugins/LanguagesManager/angularjs/languageselector/languageselector.directive.js";
-        $jsFiles[] = "plugins/LanguagesManager/angularjs/translationsearch/translationsearch.controller.js";
-        $jsFiles[] = "plugins/LanguagesManager/angularjs/translationsearch/translationsearch.directive.js";
+        $translations[] = 'LanguagesManager_TranslationSearch';
+        $translations[] = 'LanguagesManager_AboutPiwikTranslations';
+    }
+
+    /**
+     * Register the new tables, so Matomo knows about them.
+     *
+     * @param array $allTablesInstalled
+     */
+    public function getTablesInstalled(&$allTablesInstalled)
+    {
+        $allTablesInstalled[] = Common::prefixTable('user_language');
     }
 
     /**
@@ -61,8 +73,8 @@ class LanguagesManager extends \Piwik\Plugin
     {
         // piwik object & scripts aren't loaded in 'other' topbars
         $str .= "<script type='text/javascript'>if (!window.piwik) window.piwik={};</script>";
-        $str .= "<script type='text/javascript' src='plugins/CoreHome/angularjs/menudropdown/menudropdown.directive.js'></script>";
-        $str .= "<script type='text/javascript' src='plugins/LanguagesManager/angularjs/languageselector/languageselector.directive.js'></script>";
+        $file = PluginUmdAssetFetcher::getUmdFileToUseForPlugin('LanguagesManager');
+        $str .= "<script type='text/javascript' src='$file' defer></script>";
         $str .= $this->getLanguagesSelector();
     }
 
@@ -88,6 +100,7 @@ class LanguagesManager extends \Piwik\Plugin
         $view->languages = API::getInstance()->getAvailableLanguageNames();
         $view->currentLanguageCode = self::getLanguageCodeForCurrentUser();
         $view->currentLanguageName = self::getLanguageNameForCurrentUser();
+        $view->nonce = Nonce::getNonce(self::LANGUAGE_SELECTION_NONCE);
         return $view->render();
     }
 
@@ -153,10 +166,10 @@ class LanguagesManager extends \Piwik\Plugin
     {
         $languageCode = self::getLanguageFromPreferences();
         if (!API::getInstance()->isLanguageAvailable($languageCode)) {
-            $languageCode = Common::extractLanguageCodeFromBrowserLanguage(Common::getBrowserLanguage(), API::getInstance()->getAvailableLanguages());
+            $languageCode = Common::extractLanguageAndRegionCodeFromBrowserLanguage(Common::getBrowserLanguage(), API::getInstance()->getAvailableLanguages());
         }
         if (!API::getInstance()->isLanguageAvailable($languageCode)) {
-            $languageCode = Translate::getLanguageDefault();
+            $languageCode = StaticContainer::get('Piwik\Translation\Translator')->getDefaultLanguage();
         }
         return $languageCode;
     }
@@ -224,7 +237,8 @@ class LanguagesManager extends \Piwik\Plugin
         $cookie = new Cookie($cookieName, 0);
         $cookie->set('language', $languageCode);
         $cookie->setSecure(ProxyHttp::isHttps());
-        $cookie->save();
+        $cookie->setHttpOnly(true);
+        $cookie->save('Lax');
         return true;
     }
 }

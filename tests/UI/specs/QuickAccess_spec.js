@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * ActionsDataTable screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -18,7 +18,9 @@ describe("QuickAccess", function () {
 
         await page.focus(".quick-access input");
         await page.keyboard.type(searchTermToAdd);
+        await page.waitForTimeout(100);
         await page.waitForNetworkIdle();
+        await page.waitForTimeout(100);
 
         await page.evaluate(function () {
             $('.quick-access input').blur();
@@ -32,19 +34,19 @@ describe("QuickAccess", function () {
 
     it("should search for something and update view", async function () {
         await enterSearchTerm('s');
-        await page.waitFor(100);
+        await page.waitForTimeout(100);
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_1');
     });
 
     it("should search again when typing another letter", async function () {
         await enterSearchTerm('as');
-        await page.waitFor(100);
+        await page.waitForTimeout(100);
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_2');
     });
 
     it("should show message if no results", async function () {
         await enterSearchTerm('alaskdjfs');
-        await page.waitFor(100);
+        await page.waitForTimeout(100);
         expect(await page.screenshotSelector(selectorToCapture)).to.matchImage('search_no_result');
     });
 

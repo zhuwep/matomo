@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -23,7 +23,7 @@ class VisitFirstActionMinute extends VisitDimension
     protected $sqlSegment = 'MINUTE(log_visit.visit_first_action_time)';
     protected $segmentName = 'visitStartServerMinute';
     protected $acceptValues = '0, 1, 2, 3, ..., 56, 57, 58, 59';
-    protected $nameSingular = 'VisitTime_ColumnVisitStartServerMinute';
+    protected $nameSingular = 'VisitTime_ColumnVisitStartUTCMinute';
 
     public function __construct()
     {
@@ -41,5 +41,4 @@ class VisitFirstActionMinute extends VisitDimension
     {
         return $value;
     }
-
 }

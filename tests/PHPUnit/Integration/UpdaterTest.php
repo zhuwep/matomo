@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -28,8 +28,8 @@ class UpdaterTest extends IntegrationTestCase
 
         $result = $updater->updateComponents($componentsWithUpdateFile);
 
-        $this->assertTrue( count ($result['errors']) > 0, 'when an update fails because config file is not writable, we expect the updater to report a critical error');
-        $this->assertEquals( 'make sure this exception is thrown', $result['errors'][0]);
+        $this->assertTrue(count($result['errors']) > 0, 'when an update fails because config file is not writable, we expect the updater to report a critical error');
+        $this->assertEquals('make sure this exception is thrown', $result['errors'][0]);
     }
 
 
@@ -80,6 +80,8 @@ class UpdaterTest extends IntegrationTestCase
 
     public function testUpdateWorksAfterPiwikIsAlreadyUpToDate()
     {
+        self::expectNotToPerformAssertions();
+
         $result = Fixture::updateDatabase($force = true);
         if ($result === false) {
             throw new \Exception("Failed to force update (nothing to update).");
@@ -111,5 +113,4 @@ class UpdaterTest extends IntegrationTestCase
     {
         return new Updater();
     }
-
 }

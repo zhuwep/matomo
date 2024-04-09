@@ -19,7 +19,7 @@
                     <a href="{{ linkTo({'module': 'CorePluginsAdmin', 'action': 'activate', 'nonce': nonce, 'pluginName': 'TagManager', 'redirectTo': 'tagmanager'}) }}"
                        class="btn activateTagManagerPlugin"><span class="icon-rocket"></span> {{ 'CorePluginsAdmin_ActivateTagManagerNow'|translate }} <span class="icon-rocket"></span></a>
                 {% else %}
-                    <a href="mailto:{{ superUserEmails|e('url') }}?subject={{ 'CorePluginsAdmin_TagManagerNowAvailableTitle'|translate|e('url') }}&body={{ 'CorePluginsAdmin_TagManagerTeaserEmailSuperUserBody'|translate("\n\n", "\n\n", piwikUrl, "\n\n")|e('url') }}"
+                    <a href="mailto:{{ contactEmail|e('url') }}?subject={{ 'CorePluginsAdmin_TagManagerNowAvailableTitle'|translate|e('url') }}&body={{ 'CorePluginsAdmin_TagManagerTeaserEmailSuperUserBody'|translate("\n\n", "\n\n", piwikUrl, "\n\n")|e('url') }}"
                        class="btn activateTagManagerPlugin"><span class="icon-rocket"></span> {{ 'CorePluginsAdmin_TagManagerEmailSuperUserToActivate'|translate }} <span class="icon-rocket"></span></a>
                 {% endif %}
 
@@ -34,16 +34,16 @@
     {{ actionBlock|raw }}
     <div class="row">
         <div class="col {% if isSuperUser %}l4{% else %}l6{% endif %} m12 s12">
-            <div piwik-content-block content-title="{{ 'CorePluginsAdmin_WhatIsTagManager'|translate }}">
+            <div vue-entry="CoreHome.ContentBlock" content-title="{{ 'CorePluginsAdmin_WhatIsTagManager'|translate }}">
                 <p>
                     {{ 'CorePluginsAdmin_WhatIsTagManagerDetails1'|translate }}<br /><br />
                     {{ 'CorePluginsAdmin_WhatIsTagManagerDetails2'|translate }}<br /><br />
-                    <a href="https://matomo.org/docs/tag-manager" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
+                    <a href="{{ 'https://matomo.org/docs/tag-manager'|trackmatomolink }}" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
                 </p>
             </div>
         </div>
         <div class="col {% if isSuperUser %}l4{% else %}l6{% endif %} m12 s12">
-            <div piwik-content-block content-title="{{ 'CorePluginsAdmin_WhyUsingATagManager'|translate }}">
+            <div vue-entry="CoreHome.ContentBlock" content-title="{{ 'CorePluginsAdmin_WhyUsingATagManager'|translate }}">
                 <p>
                     {{ 'CorePluginsAdmin_WhyUsingATagManagerDetails1'|translate }}
                     <br /><br />
@@ -51,19 +51,19 @@
                     <br /><br />
                     {{ 'CorePluginsAdmin_WhyUsingATagManagerDetails3'|translate }}
                     <br /><br /><br />
-                    <a href="https://matomo.org/docs/tag-manager" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
+                    <a href="{{ 'https://matomo.org/docs/tag-manager'|trackmatomolink }}" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
                 </p>
             </div>
         </div>
         {% if isSuperUser %}
             <div class="col l4 m12 s12">
-                <div piwik-content-block content-title="{{ 'CorePluginsAdmin_AreThereAnyRisks'|translate }}">
+                <div vue-entry="CoreHome.ContentBlock" content-title="{{ 'CorePluginsAdmin_AreThereAnyRisks'|translate }}">
 
                     {{ 'CorePluginsAdmin_AreThereAnyRisksDetails1'|translate('<a rel="noreferrer noopener" href="https://en.wikipedia.org/wiki/Cross-site_scripting">', '</a>')|raw }}
                     <br /><br />
                     {{ 'CorePluginsAdmin_AreThereAnyRisksDetails2'|translate }}
                     <br /><br /><br />
-                    <a href="https://matomo.org/docs/tag-manager/#website-security" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
+                    <a href="{{ 'https://matomo.org/faq/tag-manager/website-security-considerations-when-using-a-tag-manager/'|trackmatomolink }}" rel="noreferrer noopener">{{ 'CorePluginsAdmin_TagManagerLearnMoreInUserGuide'|translate }}</a>
                 </div>
             </div>
         {% endif %}

@@ -23,9 +23,9 @@
 	</previousSiteSearches>
 	<pageMetrics>
 		<loops>5</loops>
-		<pageviews>18</pageviews>
-		<entries>4</entries>
-		<exits>4</exits>
+		<pageviews>19</pageviews>
+		<entries>5</entries>
+		<exits>5</exits>
 	</pageMetrics>
 	<followingPages>
 		<row>
@@ -69,25 +69,25 @@
 	</downloads>
 	<referrers>
 		<row>
-			<label>Direct Entries</label>
+			<label>Direct entries</label>
 			<shortName>direct</shortName>
 			<visits>1</visits>
 			<details>
 			</details>
 		</row>
 		<row>
-			<label>From Search Engines</label>
+			<label>From search engines</label>
 			<shortName>search</shortName>
-			<visits>1</visits>
+			<visits>2</visits>
 			<details>
 				<row>
-					<label>&lt;&gt;&amp;\&quot;the pdo extension is required for this adapter but the extension is not loaded</label>
-					<referrals>1</referrals>
+					<label>Google</label>
+					<referrals>2</referrals>
 				</row>
 			</details>
 		</row>
 		<row>
-			<label>From Websites</label>
+			<label>From websites</label>
 			<shortName>website</shortName>
 			<visits>1</visits>
 			<details>
@@ -98,7 +98,7 @@
 			</details>
 		</row>
 		<row>
-			<label>From Campaigns</label>
+			<label>From campaigns</label>
 			<shortName>campaign</shortName>
 			<visits>1</visits>
 			<details>

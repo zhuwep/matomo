@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Tests\Integration\Settings\Plugin;
 
 use Piwik\Config;
-use Piwik\Db;
 use Piwik\Settings\FieldConfig;
 use Piwik\Settings\Plugin\SystemSetting;
 use Piwik\Tests\Integration\Settings\IntegrationTestCase;
@@ -21,8 +20,7 @@ use Piwik\Tests\Integration\Settings\IntegrationTestCase;
  */
 class SystemSettingTest extends IntegrationTestCase
 {
-
-    public function tearDown()
+    public function tearDown(): void
     {
         Config::getInstance()->MyPluginName = array();
         parent::tearDown();
@@ -37,24 +35,22 @@ class SystemSettingTest extends IntegrationTestCase
         $this->assertNotDbConnectionCreated();
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage CoreAdminHome_PluginSettingChangeNotAllowed
-     */
     public function test_setSettingValue_shouldThrowException_IfAUserIsTryingToSetASettingWhichNeedsSuperUserPermission()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('CoreAdminHome_PluginSettingChangeNotAllowed');
+
         $this->setUser();
         $setting = $this->buildSetting('mysystem');
 
         $setting->setValue(2);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage CoreAdminHome_PluginSettingChangeNotAllowed
-     */
     public function test_setSettingValue_shouldThrowException_IfAnonymousIsTryingToSetASettingWhichNeedsSuperUserPermission()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('CoreAdminHome_PluginSettingChangeNotAllowed');
+
         $this->setAnonymousUser();
         $setting = $this->buildSetting('mysystem');
 
@@ -147,12 +143,11 @@ class SystemSettingTest extends IntegrationTestCase
         $this->assertTrue($setting->isWritableByCurrentUser());
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage CoreAdminHome_PluginSettingChangeNotAllowed
-     */
     public function test_setSettingsValue_shouldNotBePossible_AsSoonAsAConfigValueIsConfigured()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('CoreAdminHome_PluginSettingChangeNotAllowed');
+
         $this->setSuperUser();
         $setting = $this->buildSetting('myusersetting');
 
@@ -199,5 +194,4 @@ class SystemSettingTest extends IntegrationTestCase
 
         return $systemSetting;
     }
-
 }

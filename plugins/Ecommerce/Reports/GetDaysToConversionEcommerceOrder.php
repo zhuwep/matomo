@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
  */
 namespace Piwik\Plugins\Ecommerce\Reports;
 
-use Piwik\Metrics;
 use Piwik\Piwik;
 use Piwik\Plugins\Goals\Columns\DaysToConversion;
 
@@ -28,5 +27,4 @@ class GetDaysToConversionEcommerceOrder extends Base
 
         $this->parameters = array('idGoal' => Piwik::LABEL_ID_GOAL_IS_ECOMMERCE_ORDER);
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,7 +17,7 @@ class ReportRendererException extends ReportRenderer
 {
     private $rendering = "";
 
-    function __construct($exception)
+    public function __construct($exception)
     {
         $this->rendering = $exception;
     }

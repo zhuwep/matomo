@@ -57,8 +57,7 @@
         },
 
         _initStandaloneMap: function () {
-            var $rootScope = piwikHelper.getAngularDependency('$rootScope');
-            $rootScope.$emit('hidePeriodSelector');
+            window.CoreHome.Matomo.postEvent('hidePeriodSelector');
 
             $('.realTimeMap_overlay').css('top', '0px');
             $('.realTimeMap_datetime').css('top', '20px');
@@ -148,7 +147,7 @@
                 return $.ajax({
                     url: 'index.php?' + $.param(params),
                     dataType: 'json',
-                    data: { token_auth: tokenAuth },
+                    data: { token_auth: tokenAuth, force_api_session: broadcast.isWidgetizeRequestWithoutSession() ? 0 : 1 },
                     type: 'POST'
                 });
             }
@@ -321,6 +320,7 @@
             this.$element.on('mapClick', function (e, visit, mapPath) {
                 var VisitorProfileControl = require('piwik/UI').VisitorProfileControl;
                 if (visit
+                    && piwik.visitorProfileEnabled
                     && VisitorProfileControl
                     && !self.$element.closest('.visitor-profile').length
                 ) {
@@ -404,14 +404,19 @@
                             return r.latitude !== null;
                         });
 
-                        // show warning if no visits w/ latitude
-                        $('#realTimeMapNoVisitsInfo').toggle(!report.length);
+                        if (firstRun) {
+                            // show warning if no visits w/ latitude
+                            $('#realTimeMapNoVisitsInfo').toggle(!report.length);
+                        }
                     }
 
-                    // check wether we got any geolocated visits left
+                    // check whether we got any geolocated visits left
                     if (!report.length) {
-                        $('.realTimeMap_overlay .showing_visits_of').hide();
-                        $('.realTimeMap_overlay .no_data').show();
+                        if (firstRun) {
+                            // show no visits message only if the first request did not return any data
+                            $('.realTimeMap_overlay .showing_visits_of').hide();
+                            $('.realTimeMap_overlay .no_data').show();
+                        }
                         return;
                     } else {
                         $('.realTimeMap_overlay .showing_visits_of').show();
@@ -580,7 +585,7 @@
                 }
             }
 
-            updateMap(location.hash && (location.hash == '#world' || location.hash.match(/^#[A-Z]{2,3}$/)) ? location.hash.substr(1) : 'world'); // TODO: restore last state
+            updateMap(location.hash && (location.hash == '#world' || location.hash.match(/^#[A-Z]{2,3}$/)) ? location.hash.slice(1) : 'world'); // TODO: restore last state
 
             // clicking on map background zooms out
             $('.RealTimeMap_map', this.$element).off('click').click(function () {
@@ -637,7 +642,7 @@
                     var ds = new Date().getTime() / 1000 - el.data('actiontime');
                     el.html(relativeTime(ds));
                 });
-                var d = new Date(), datetime = d.toTimeString().substr(0, 8);
+                var d = new Date(), datetime = d.toTimeString().slice(0, 8);
                 $('.realTimeMap_datetime').html(datetime);
             }, 1000);
         },

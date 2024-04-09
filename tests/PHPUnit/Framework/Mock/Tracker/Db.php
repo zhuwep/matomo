@@ -1,6 +1,6 @@
 <?php
 /**
-* Piwik - free/libre analytics platform
+* Matomo - free/libre analytics platform
 *
 * @link https://matomo.org
 * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,6 +16,16 @@ class Db extends Mysql
     public $rollbackTransactionId = false;
     public $beganTransaction = false;
     public $connectCalled = false;
+
+    /**
+     * @var string
+     */
+    private $username;
+
+    /**
+     * @var string
+     */
+    private $password;
 
     public function __construct($dbInfo, $driverName = 'mysql')
     {
@@ -49,5 +59,4 @@ class Db extends Mysql
     {
         $this->rollbackTransactionId = $xid;
     }
-
 }

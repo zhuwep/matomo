@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -35,7 +35,7 @@ class Sparkline implements ViewInterface
      * @var int
      */
     protected $_height = self::DEFAULT_HEIGHT;
-    private $serieses = array();
+    private $serieses = [];
     /**
      * @var \Davaxi\Sparkline
      */
@@ -43,11 +43,11 @@ class Sparkline implements ViewInterface
 
     /**
      * Array with format: array( x, y, z, ... )
-     * @param array $data,...
+     * @param array ...$data
      */
-    public function setValues()
+    public function setValues(...$data)
     {
-        $this->serieses = func_get_args();
+        $this->serieses = $data;
     }
 
     public function addSeries(array $values)
@@ -57,7 +57,13 @@ class Sparkline implements ViewInterface
 
     public function main()
     {
-        $sparkline = new \Davaxi\Sparkline();
+        try {
+            $sparkline = new \Davaxi\Sparkline();
+        } catch (\Exception $exception) {
+            // Ignore GD not installed exception
+            return;
+        }
+
 
         $thousandSeparator = Piwik::translate('Intl_NumberSymbolGroup');
         $decimalSeparator = Piwik::translate('Intl_NumberSymbolDecimal');
@@ -112,7 +118,8 @@ class Sparkline implements ViewInterface
      * Returns the width of the sparkline
      * @return int
      */
-    public function getWidth() {
+    public function getWidth()
+    {
         return $this->_width;
     }
 
@@ -120,7 +127,8 @@ class Sparkline implements ViewInterface
      * Sets the width of the sparkline
      * @param int $width
      */
-    public function setWidth($width) {
+    public function setWidth($width)
+    {
         if (!is_numeric($width) || $width <= 0) {
             return;
         }
@@ -135,7 +143,8 @@ class Sparkline implements ViewInterface
      * Returns the height of the sparkline
      * @return int
      */
-    public function getHeight() {
+    public function getHeight()
+    {
         return $this->_height;
     }
 
@@ -143,7 +152,8 @@ class Sparkline implements ViewInterface
      * Sets the height of the sparkline
      * @param int $height
      */
-    public function setHeight($height) {
+    public function setHeight($height)
+    {
         if (!is_numeric($height) || $height <= 0) {
             return;
         }
@@ -159,18 +169,23 @@ class Sparkline implements ViewInterface
      *
      * @param \Davaxi\Sparkline $sparkline
      */
-    private function setSparklineColors($sparkline, $seriesIndex) {
+    private function setSparklineColors($sparkline, $seriesIndex)
+    {
         $colors = Common::getRequestVar('colors', false, 'json');
 
-        if (empty($colors)) { // quick fix so row evolution sparklines will have color in widgetize's iframes
-            $colors = array(
-                'backgroundColor' => '#ffffff',
-                'lineColor' => '#162C4A',
-                'minPointColor' => '#ff7f7f',
-                'maxPointColor' => '#75BF7C',
-                'lastPointColor' => '#55AAFF',
-                'fillColor' => '#ffffff'
-            );
+        $defaultColors = array(
+            'backgroundColor' => '#ffffff',
+            'lineColor' => '#162C4A',
+            'minPointColor' => '#ff7f7f',
+            'maxPointColor' => '#75BF7C',
+            'lastPointColor' => '#55AAFF',
+            'fillColor' => '#ffffff'
+        );
+
+        if (empty($colors)) {
+            $colors = $defaultColors; //set default color, if no color passed
+        } else {
+            $colors = array_merge($defaultColors, $colors); //set default color key, if no key set.
         }
 
         if (strtolower($colors['backgroundColor']) !== '#ffffff') {
@@ -180,10 +195,10 @@ class Sparkline implements ViewInterface
         }
 
         if (is_array($colors['lineColor'])) {
-            $sparkline->setLineColorHex($colors['lineColor'][$seriesIndex], $seriesIndex);
+            $sparkline->setLineColorHex($colors['lineColor'][$seriesIndex] ?? $defaultColors['lineColor'], $seriesIndex);
 
             // set point colors to same as line colors so they can be better differentiated
-            $colors['minPointColor'] = $colors['maxPointColor'] = $colors['lastPointColor'] = $colors['lineColor'][$seriesIndex];
+            $colors['minPointColor'] = $colors['maxPointColor'] = $colors['lastPointColor'] = $colors['lineColor'][$seriesIndex] ?? $defaultColors['lineColor'];
         } else {
             $sparkline->setLineColorHex($colors['lineColor']);
         }
@@ -204,7 +219,18 @@ class Sparkline implements ViewInterface
         }
     }
 
-    public function render() {
+    public function render()
+    {
+        if (!$this->sparkline instanceof \Davaxi\Sparkline) {
+            return;
+        }
+
+        if (0 === $this->sparkline->getSeriesCount()) {
+            // ensure to have at least one series & point in sparkline to avoid possible php notices/errors
+            // a sparkline will then be displayed with a zero line
+            $this->sparkline->addSeries([0]);
+        }
+
         $this->sparkline->display();
         $this->sparkline->destroy();
     }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -25,6 +25,7 @@ class AddSegmentByRangeLabel extends BaseFilter
 {
     private $segments;
     private $delimiter;
+    private $segment;
 
     /**
      * Generates a segment filter based on the label column and the given segment name
@@ -57,7 +58,7 @@ class AddSegmentByRangeLabel extends BaseFilter
                 return;
             }
 
-            if ($label == 'General_NewVisits') {
+            if ($label === 'General_NewVisits') {
                 $row->setMetadata('segment', 'visitorType==new');
                 continue;
             }
@@ -73,8 +74,9 @@ class AddSegmentByRangeLabel extends BaseFilter
                     $row->setMetadata('segment', $this->segment . '>=' . urlencode($lowerBound) . ';' .
                                                               $this->segment . '<=' . urlencode($upperBound));
                 }
-            } // if there's one element, handle as a range w/ no upper bound
-            else {
+            } else {
+                // if there's one element, handle as a range w/ no upper bound
+
                 // get the lower bound
                 sscanf($label, "%d", $lowerBound);
 

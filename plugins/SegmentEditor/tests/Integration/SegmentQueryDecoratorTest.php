@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
 
 namespace Piwik\Plugins\SegmentEditor\tests\Integration;
 
+use Piwik\ArchiveProcessor\Rules;
 use Piwik\Plugins\SegmentEditor\API;
 use Piwik\Plugins\SegmentEditor\SegmentQueryDecorator;
 use Piwik\Segment;
@@ -25,7 +26,7 @@ class SegmentQueryDecoratorTest extends IntegrationTestCase
      */
     private $segmentQueryDecorator;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -34,11 +35,15 @@ class SegmentQueryDecoratorTest extends IntegrationTestCase
         Fixture::createWebsite('2011-01-01');
 
         $this->segmentQueryDecorator = self::$fixture->piwikEnvironment->getContainer()->get(
-            'Piwik\Plugins\SegmentEditor\SegmentQueryDecorator');
+            'Piwik\Plugins\SegmentEditor\SegmentQueryDecorator'
+        );
+
+        Rules::setBrowserTriggerArchiving(false);
 
         /** @var API $segmentEditorApi */
         $segmentEditorApi = self::$fixture->piwikEnvironment->getContainer()->get(
-            'Piwik\Plugins\SegmentEditor\API');
+            'Piwik\Plugins\SegmentEditor\API'
+        );
         $segmentEditorApi->add('segment 1', 'visitCount<2', $idSite = false, $autoArchive = true);
         $segmentEditorApi->add('segment 2', 'countryCode==fr', $idSite = false, $autoArchive = true);
         $segmentEditorApi->add('segment 3', 'visitCount<2', 1, $autoArchive = true);
@@ -47,6 +52,8 @@ class SegmentQueryDecoratorTest extends IntegrationTestCase
         // test that segments w/ auto archive == false are included
         $segmentEditorApi->add('segment 5', 'visitCount<2', 3, $autoArchive = false);
         $segmentEditorApi->add('segment 6', 'countryCode!=fr', 3, $autoArchive = false);
+
+        Rules::setBrowserTriggerArchiving(true);
     }
 
     /**
@@ -67,22 +74,23 @@ class SegmentQueryDecoratorTest extends IntegrationTestCase
             $this->assertStringStartsNotWith("/* idSegments", $sql);
         } else {
             $this->assertStringStartsWith($expectedPrefix, $sql);
+            $this->assertEquals(1, substr_count($sql, 'SELECT'));
         }
     }
 
     public function getTestDataForSegmentSqlTest()
     {
         return array(
-            array('countryCode==fr', null, '/* idSegments = [2] */'),
-            array('visitCount<2', null, '/* idSegments = [1, 3, 4, 5] */'),
+            array('countryCode==fr', null, 'SELECT /* idSegments = [2] */'),
+            array('visitCount<2', null, 'SELECT /* idSegments = [1, 3, 4, 5] */'),
             array('', null, null),
-            array('countryCode!=fr', null, '/* idSegments = [6] */'),
+            array('countryCode!=fr', null, 'SELECT /* idSegments = [6] */'),
 
-            array('', 'archivephp', '/* trigger = CronArchive */'),
-            array('countryCode!=fr', 'archivephp', '/* trigger = CronArchive, idSegments = [6] */'),
+            array('', 'archivephp', 'SELECT /* trigger = CronArchive */'),
+            array('countryCode!=fr', 'archivephp', 'SELECT /* trigger = CronArchive, idSegments = [6] */'),
 
             array('', 'garbage', null),
-            array('countryCode!=fr', 'garbage', '/* idSegments = [6] */'),
+            array('countryCode!=fr', 'garbage', 'SELECT /* idSegments = [6] */'),
         );
     }
 }

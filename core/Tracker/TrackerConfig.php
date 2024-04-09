@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Tracker;
 
 use Piwik\Config;
-use Piwik\Tracker;
 
 class TrackerConfig
 {
@@ -26,14 +25,24 @@ class TrackerConfig
         Config::getInstance()->Tracker = $section;
     }
 
-    public static function getConfigValue($name)
+    public static function getConfigValue($name, $idSite = null)
     {
         $config = self::getConfig();
-        return $config[$name];
+        if (!empty($idSite)) {
+            $siteSpecificConfig = self::getSiteSpecificConfig($idSite);
+            $config = array_merge($config, $siteSpecificConfig);
+        }
+        return $config[$name] ?? null;
     }
 
     private static function getConfig()
     {
         return Config::getInstance()->Tracker;
+    }
+
+    private static function getSiteSpecificConfig($idSite)
+    {
+        $key = 'Tracker_' . $idSite;
+        return Config::getInstance()->$key;
     }
 }

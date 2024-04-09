@@ -51,6 +51,12 @@
 		<logo>plugins/Morpheus/icons/dist/devices/feature_phone.png</logo>
 	</row>
 	<row>
+		<label>Peripheral</label>
+		<nb_visits>0</nb_visits>
+		<segment>deviceType==peripheral</segment>
+		<logo>plugins/Morpheus/icons/dist/devices/peripheral.png</logo>
+	</row>
+	<row>
 		<label>Phablet</label>
 		<nb_visits>0</nb_visits>
 		<segment>deviceType==phablet</segment>
@@ -91,5 +97,11 @@
 		<nb_visits>0</nb_visits>
 		<segment>deviceType==tv</segment>
 		<logo>plugins/Morpheus/icons/dist/devices/tv.png</logo>
+	</row>
+	<row>
+		<label>Wearable</label>
+		<nb_visits>0</nb_visits>
+		<segment>deviceType==wearable</segment>
+		<logo>plugins/Morpheus/icons/dist/devices/wearable.png</logo>
 	</row>
 </result>

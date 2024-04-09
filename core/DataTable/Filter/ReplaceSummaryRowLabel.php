@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -30,6 +30,11 @@ use Piwik\Piwik;
 class ReplaceSummaryRowLabel extends BaseFilter
 {
     /**
+     * @var string|null
+     */
+    private $newLabel;
+
+    /**
      * Constructor.
      *
      * @param DataTable $table The table that will eventually be filtered.
@@ -55,11 +60,6 @@ class ReplaceSummaryRowLabel extends BaseFilter
         $row = $table->getRowFromId(DataTable::ID_SUMMARY_ROW);
         if ($row) {
             $row->setColumn('label', $this->newLabel);
-        } else {
-            $row = $table->getRowFromLabel(DataTable::LABEL_SUMMARY_ROW);
-            if ($row) {
-                $row->setColumn('label', $this->newLabel);
-            }
         }
 
         // recurse
@@ -69,8 +69,8 @@ class ReplaceSummaryRowLabel extends BaseFilter
                 $this->filter($subTable);
             }
         }
-        
-       
+
+
         $summaryRow = $table->getRowFromId(DataTable::ID_SUMMARY_ROW);
         if (!empty($summaryRow)) {
             $subTable = $summaryRow->getSubtable();

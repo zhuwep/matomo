@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,12 +15,14 @@ class CallableProcessedMetric extends ProcessedMetric
     private $name;
     private $callback;
     private $dependentMetrics;
+    private $semanticType;
 
-    public function __construct($name, $callback, $dependentMetrics = array())
+    public function __construct($name, $callback, $dependentMetrics = array(), string $semanticType = null)
     {
         $this->name = $name;
         $this->callback = $callback;
         $this->dependentMetrics = $dependentMetrics;
+        $this->semanticType = $semanticType;
     }
 
     public function getName()
@@ -43,5 +45,10 @@ class CallableProcessedMetric extends ProcessedMetric
     public function getDependentMetrics()
     {
         return $this->dependentMetrics;
+    }
+
+    public function getSemanticType(): ?string
+    {
+        return $this->semanticType;
     }
 }

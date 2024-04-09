@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,12 +8,13 @@
 
 namespace Piwik\Tests\Framework;
 
-use Interop\Container\ContainerInterface;
-use Piwik\Application\Environment;
+use Piwik\Container\Container;
 use Piwik\Application\EnvironmentManipulator;
 use Piwik\Application\Kernel\GlobalSettingsProvider;
 use Piwik\Application\Kernel\PluginList;
 use Piwik\Config;
+use Piwik\DataTable;
+use Piwik\DataTable\DataTableInterface;
 use Piwik\DbHelper;
 use Piwik\Option;
 use Piwik\Plugin;
@@ -32,6 +33,15 @@ class FakePluginList extends PluginList
         $section = $globalSettingsProvider->getSection('Plugins');
         $section['Plugins'] = $this->plugins;
         $globalSettingsProvider->setSection('Plugins', $section);
+    }
+
+    public function sortPlugins(array $plugins)
+    {
+        if (isset($GLOBALS['MATOMO_SORT_PLUGINS']) && is_callable($GLOBALS['MATOMO_SORT_PLUGINS'])) {
+            return call_user_func($GLOBALS['MATOMO_SORT_PLUGINS'], parent::sortPlugins($plugins));
+        }
+
+        return parent::sortPlugins($plugins);
     }
 }
 
@@ -60,7 +70,8 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
 
     public function makeGlobalSettingsProvider(GlobalSettingsProvider $original)
     {
-        if ($this->vars->configFileGlobal
+        if (
+            $this->vars->configFileGlobal
             || $this->vars->configFileLocal
             || $this->vars->configFileCommon
         ) {
@@ -107,14 +118,15 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
             \Piwik\Profiler::setupProfilerXHProf($mainRun = false, $setupDuringTracking = true);
         }
 
-        \Piwik\Cache\Backend\File::$invalidateOpCacheBeforeRead = true;
+        \Matomo\Cache\Backend\File::$invalidateOpCacheBeforeRead = true;
     }
 
     public function onEnvironmentBootstrapped()
     {
-        if (empty($_GET['ignoreClearAllViewDataTableParameters'])
+        if (
+            empty($this->vars->ignoreClearAllViewDataTableParameters)
             && !SettingsServer::isTrackerApiRequest()
-        ) { // TODO: should use testingEnvironment variable, not query param
+        ) {
             try {
                 \Piwik\ViewDataTable\Manager::clearAllViewDataTableParameters();
             } catch (\Exception $ex) {
@@ -135,7 +147,8 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
         \Piwik\Plugins\CoreVisualizations\Visualizations\Cloud::$debugDisableShuffle = true;
         \Piwik\Plugins\ExampleUI\API::$disableRandomness = true;
 
-        if ($this->vars->deleteArchiveTables
+        if (
+            $this->vars->deleteArchiveTables
             && !$this->vars->_archivingTablesDeleted
         ) {
             $this->vars->_archivingTablesDeleted = true;
@@ -180,9 +193,9 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
 
         $plugins = $this->getPluginsToLoadDuringTest();
         $diConfigs[] = array(
-            'observers.global' => \DI\add($this->globalObservers),
+            'observers.global' => \Piwik\DI::add($this->globalObservers),
 
-            'Piwik\Config' => \DI\decorate(function (Config $config, ContainerInterface $c) use ($plugins) {
+            'Piwik\Config' => \Piwik\DI::decorate(function (Config $config, Container $c) use ($plugins) {
                 /** @var PluginList $pluginList */
                 $pluginList = $c->get('Piwik\Application\Kernel\PluginList');
                 $plugins = $pluginList->sortPlugins($plugins);
@@ -194,6 +207,31 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
                 return $config;
             }),
         );
+
+        if (!empty($this->vars->multiplicateTableResults)) {
+            $diConfigs[] = [
+                'observers.global' => \Piwik\DI::add([
+                    [
+                        'API.Request.dispatch.end',
+                        \Piwik\DI::value(function ($returnedValue) {
+                            if ($returnedValue instanceof DataTableInterface) {
+                                $returnedValue->filter(function (DataTable $dataTable) {
+                                    foreach ($dataTable->getRows() as $row) {
+                                        $columns = $row->getColumns();
+                                        foreach ($columns as $name => &$value) {
+                                            if ($name !== 'label' && is_numeric($value)) {
+                                                $value *= $this->vars->multiplicateTableResults;
+                                            }
+                                        }
+                                        $row->setColumns($columns);
+                                    }
+                                });
+                            }
+                        })
+                    ]
+                ])
+            ];
+        }
 
         return $diConfigs;
     }
@@ -252,6 +290,10 @@ class TestingEnvironmentManipulator implements EnvironmentManipulator
 
             $plugins = $this->getPluginAndRequiredPlugins($pluginName, $plugins);
         }
+
+        $pluginsToUnload = $this->vars->pluginsToUnload ?? [];
+
+        $plugins = array_diff($plugins, $pluginsToUnload);
 
         return $plugins;
     }

@@ -2,20 +2,52 @@
 <result>
 	<row>
 		<label>Books Cat #0</label>
-		<nb_uniq_visitors>5</nb_uniq_visitors>
 		<nb_visits>5</nb_visits>
+		<nb_uniq_visitors>5</nb_uniq_visitors>
 		<nb_actions>5</nb_actions>
 		<avg_price>7.5</avg_price>
 		<avg_quantity>0</avg_quantity>
 		<conversion_rate>0%</conversion_rate>
+		<segment>productCategory==Books+Cat+%230</segment>
 	</row>
 	<row>
-		<label>Others</label>
-		<nb_uniq_visitors>20</nb_uniq_visitors>
-		<nb_visits>20</nb_visits>
-		<nb_actions>20</nb_actions>
-		<avg_price>30</avg_price>
+		<label>Books Cat #1</label>
+		<nb_visits>5</nb_visits>
+		<nb_uniq_visitors>5</nb_uniq_visitors>
+		<nb_actions>5</nb_actions>
+		<avg_price>7.5</avg_price>
 		<avg_quantity>0</avg_quantity>
 		<conversion_rate>0%</conversion_rate>
+		<segment>productCategory==Books+Cat+%231</segment>
+	</row>
+	<row>
+		<label>Books Cat #2</label>
+		<nb_visits>5</nb_visits>
+		<nb_uniq_visitors>5</nb_uniq_visitors>
+		<nb_actions>5</nb_actions>
+		<avg_price>7.5</avg_price>
+		<avg_quantity>0</avg_quantity>
+		<conversion_rate>0%</conversion_rate>
+		<segment>productCategory==Books+Cat+%232</segment>
+	</row>
+	<row>
+		<label>Books Cat #3</label>
+		<nb_visits>5</nb_visits>
+		<nb_uniq_visitors>5</nb_uniq_visitors>
+		<nb_actions>5</nb_actions>
+		<avg_price>7.5</avg_price>
+		<avg_quantity>0</avg_quantity>
+		<conversion_rate>0%</conversion_rate>
+		<segment>productCategory==Books+Cat+%233</segment>
+	</row>
+	<row>
+		<label>Books Cat #4</label>
+		<nb_visits>5</nb_visits>
+		<nb_uniq_visitors>5</nb_uniq_visitors>
+		<nb_actions>5</nb_actions>
+		<avg_price>7.5</avg_price>
+		<avg_quantity>0</avg_quantity>
+		<conversion_rate>0%</conversion_rate>
+		<segment>productCategory==Books+Cat+%234</segment>
 	</row>
 </result>

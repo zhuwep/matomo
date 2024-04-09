@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\Referrers\DataTable\Filter;
 
 use Piwik\DataTable\BaseFilter;
-use Piwik\DataTable\Row;
 use Piwik\DataTable;
 use Piwik\Plugins\Referrers\SearchEngine;
 
@@ -48,7 +47,14 @@ class KeywordsFromSearchEngineId extends BaseFilter
 
         if (!empty($subTableRow)) {
             $searchEngineUrl = $subTableRow->getMetadata('url');
-            $table->queueFilter('ColumnCallbackAddMetadata', array('label', 'url',  function ($keyword, $url) { return SearchEngine::getInstance()->getBackLinkFromUrlAndKeyword($url, $keyword); }, array($searchEngineUrl)));
+            $table->queueFilter('ColumnCallbackAddMetadata', array(
+                'label',
+                'url',
+                function ($keyword, $url) {
+                    return SearchEngine::getInstance()->getBackLinkFromUrlAndKeyword($url, $keyword);
+                },
+                array($searchEngineUrl)
+            ));
             $table->queueFilter(function (DataTable $table) {
                 $row = $table->getRowFromId(DataTable::ID_SUMMARY_ROW);
                 if ($row) {

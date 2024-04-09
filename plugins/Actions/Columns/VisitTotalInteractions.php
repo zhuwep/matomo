@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\Actions\Columns;
 
 use Piwik\Plugin\Dimension\VisitDimension;
-use Piwik\Plugins\CoreHome\Segment;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\Visitor;
@@ -17,7 +16,7 @@ use Piwik\Tracker\Visitor;
 class VisitTotalInteractions extends VisitDimension
 {
     protected $columnName = 'visit_total_interactions';
-    protected $columnType = 'SMALLINT UNSIGNED DEFAULT 0';
+    protected $columnType = 'MEDIUMINT UNSIGNED DEFAULT 0';
     protected $type = self::TYPE_NUMBER;
     protected $segmentName = 'interactions';
     protected $nameSingular = 'General_NbInteractions';
@@ -26,7 +25,7 @@ class VisitTotalInteractions extends VisitDimension
     public function __construct()
     {
         $this->suggestedValuesCallback = function ($idSite, $maxValuesToReturn) {
-            $positions = range(1,50);
+            $positions = range(1, 50);
 
             return array_slice($positions, 0, $maxValuesToReturn);
         };
@@ -83,10 +82,7 @@ class VisitTotalInteractions extends VisitDimension
     {
         $position = self::getCurrentInteractionPosition($request);
 
-        $position = $position + 1;
-
-        // Remove this in Piwik 4
-        return min($position, 32765);
+        return $position + 1;
     }
 
     /**
@@ -114,5 +110,4 @@ class VisitTotalInteractions extends VisitDimension
 
         return false;
     }
-
 }

@@ -1,14 +1,14 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * UI tests config
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
 /**
- * The root Piwik URL to test against.
+ * The root Matomo URL to test against.
  */
 exports.piwikUrl = "http://localhost/";
 
@@ -38,12 +38,23 @@ exports.mocha = 'mocha-3.1.2';
 exports.chai = 'chai-1.9.0';
 
 /**
- * The mocha reporter to use.
+ * Mocha reporters to use (can be multiple delimited by a comma).
  */
-exports.reporter = "spec";
+if (process.env.TESTOMATIO) {
+  exports.reporter = 'mocha-multi-reporters';
+  exports.reporterOptions = {
+    reporterEnabled: 'spec, @testomatio/reporter/lib/adapter/mocha.js',
+    testomatioReporterLibAdapterMochaJsReporterOptions: {
+      apiKey: process.env.TESTOMATIO
+    }
+  };
+} else {
+  exports.reporter = 'spec';
+  exports.reporterOptions = {};
+}
 
 /**
- * The directory that stores expected screenshots. Relative to the UI repo's root directoriy.
+ * The directory that stores expected screenshots. Relative to the UI repo's root directory.
  */
 exports.expectedScreenshotsDir = ["./expected-screenshots", "./expected-ui-screenshots"];
 
@@ -56,3 +67,10 @@ exports.processedScreenshotsDir = "./processed-ui-screenshots";
  * The directory that stores screenshot diffs. Relative to the UI repo's root directory.
  */
 exports.screenshotDiffDir = "./screenshot-diffs";
+
+/**
+ * The config object passed to the headless browser used by Puppeteer
+ */
+exports.browserConfig = {
+    args: ['--no-sandbox', '--ignore-certificate-errors']
+};

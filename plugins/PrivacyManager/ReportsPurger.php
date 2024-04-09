@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -78,9 +78,14 @@ class ReportsPurger
      *                             is true, these metrics will be saved.
      * @param int $maxRowsToDeletePerQuery The maximum number of rows to delete per DELETE query.
      */
-    public function __construct($deleteReportsOlderThan, $keepBasicMetrics, $reportPeriodsToKeep,
-                                $keepSegmentReports, $metricsToKeep, $maxRowsToDeletePerQuery)
-    {
+    public function __construct(
+        $deleteReportsOlderThan,
+        $keepBasicMetrics,
+        $reportPeriodsToKeep,
+        $keepSegmentReports,
+        $metricsToKeep,
+        $maxRowsToDeletePerQuery
+    ) {
         $this->deleteReportsOlderThan = (int) $deleteReportsOlderThan;
         $this->keepBasicMetrics = (bool) $keepBasicMetrics;
         $this->reportPeriodsToKeep = $reportPeriodsToKeep;
@@ -274,8 +279,13 @@ class ReportsPurger
     {
         $maxIdArchive = Db::fetchOne("SELECT MAX(idarchive) FROM $table");
 
+        $blobTableWhere = $this->getBlobTableWhereExpr($oldNumericTables, $table);
+        if (empty($blobTableWhere)) {
+            return 0;
+        }
+
         $sql = "SELECT COUNT(*) FROM $table
-                 WHERE " . $this->getBlobTableWhereExpr($oldNumericTables, $table) . "
+                 WHERE " . $blobTableWhere . "
                    AND idarchive >= ?
                    AND idarchive < ?";
 
@@ -387,4 +397,3 @@ class ReportsPurger
         return $keepReportPeriods;
     }
 }
-

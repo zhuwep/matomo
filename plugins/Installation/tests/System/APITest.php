@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Plugins\Installation\tests\System;
 
-use Piwik\Config;
 use Piwik\Http;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
@@ -25,7 +24,7 @@ class APITest extends SystemTestCase
      */
     public static $fixture = null; // initialized below class definition
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
 
@@ -47,7 +46,7 @@ class APITest extends SystemTestCase
         $data = str_replace("\n", "", $response['data']);
 
         $this->assertStringStartsWith('<?xml version="1.0" encoding="utf-8" ?><result>	<error message=', $data);
-        $this->assertContains('Access denied', $data);
+        self::assertStringContainsString('Database access denied', $data);
         $this->assertStringEndsWith('</result>', $data);
     }
 
@@ -58,7 +57,7 @@ class APITest extends SystemTestCase
         $data = str_replace("\n", "", $response['data']);
 
         $this->assertStringStartsWith('{"result":"error","message":"', $data);
-        $this->assertContains('Access denied', $data);
+        self::assertStringContainsString('Database access denied', $data);
     }
 
     public function test_shouldReturnEmptyResultWhenNotInstalledAndDispatchIsDisabled()

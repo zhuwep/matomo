@@ -7,16 +7,29 @@
  */
 namespace Piwik\Plugins\TwoFactorAuth;
 
+use Piwik\Common;
+use Piwik\Db;
+use Piwik\Option;
 use Piwik\Piwik;
 use Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao;
 use Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator;
 use Piwik\Plugins\UsersManager\Model;
 use Exception;
+use Piwik\SettingsPiwik;
 
 require_once PIWIK_DOCUMENT_ROOT . '/libs/Authenticator/TwoFactorAuthenticator.php';
 
 class TwoFactorAuthentication
 {
+    const OPTION_PREFIX_TWO_FA_CODE_USED = 'twofa_codes_used_';
+
+    /**
+     * Make sure the same fa code was not used in the last X minutes.
+     * Technically, even 2 minutes be fine since every token is only valid for 30 sec and we only allow the 2 most
+     * recent tokens.
+     */
+    const BLOCK_TWOFA_CODE_MINUTES = 10;
+
     /**
      * @var SystemSettings
      */
@@ -39,7 +52,7 @@ class TwoFactorAuthentication
         $this->secretGenerator = $twoFaSecretRandomGenerator;
     }
 
-    private function getUserModel()
+    private static function getUserModel()
     {
         return new Model();
     }
@@ -57,14 +70,14 @@ class TwoFactorAuthentication
         Piwik::postEvent('TwoFactorAuth.disabled', array($login));
     }
 
-    private function isAnonymous($login)
+    private static function isAnonymous($login)
     {
         return strtolower($login) === 'anonymous';
     }
 
     public function saveSecret($login, $secret)
     {
-        if ($this->isAnonymous($login)) {
+        if (self::isAnonymous($login)) {
             throw new Exception('Anonymous cannot use two-factor authentication');
         }
 
@@ -73,7 +86,7 @@ class TwoFactorAuthentication
             throw new Exception('Cannot enable two-factor authentication, no recovery codes have been created');
         }
 
-        $model = $this->getUserModel();
+        $model = self::getUserModel();
         $model->updateUserFields($login, array('twofactor_secret' => $secret));
     }
 
@@ -82,31 +95,85 @@ class TwoFactorAuthentication
         return $this->settings->twoFactorAuthRequired->getValue();
     }
 
-    public function isUserUsingTwoFactorAuthentication($login)
+    public static function isUserUsingTwoFactorAuthentication($login)
     {
-        if ($this->isAnonymous($login)) {
+        if (self::isAnonymous($login)) {
             return false; // not possible to use auth code with anonymous
         }
 
-        $user = $this->getUser($login);
+        $user = self::getUser($login);
         return !empty($user['twofactor_secret']);
     }
 
-    private function getUser($login)
+    private static function getUser($login)
     {
-        $model = $this->getUserModel();
+        $model = self::getUserModel();
         return $model->getUser($login);
+    }
+
+    private function wasTwoFaCodeUsedRecently($login, $authCode)
+    {
+        $time = Option::get($this->gettwoFaCodeUsedKey($login, $authCode));
+        if (empty($time)) {
+            return false;
+        }
+        $fiveMinutes = 60 * self::BLOCK_TWOFA_CODE_MINUTES;
+        if (time() - $fiveMinutes >= (int)$time) {
+            return true;
+        }
+        return false;
+    }
+
+    private function gettwoFaCodeUsedKey($login, $authCode)
+    {
+        return self::OPTION_PREFIX_TWO_FA_CODE_USED . md5($login . $authCode . SettingsPiwik::getSalt());
+    }
+
+    private function setTwoFaCodeWasUsed($login, $authCode)
+    {
+        $table = Common::prefixTable('option');
+        $bind = array($this->gettwoFaCodeUsedKey($login, $authCode), time(), 0);
+        try {
+            Db::query('INSERT INTO `' . $table . '` (option_name, option_value, autoload) VALUES (?, ?, ?) ', $bind);
+            return true;
+        } catch (Exception $e) {
+            // when 2 process try to insert at same time should result in duplicate error
+            return false;
+        }
+    }
+
+    public function cleanupTwoFaCodesUsedRecently()
+    {
+        $values = Option::getLike(TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
+        if (!empty($values)) {
+            foreach ($values as $optionName => $timeCodeWasUsed) {
+                $fiveMinutesAgo = time() - (60 * self::BLOCK_TWOFA_CODE_MINUTES);
+                if ($timeCodeWasUsed < $fiveMinutesAgo) {
+                    // delete any entry created more than 5 min ago
+                    Option::delete($optionName);
+                }
+            }
+        }
     }
 
     public function validateAuthCode($login, $authCode)
     {
-        if (!$this->isUserUsingTwoFactorAuthentication($login)) {
+        if (!self::isUserUsingTwoFactorAuthentication($login)) {
             return false;
         }
 
-        $user = $this->getUser($login);
+        $user = self::getUser($login);
 
-        if (!empty($user['twofactor_secret'])
+        if ($this->wasTwoFaCodeUsedRecently($user['login'], $authCode)) {
+            return false;
+        }
+
+        if (!$this->setTwoFaCodeWasUsed($user['login'], $authCode)) {
+            return false;
+        }
+
+        if (
+            !empty($user['twofactor_secret'])
             && $this->validateAuthCodeDuringSetup($authCode, $user['twofactor_secret'])) {
             return true;
         }
@@ -132,5 +199,4 @@ class TwoFactorAuthentication
     {
         return new \TwoFactorAuthenticator();
     }
-
 }

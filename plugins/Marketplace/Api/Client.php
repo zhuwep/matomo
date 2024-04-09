@@ -1,24 +1,25 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\Marketplace\Api;
 
-use Piwik\Cache;
+use Exception as PhpException;
+use Matomo\Cache\Lazy;
 use Piwik\Common;
+use Piwik\Config\GeneralConfig;
 use Piwik\Container\StaticContainer;
 use Piwik\Filesystem;
 use Piwik\Http;
 use Piwik\Plugin;
 use Piwik\Plugins\Marketplace\Environment;
-use Piwik\Plugins\Marketplace\Api\Service;
 use Piwik\SettingsServer;
-use Exception as PhpException;
-use Psr\Log\LoggerInterface;
+use Piwik\Log\LoggerInterface;
 
 /**
  *
@@ -34,7 +35,7 @@ class Client
     private $service;
 
     /**
-     * @var Cache\Lazy
+     * @var Lazy
      */
     private $cache;
 
@@ -53,7 +54,7 @@ class Client
      */
     private $environment;
 
-    public function __construct(Service $service, Cache\Lazy $cache, LoggerInterface $logger, Environment $environment)
+    public function __construct(Service $service, Lazy $cache, LoggerInterface $logger, Environment $environment)
     {
         $this->service = $service;
         $this->cache = $cache;
@@ -72,14 +73,19 @@ class Client
         return $this->environment;
     }
 
+    /**
+     * @param string $name
+     * @return array
+     * @throws Exception
+     */
     public function getPluginInfo($name)
     {
         $action = sprintf('plugins/%s/info', $name);
 
         $plugin = $this->fetch($action, array());
 
-        if (!empty($plugin) && $this->shouldIgnorePlugin($plugin)) {
-            return;
+        if (empty($plugin['name']) || $this->shouldIgnorePlugin($plugin)) {
+            return [];
         }
 
         return $plugin;
@@ -142,7 +148,7 @@ class Client
         }
 
         // in the beginning we allowed to specify a download path but this way we make sure security is always taken
-        // care of and we always generate a random download filename.
+        // care of and we always generate a random download filename.Marketplace/Api/Client.php
         $target = $this->getRandomTmpPluginDownloadFilename();
 
         Filesystem::deleteFileIfExists($target);
@@ -168,7 +174,7 @@ class Client
             $pluginName = $plugin->getPluginName();
             if (!$this->pluginManager->isPluginBundledWithCore($pluginName)) {
                 $isActivated = $this->pluginManager->isPluginActivated($pluginName);
-                $params[] = array('name' => $plugin->getPluginName(), 'version' => $plugin->getVersion(), 'activated' => (int) $isActivated);
+                $params[] = array('name' => $plugin->getPluginName(), 'version' => $plugin->getVersion(), 'activated' => (int)$isActivated);
             }
         }
 
@@ -177,8 +183,9 @@ class Client
         }
 
         $params = array('plugins' => $params);
+        $params = array('plugins' => json_encode($params));
 
-        $hasUpdates = $this->fetch('plugins/checkUpdates', array('plugins' => json_encode($params)));
+        $hasUpdates = $this->fetch('plugins/checkUpdates', $params);
 
         if (empty($hasUpdates)) {
             return array();
@@ -188,14 +195,14 @@ class Client
     }
 
     /**
-     * @param  \Piwik\Plugin[] $plugins
-     * @return array
+     * @param \Piwik\Plugin[] $plugins
+     * @return array (pluginName => pluginDetails)
      */
-    public function getInfoOfPluginsHavingUpdate($plugins)
+    public function getInfoOfPluginsHavingUpdate($plugins): array
     {
         $hasUpdates = $this->checkUpdates($plugins);
 
-        $pluginDetails = array();
+        $pluginDetails = [];
 
         foreach ($hasUpdates as $pluginHavingUpdate) {
             if (empty($pluginHavingUpdate)) {
@@ -211,9 +218,8 @@ class Client
 
             if (!empty($plugin)) {
                 $plugin['repositoryChangelogUrl'] = $pluginHavingUpdate['repositoryChangelogUrl'];
-                $pluginDetails[] = $plugin;
+                $pluginDetails[$pluginHavingUpdate['name']] = $plugin;
             }
-
         }
 
         return $pluginDetails;
@@ -267,7 +273,7 @@ class Client
             $params['release_channel'] = $releaseChannel;
         }
 
-        $params['prefer_stable'] = (int) $this->environment->doesPreferStable();
+        $params['prefer_stable'] = (int)$this->environment->doesPreferStable();
         $params['piwik'] = $this->environment->getPiwikVersion();
         $params['php'] = $this->environment->getPhpVersion();
         $params['mysql'] = $this->environment->getMySQLVersion();
@@ -308,8 +314,8 @@ class Client
 
     /**
      * @param  $pluginOrThemeName
-     * @throws Exception
      * @return string
+     * @throws Exception
      */
     public function getDownloadUrl($pluginOrThemeName)
     {
@@ -325,4 +331,21 @@ class Client
         return $this->service->getDomain() . $downloadUrl . '?coreVersion=' . $this->environment->getPiwikVersion();
     }
 
+    /**
+     * Return the api.matomo.org URL with the correct protocol prefix
+     *
+     * @return string|null
+     */
+    public static function getApiServiceUrl(): ?string
+    {
+        // Default is now https://
+        $url = GeneralConfig::getConfigValue('api_service_url');
+
+        if (GeneralConfig::getConfigValue('force_matomo_http_request')) {
+            // http is being forced, downgrade the protocol to http
+            $url = str_replace('https', 'http', $url);
+        }
+
+        return $url;
+    }
 }

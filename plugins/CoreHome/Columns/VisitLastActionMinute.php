@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,19 +16,16 @@ use Piwik\Metrics\Formatter;
 require_once PIWIK_INCLUDE_PATH . '/plugins/VisitTime/functions.php';
 
 /**
- * This dimension holds the best guess for a visit's end time. It is set the last action
- * time for each visit. `ping=1` requests can be sent to update the dimension value so
- * it can be a more accurate guess of the time the visitor spent on the site.
+ * This dimension holds visit's last action time in a visit.
  *
- * Note: though it is named 'visit last action time' it actually refers to the visit's last action's
- * end time.
+ * Note: though it is named 'visit end time time' it actually refers to the visit's last action.
  */
 class VisitLastActionMinute extends VisitDimension
 {
     protected $columnName = 'visit_last_action_time';
     protected $type = self::TYPE_DATETIME;
     protected $segmentName = 'visitEndServerMinute';
-    protected $nameSingular = 'VisitTime_ColumnVisitEndServerMinute';
+    protected $nameSingular = 'VisitTime_ColumnVisitEndUTCMinute';
     protected $sqlSegment = 'MINUTE(log_visit.visit_last_action_time)';
     protected $acceptValues = '0, 1, 2, 3, ..., 56, 57, 58, 59';
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,6 +15,4 @@ class Type extends \Piwik\Measurable\Type
     protected $namePlural = 'SitesManager_Sites'; // translated into more languages
     protected $description = 'WebsiteMeasurable_WebsiteDescription';
     protected $howToSetupUrl = '?module=CoreAdminHome&action=trackingCodeGenerator';
-
 }
-

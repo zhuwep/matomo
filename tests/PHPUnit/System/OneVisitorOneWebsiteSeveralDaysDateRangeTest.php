@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\System;
@@ -43,6 +43,14 @@ class OneVisitorOneWebsiteSeveralDaysDateRangeTest extends SystemTestCase
             array('MultiSites.getAll', array('date'    => '2010-12-15,2011-01-15',
                                              'periods' => array('range')
                 // Testing without &pattern= so should return all sites
+            )),
+
+            // range test
+            array('MultiSites.getAll', array('date'            => '2010-12-15,2011-01-15',
+                                             'periods'         => array('range'),
+                                             'testSuffix'      => '_Truncated',
+                // Testing with filter_truncate should return an `Others` row
+                                             'otherRequestParameters' => ['filter_truncate' => '0'],
             )),
 
             // test several dates (tests use of IndexedByDate w/ 'date1,date2,etc.')

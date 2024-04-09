@@ -1,12 +1,12 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-namespace Piwik\Tests\Unit;
+namespace Piwik\Tests\Unit\Archive;
 
 use Piwik\Archive\DataCollection;
 use Piwik\Archive\DataTableFactory;
@@ -17,7 +17,7 @@ use Piwik\Segment;
  * @group DataCollectionTest
  * @group Archive
  */
-class DataCollectionTest extends \PHPUnit_Framework_TestCase
+class DataCollectionTest extends \PHPUnit\Framework\TestCase
 {
     private $site1 = 1;
     private $site2 = 2;
@@ -45,7 +45,12 @@ class DataCollectionTest extends \PHPUnit_Framework_TestCase
             $siteIds = array($siteIds[0]);
         }
 
-        return new DataCollection($dataNames, $dataType, $siteIds, $periods, new Segment('', []), $defaultRow);
+        // using mock since Segment makes API queries
+        $mockSegment = $this->getMockBuilder(Segment::class)
+            ->disableOriginalConstructor()
+            ->getMock()
+            ->method('getString')->willReturn('');
+        return new DataCollection($dataNames, $dataType, $siteIds, $periods, $mockSegment, $defaultRow);
     }
 
     public function test_getIndexedArray_numeric_noResultIndices_noData()

@@ -34,7 +34,7 @@ class Validator
             return false;
         }
 
-        if (!SettingsPiwik::isPiwikInstalled()) {
+        if (!SettingsPiwik::isMatomoInstalled()) {
             return false;
         }
 
@@ -45,7 +45,7 @@ class Validator
     {
         Piwik::checkUserIsNotAnonymous();
 
-        if (!SettingsPiwik::isPiwikInstalled()) {
+        if (!SettingsPiwik::isMatomoInstalled()) {
             throw new NotYetInstalledException('Matomo is not set up yet');
         }
     }
@@ -59,14 +59,14 @@ class Validator
 
     public function check2FaEnabled()
     {
-        if (!$this->twoFa->isUserUsingTwoFactorAuthentication(Piwik::getCurrentUserLogin())) {
+        if (!TwoFactorAuthentication::isUserUsingTwoFactorAuthentication(Piwik::getCurrentUserLogin())) {
             throw new Exception('not available');
         }
     }
 
     public function check2FaNotEnabled()
     {
-        if ($this->twoFa->isUserUsingTwoFactorAuthentication(Piwik::getCurrentUserLogin())) {
+        if (TwoFactorAuthentication::isUserUsingTwoFactorAuthentication(Piwik::getCurrentUserLogin())) {
             throw new Exception('not available');
         }
     }
@@ -91,5 +91,4 @@ class Validator
     {
         return new SessionFingerprint();
     }
-
 }

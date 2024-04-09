@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -124,12 +124,13 @@ abstract class Renderer extends BaseFactory
     /**
      * Set the DataTable to be rendered
      *
-     * @param DataTable|Simple|DataTable\Map $table table to be rendered
+     * @param DataTableInterface $table table to be rendered
      * @throws Exception
      */
     public function setTable($table)
     {
-        if (!is_array($table)
+        if (
+            !is_array($table)
             && !($table instanceof DataTableInterface)
         ) {
             throw new Exception("DataTable renderers renderer accepts only DataTable, Simple and Map instances, and arrays.");
@@ -144,8 +145,7 @@ abstract class Renderer extends BaseFactory
                                                  'json',
                                                  'csv',
                                                  'tsv',
-                                                 'html',
-                                                 'php'
+                                                 'html'
     );
 
     /**
@@ -182,10 +182,11 @@ abstract class Renderer extends BaseFactory
      */
     public static function formatValueXml($value)
     {
-        if (is_string($value)
+        if (
+            is_string($value)
             && !is_numeric($value)
         ) {
-            $value = html_entity_decode($value, ENT_COMPAT, 'UTF-8');
+            $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
             // make sure non-UTF-8 chars don't cause htmlspecialchars to choke
             if (function_exists('mb_convert_encoding')) {
                 $value = @mb_convert_encoding($value, 'UTF-8', 'UTF-8');
@@ -266,7 +267,7 @@ abstract class Renderer extends BaseFactory
 
             $api = \Piwik\Plugins\API\API::getInstance();
             $meta = $api->getMetadata($this->idSite, $apiModule, $apiAction);
-            if (is_array($meta[0])) {
+            if (isset($meta[0]) && is_array($meta[0])) {
                 $meta = $meta[0];
             }
 
@@ -344,8 +345,10 @@ abstract class Renderer extends BaseFactory
      * @return bool
      */
     protected static function shouldWrapArrayBeforeRendering(
-        $array, $wrapSingleValues = true, $isAssociativeArray = null)
-    {
+        $array,
+        $wrapSingleValues = true,
+        $isAssociativeArray = null
+    ) {
         if (empty($array)) {
             return false;
         }
@@ -358,7 +361,8 @@ abstract class Renderer extends BaseFactory
         if ($isAssociativeArray) {
             // we don't wrap if the array has one element that is a value
             $firstValue = reset($array);
-            if (!$wrapSingleValues
+            if (
+                !$wrapSingleValues
                 && count($array) === 1
                 && (!is_array($firstValue)
                     && !is_object($firstValue))
@@ -366,7 +370,8 @@ abstract class Renderer extends BaseFactory
                 $wrap = false;
             } else {
                 foreach ($array as $value) {
-                    if (is_array($value)
+                    if (
+                        is_array($value)
                         || is_object($value)
                     ) {
                         $wrap = false;
@@ -379,5 +384,158 @@ abstract class Renderer extends BaseFactory
         }
 
         return $wrap;
+    }
+
+    /**
+     * Produces a flat php array from the DataTable, putting "columns" and "metadata" on the same level.
+     *
+     * For example, when  a originalRender() would be
+     *     array( 'columns' => array( 'col1_name' => value1, 'col2_name' => value2 ),
+     *            'metadata' => array( 'metadata1_name' => value_metadata) )
+     *
+     * a flatRender() is
+     *     array( 'col1_name' => value1,
+     *            'col2_name' => value2,
+     *            'metadata1_name' => value_metadata )
+     *
+     * @param null|DataTable|DataTable\Map|Simple $dataTable
+     * @return array  Php array representing the 'flat' version of the datatable
+     */
+    protected function convertDataTableToArray($dataTable = null)
+    {
+        if (is_null($dataTable)) {
+            $dataTable = $this->table;
+        }
+
+        if (is_array($dataTable)) {
+            $flatArray = $dataTable;
+            if (self::shouldWrapArrayBeforeRendering($flatArray)) {
+                $flatArray = array($flatArray);
+            }
+        } elseif ($dataTable instanceof DataTable\Map) {
+            $flatArray = array();
+            foreach ($dataTable->getDataTables() as $keyName => $table) {
+                $flatArray[$keyName] = $this->convertDataTableToArray($table);
+            }
+        } elseif ($dataTable instanceof Simple) {
+            $flatArray = $this->convertSimpleTable($dataTable);
+
+            reset($flatArray);
+            $firstKey = key($flatArray);
+
+            // if we return only one numeric value then we print out the result in a simple <result> tag
+            // keep it simple!
+            if (
+                count($flatArray) == 1
+                && $firstKey !== DataTable\Row::COMPARISONS_METADATA_NAME
+            ) {
+                $flatArray = current($flatArray);
+            }
+        } else {
+            // A normal DataTable needs to be handled specifically
+            $array = $this->convertTable($dataTable);
+            $flatArray = $this->flattenArray($array);
+        }
+
+        return $flatArray;
+    }
+
+    /**
+     * Converts the given data table to an array
+     *
+     * @param DataTable $table
+     * @return array
+     */
+    protected function convertTable($table)
+    {
+        $array = [];
+
+        foreach ($table->getRows() as $id => $row) {
+            $newRow = array(
+                'columns'        => $row->getColumns(),
+                'metadata'       => $row->getMetadata(),
+                'idsubdatatable' => $row->getIdSubDataTable(),
+            );
+
+            if ($id == DataTable::ID_SUMMARY_ROW) {
+                $newRow['issummaryrow'] = true;
+            }
+
+            if (isset($newRow['metadata'][DataTable\Row::COMPARISONS_METADATA_NAME])) {
+                $newRow['metadata'][DataTable\Row::COMPARISONS_METADATA_NAME] = $row->getComparisons();
+            }
+
+            $subTable = $row->getSubtable();
+            if (
+                $this->isRenderSubtables()
+                && $subTable
+            ) {
+                $subTable = $this->convertTable($subTable);
+                $newRow['subtable'] = $subTable;
+                if (
+                    $this->hideIdSubDatatable === false
+                    && isset($newRow['metadata']['idsubdatatable_in_db'])
+                ) {
+                    $newRow['columns']['idsubdatatable'] = $newRow['metadata']['idsubdatatable_in_db'];
+                }
+                unset($newRow['metadata']['idsubdatatable_in_db']);
+            }
+            if ($this->hideIdSubDatatable !== false) {
+                unset($newRow['idsubdatatable']);
+            }
+
+            $array[] = $newRow;
+        }
+        return $array;
+    }
+
+    /**
+     * Converts the simple data table to an array
+     *
+     * @param Simple $table
+     * @return array
+     */
+    protected function convertSimpleTable($table)
+    {
+        $array = [];
+
+        $row = $table->getFirstRow();
+        if ($row === false) {
+            return $array;
+        }
+        foreach ($row->getColumns() as $columnName => $columnValue) {
+            $array[$columnName] = $columnValue;
+        }
+
+        $comparisons = $row->getComparisons();
+        if (!empty($comparisons)) {
+            $array[DataTable\Row::COMPARISONS_METADATA_NAME] = $comparisons;
+        }
+
+        return $array;
+    }
+
+    /**
+     *
+     * @param array $array
+     * @return array
+     */
+    protected function flattenArray($array)
+    {
+        $flatArray = [];
+        foreach ($array as $row) {
+            $newRow = $row['columns'] + $row['metadata'];
+            if (
+                isset($row['idsubdatatable'])
+                && $this->hideIdSubDatatable === false
+            ) {
+                $newRow += array('idsubdatatable' => $row['idsubdatatable']);
+            }
+            if (isset($row['subtable'])) {
+                $newRow += array('subtable' => $this->flattenArray($row['subtable']));
+            }
+            $flatArray[] = $newRow;
+        }
+        return $flatArray;
     }
 }

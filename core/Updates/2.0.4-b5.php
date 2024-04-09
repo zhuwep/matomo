@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -36,7 +36,7 @@ class Updates_2_0_4_b5 extends Updates
     public function getMigrations(Updater $updater)
     {
         return array(
-            $this->migration->db->addColumn('user', 'superuser_access', "TINYINT(2) UNSIGNED NOT NULL DEFAULT '0'", 'token_auth')
+            $this->migration->db->addColumn('user', 'superuser_access', "TINYINT(2) UNSIGNED NOT NULL DEFAULT '0'")
         );
     }
 
@@ -65,7 +65,8 @@ class Updates_2_0_4_b5 extends Updates
             $superUser = null;
         }
 
-        if (!empty($superUser['bridge'])
+        if (
+            !empty($superUser['bridge'])
             || empty($superUser)
             || empty($superUser['login'])
         ) {
@@ -82,11 +83,10 @@ class Updates_2_0_4_b5 extends Updates
                     'password'   => $superUser['password'],
                     'alias'      => $superUser['login'],
                     'email'      => $superUser['email'],
-                    'token_auth' => $userApi->getTokenAuth($superUser['login'], $superUser['password']),
+                    'token_auth' => md5(Common::getRandomString(32)),
                     'date_registered'  => Date::now()->getDatetime(),
                     'superuser_access' => 1
-                )
-            );
+                ));
         } catch (\Exception $e) {
             echo "There was an issue, but we proceed: " . $e->getMessage();
         }

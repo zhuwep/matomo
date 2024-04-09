@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <result>
 	<website>Site 1</website>
-	<prettyDate>January 3 – 9, 2010</prettyDate>
+	<prettyDate>January 3 – 9, 2010</prettyDate>
 	<metadata>
 		<category>All Websites</category>
 		<name>All Websites dashboard</name>
 		<module>MultiSites</module>
 		<action>getAll</action>
 		<dimension>Website</dimension>
+		<documentation>This report gives you an informational overview for each of your websites, containing the most general metrics about your visitors.</documentation>
 		<metrics>
 			<nb_visits>Visits</nb_visits>
 			<nb_actions>Actions</nb_actions>
@@ -31,6 +32,22 @@
 			<orders_evolution>Ecommerce Orders Evolution</orders_evolution>
 			<ecommerce_revenue_evolution>Product Revenue Evolution</ecommerce_revenue_evolution>
 		</processedMetrics>
+		<metricTypes>
+			<nb_visits>number</nb_visits>
+			<nb_actions>number</nb_actions>
+			<nb_pageviews>number</nb_pageviews>
+			<revenue>money</revenue>
+			<nb_conversions>number</nb_conversions>
+			<orders>number</orders>
+			<ecommerce_revenue>money</ecommerce_revenue>
+			<visits_evolution>percent</visits_evolution>
+			<actions_evolution>percent</actions_evolution>
+			<pageviews_evolution>percent</pageviews_evolution>
+			<revenue_evolution>percent</revenue_evolution>
+			<nb_conversions_evolution>percent</nb_conversions_evolution>
+			<orders_evolution>percent</orders_evolution>
+			<ecommerce_revenue_evolution>percent</ecommerce_revenue_evolution>
+		</metricTypes>
 		<imageGraphUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=MultiSites&amp;apiAction=getAll&amp;period=range&amp;date=2010-01-03,2010-01-09</imageGraphUrl>
 		<imageGraphEvolutionUrl>index.php?module=API&amp;method=ImageGraph.get&amp;idSite=1&amp;apiModule=MultiSites&amp;apiAction=getAll&amp;period=day&amp;date=2010-01-03,2010-01-09</imageGraphEvolutionUrl>
 		<uniqueId>MultiSites_getAll</uniqueId>
@@ -208,6 +225,14 @@
 		<result prettyDate="Sunday, January 3, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>0</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Sat, Jan 2</previousRange>
+				<previous_nb_actions>0</previous_nb_actions>
+				<previous_Actions_nb_pageviews>0</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>0</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -215,11 +240,27 @@
 		<result prettyDate="Monday, January 4, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>2</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Sun, Jan 3</previousRange>
+				<previous_nb_actions>2</previous_nb_actions>
+				<previous_Actions_nb_pageviews>2</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>10</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
 			<row>
 				<idsite>2</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>0</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Sun, Jan 3</previousRange>
+				<previous_nb_actions>0</previous_nb_actions>
+				<previous_Actions_nb_pageviews>0</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>0</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -227,6 +268,14 @@
 		<result prettyDate="Tuesday, January 5, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>1</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Mon, Jan 4</previousRange>
+				<previous_nb_actions>1</previous_nb_actions>
+				<previous_Actions_nb_pageviews>1</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>0</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -234,6 +283,14 @@
 		<result prettyDate="Wednesday, January 6, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>1</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Tue, Jan 5</previousRange>
+				<previous_nb_actions>5</previous_nb_actions>
+				<previous_Actions_nb_pageviews>5</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>5</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -241,6 +298,14 @@
 		<result prettyDate="Thursday, January 7, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>1</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Wed, Jan 6</previousRange>
+				<previous_nb_actions>5</previous_nb_actions>
+				<previous_Actions_nb_pageviews>5</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>5</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -248,6 +313,14 @@
 		<result prettyDate="Friday, January 8, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>1</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Thu, Jan 7</previousRange>
+				<previous_nb_actions>5</previous_nb_actions>
+				<previous_Actions_nb_pageviews>5</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>5</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -255,6 +328,14 @@
 		<result prettyDate="Saturday, January 9, 2010">
 			<row>
 				<idsite>1</idsite>
+				<ratio>1</ratio>
+				<currencySymbol>$</currencySymbol>
+				<previous_nb_visits>1</previous_nb_visits>
+				<periodName>day</periodName>
+				<previousRange>Fri, Jan 8</previousRange>
+				<previous_nb_actions>5</previous_nb_actions>
+				<previous_Actions_nb_pageviews>5</previous_Actions_nb_pageviews>
+				<previous_Goal_revenue>5</previous_Goal_revenue>
 				<group />
 				<main_url>http://piwik.net</main_url>
 			</row>
@@ -265,5 +346,13 @@
 		<nb_actions>31</nb_actions>
 		<nb_pageviews>31</nb_pageviews>
 		<revenue>35</revenue>
+		<_metadata>
+			<ts_archived>today-date-removed-in-tests</ts_archived>
+			<archive_state>complete</archive_state>
+		</_metadata>
+		<visits_evolution_trend>7</visits_evolution_trend>
+		<actions_evolution_trend>7</actions_evolution_trend>
+		<pageviews_evolution_trend>7</pageviews_evolution_trend>
+		<revenue_evolution_trend>6</revenue_evolution_trend>
 	</reportTotal>
 </result>

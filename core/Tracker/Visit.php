@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,8 +15,9 @@ use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Date;
 use Piwik\Exception\UnexpectedWebsiteFoundException;
-use Piwik\Network\IPUtils;
+use Matomo\Network\IPUtils;
 use Piwik\Plugin\Dimension\VisitDimension;
+use Piwik\Plugins\Actions\Tracker\ActionsRequestProcessor;
 use Piwik\Plugins\UserCountry\Columns\Base;
 use Piwik\Tracker;
 use Piwik\Tracker\Visit\VisitProperties;
@@ -63,6 +64,11 @@ class Visit implements VisitInterface
      * @var VisitProperties
      */
     protected $visitProperties;
+
+    /**
+     * @var VisitProperties
+     */
+    protected $previousVisitProperties;
 
     /**
      * @var ArchiveInvalidator
@@ -179,6 +185,7 @@ class Visit implements VisitInterface
         }
 
         $isNewVisit = $this->request->getMetadata('CoreHome', 'isNewVisit');
+        $this->previousVisitProperties = new VisitProperties($this->request->getMetadata('CoreHome', 'lastKnownVisit') ?: []);
 
         // Known visit when:
         // ( - the visitor has the Piwik cookie with the idcookie ID used by Piwik to match the visitor
@@ -207,11 +214,14 @@ class Visit implements VisitInterface
         $this->request->setThirdPartyCookie($this->request->getVisitorIdForThirdPartyCookie());
 
         foreach ($this->requestProcessors as $processor) {
+            if (!$isNewVisit && $processor instanceof ActionsRequestProcessor) {
+                // already processed earlier when handling exisitng visit see {@link self::handleExistingVisit()}
+                continue;
+            }
             Common::printDebug("Executing " . get_class($processor) . "::recordLogs()...");
 
             $processor->recordLogs($this->visitProperties, $this->request);
         }
-
         $this->markArchivedReportsAsInvalidIfArchiveAlreadyFinished();
     }
 
@@ -241,8 +251,27 @@ class Visit implements VisitInterface
         }
 
         foreach ($this->requestProcessors as $processor) {
+            // for improving performance we create a log_link_visit_action entry before updating the visit.
+            // this way we save one extra update on log_visit in custom dimensions.
+            // Refs https://github.com/matomo-org/matomo/issues/17173
+            if ($processor instanceof ActionsRequestProcessor) {
+                Common::printDebug("Executing " . get_class($processor) . "::recordLogs()...");
+                $processor->recordLogs($this->visitProperties, $this->request);
+            }
+        }
+
+        foreach ($this->requestProcessors as $processor) {
             $processor->onExistingVisit($valuesToUpdate, $this->visitProperties, $this->request);
         }
+
+        // we we remove values that haven't actually changed and are still the same when comparing to the initially
+        // selected visit row. In best case this avoids the update completely. Eg when there is a bulk tracking request
+        // of many content impressions. Then it will update the visit in the first request of the bulk request, and
+        // all other visits that have same visit_last_action_time etc will be ignored and won't issue an update SQL
+        // statement at all avoiding potential lock wait time when too many requests try to update the same visit at
+        // same time
+        $visitorRecognizer = StaticContainer::get(VisitorRecognizer::class);
+        $valuesToUpdate = $visitorRecognizer->removeUnchangedValues($valuesToUpdate, $this->previousVisitProperties);
 
         $this->updateExistingVisit($valuesToUpdate);
 
@@ -323,7 +352,8 @@ class Visit implements VisitInterface
 
         // If the visitor had a first party ID cookie, then we use this value
         $idVisitor = $this->visitProperties->getProperty('idvisitor');
-        if (!empty($idVisitor)
+        if (
+            !empty($idVisitor)
             && Tracker::LENGTH_BINARY_ID == strlen($this->visitProperties->getProperty('idvisitor'))
         ) {
             return $this->visitProperties->getProperty('idvisitor');
@@ -382,7 +412,7 @@ class Visit implements VisitInterface
 
     private static function toCanonicalHost($host)
     {
-        $hostLower = Common::mb_strtolower($host);
+        $hostLower = mb_strtolower($host);
         return str_replace('www.', '', $hostLower);
     }
 
@@ -409,19 +439,23 @@ class Visit implements VisitInterface
 
         if ($wasInserted) {
             Common::printDebug('Updated existing visit: ' . var_export($valuesToUpdate, true));
-        } else {
+        } elseif (!$this->getModel()->hasVisit($idSite, $idVisit)) {
+            // mostly for WordPress. see https://github.com/matomo-org/matomo/pull/15587
+            // as WP doesn't set `MYSQLI_CLIENT_FOUND_ROWS` and therefore when the update succeeded but no value changed
+            // it would still return 0 vs OnPremise would return 1 or 2.
             throw new VisitorNotFoundInDb(
                 "The visitor with idvisitor=" . bin2hex($this->visitProperties->getProperty('idvisitor'))
                 . " and idvisit=" . @$this->visitProperties->getProperty('idvisit')
-                . " wasn't found in the DB, we fallback to a new visitor");
+                . " wasn't found in the DB, we fallback to a new visitor"
+            );
         }
     }
 
     private function printVisitorInformation()
     {
         $debugVisitInfo = $this->visitProperties->getProperties();
-        $debugVisitInfo['idvisitor'] = bin2hex($debugVisitInfo['idvisitor']);
-        $debugVisitInfo['config_id'] = bin2hex($debugVisitInfo['config_id']);
+        $debugVisitInfo['idvisitor'] = isset($debugVisitInfo['idvisitor']) ? bin2hex($debugVisitInfo['idvisitor']) : '';
+        $debugVisitInfo['config_id'] = isset($debugVisitInfo['config_id']) ? bin2hex($debugVisitInfo['config_id']) : '';
         $debugVisitInfo['location_ip'] = IPUtils::binaryToStringIP($debugVisitInfo['location_ip']);
         Common::printDebug($debugVisitInfo);
     }
@@ -525,8 +559,10 @@ class Visit implements VisitInterface
                 $dimensionNames[] = $dimension->getColumnName();
             }
 
-            Common::printDebug("Following dimensions have been collected from plugins: " . implode(", ",
-                    $dimensionNames));
+            Common::printDebug("Following dimensions have been collected from plugins: " . implode(
+                ", ",
+                $dimensionNames
+            ));
         }
 
         return self::$dimensions;
@@ -544,10 +580,25 @@ class Visit implements VisitInterface
      */
     private function setIdVisitorForExistingVisit($valuesToUpdate)
     {
-        // Might update the idvisitor when it was forced or overwritten for this visit
         if (strlen($this->visitProperties->getProperty('idvisitor')) == Tracker::LENGTH_BINARY_ID) {
-            $binIdVisitor = $this->visitProperties->getProperty('idvisitor');
-            $valuesToUpdate['idvisitor'] = $binIdVisitor;
+            $valuesToUpdate['idvisitor'] = $this->visitProperties->getProperty('idvisitor');
+        }
+
+        $visitorId = $this->request->getVisitorId();
+        if ($visitorId && strlen($visitorId) === Tracker::LENGTH_BINARY_ID) {
+            // Might update the idvisitor when it was forced or overwritten for this visit
+            $valuesToUpdate['idvisitor'] = $this->request->getVisitorId();
+        }
+
+        if (TrackerConfig::getConfigValue('enable_userid_overwrites_visitorid', $this->request->getIdSiteIfExists())) {
+            // User ID takes precedence and overwrites idvisitor value
+            $userId = $this->request->getForcedUserId();
+            if ($userId) {
+                $userIdHash = $this->request->getUserIdHashed($userId);
+                $binIdVisitor = Common::hex2bin($userIdHash);
+                $this->visitProperties->setProperty('idvisitor', $binIdVisitor);
+                $valuesToUpdate['idvisitor'] = $binIdVisitor;
+            }
         }
 
         return $valuesToUpdate;
@@ -572,10 +623,10 @@ class Visit implements VisitInterface
         $date = Date::factory((int)$time, $timezone);
 
         // $date->isToday() is buggy when server and website timezones don't match - so we'll do our own checking
-        $startOfTomorrow = Date::factoryInTimezone('today', $timezone)->addDay(1);
-        $isLaterThanToday = $date->getTimestamp() >= $startOfTomorrow->getTimestamp();
-        if ($isLaterThanToday) {
-            return;
+        $startOfToday = Date::factoryInTimezone('yesterday', $timezone)->addDay(1);
+        $isLaterThanYesterday = $date->getTimestamp() >= $startOfToday->getTimestamp();
+        if ($isLaterThanYesterday) {
+            return; // don't try to invalidate archives for today or later
         }
 
         $this->invalidator->rememberToInvalidateArchivedReportsLater($idSite, $date);
@@ -596,6 +647,6 @@ class Visit implements VisitInterface
 
     private function makeVisitorFacade()
     {
-        return Visitor::makeFromVisitProperties($this->visitProperties, $this->request);
+        return Visitor::makeFromVisitProperties($this->visitProperties, $this->request, $this->previousVisitProperties);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,6 +17,7 @@ use Piwik\Option;
 use Piwik\Plugins\Intl\DateTimeFormatProvider;
 use Piwik\SettingsPiwik;
 use Piwik\Translation\Translator;
+use Piwik\Url;
 
 /**
  * Check if cron archiving has run in the last 24-48 hrs.
@@ -49,17 +50,17 @@ class CronArchivingLastRunCheck implements Diagnostic
         // check cron archiving has been enabled
         $isBrowserTriggerDisabled = !Rules::isBrowserTriggerEnabled();
         if (!$isBrowserTriggerDisabled) {
-            $comment = $this->translator->translate('Diagnostics_BrowserTriggeredArchivingEnabled', [
-                '<a href="https://matomo.org/docs/setup-auto-archiving/" target="_blank" rel="noreferrer noopener">', '</a>']);
-            return [DiagnosticResult::singleResult($label, DiagnosticResult::STATUS_WARNING, $comment)];
+            return [];
         }
 
         // check archiving has been run
         $lastRunTime = (int)Option::get(CronArchive::OPTION_ARCHIVING_FINISHED_TS);
         if (empty($lastRunTime)) {
             $comment = $this->translator->translate('Diagnostics_CronArchivingHasNotRun')
-                . '<br/><br/>' . $this->translator->translate('Diagnostics_CronArchivingRunDetails',
-                    [$coreArchiveShort, $mailto, $commandToRerun, '<a href="https://matomo.org/docs/setup-auto-archiving/" target="_blank" rel="noreferrer noopener">', '</a>']);;
+                . '<br/><br/>' . $this->translator->translate(
+                    'Diagnostics_CronArchivingRunDetails',
+                    [$coreArchiveShort, $mailto, $commandToRerun, '<a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/docs/setup-auto-archiving/') . '" target="_blank" rel="noreferrer noopener">', '</a>']
+                );
             return [DiagnosticResult::singleResult($label, DiagnosticResult::STATUS_ERROR, $comment)];
         }
 
@@ -74,7 +75,10 @@ class CronArchivingLastRunCheck implements Diagnostic
             . '<br/><br/>' .
             $this->translator->translate(
                 'Diagnostics_CronArchivingRunDetails',
-                [$coreArchiveShort, $mailto, $commandToRerun, '<a href="https://matomo.org/docs/setup-auto-archiving/" target="_blank" rel="noreferrer noopener">', '</a>']
+                [$coreArchiveShort, $mailto, $commandToRerun,
+                    '<a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/docs/setup-auto-archiving/') . '" target="_blank" rel="noreferrer noopener">',
+                    '</a>'
+                ]
             );
 
         // check archiving has been run recently
@@ -92,8 +96,13 @@ class CronArchivingLastRunCheck implements Diagnostic
 
     private function getArchivingCommand()
     {
-        $domain = Config::getHostname();
-        return PIWIK_INCLUDE_PATH . ' --matomo-domain=' . $domain . ' core:archive';
+        if (Url::isValidHost()) {
+            $domain = Config::getHostname($checkIfTrusted = true);
+
+            return PIWIK_INCLUDE_PATH . '/console --matomo-domain=' . $domain . ' core:archive';
+        }
+
+        return PIWIK_INCLUDE_PATH . '/console core:archive';
     }
 
     public static function getTimeSinceLastSuccessfulRun($lastRunTime = null)

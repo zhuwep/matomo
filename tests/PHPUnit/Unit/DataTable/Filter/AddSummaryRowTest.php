@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,7 @@ use Piwik\DataTable\Row;
 /**
  * @group DataTableTest
  */
-class DataTable_Filter_AddSummaryRowTest extends \PHPUnit_Framework_TestCase
+class AddSummaryRowTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @group AddSummaryRow
@@ -39,7 +39,7 @@ class DataTable_Filter_AddSummaryRowTest extends \PHPUnit_Framework_TestCase
      */
     protected function getDataTableCount5()
     {
-        $table = new DataTable;
+        $table = new DataTable();
         $table->addRow($this->getRow0());
         $table->addRow($this->getRow1());
         $table->addRow($this->getRow2());

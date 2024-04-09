@@ -1,17 +1,20 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
 function _pk_translate(translationStringId, values) {
-
-    if( typeof(piwik_translations[translationStringId]) != 'undefined' ){
+    if (typeof(piwik_translations) !== 'undefined'
+        && typeof(piwik_translations[translationStringId]) != 'undefined'
+    ) {
         var translation = piwik_translations[translationStringId];
         if (typeof values != 'undefined' && values && values.length) {
             values.unshift(translation);
             return sprintf.apply(null, values);
+        } else {
+            translation = translation.replaceAll('%%', '%');
         }
 
         return translation;
@@ -20,7 +23,52 @@ function _pk_translate(translationStringId, values) {
     return "The string "+translationStringId+" was not loaded in javascript. Make sure it is added in the Translate.getClientSideTranslationKeys hook.";
 }
 
-var piwikHelper = {
+function _pk_externalRawLink(url, values) {
+
+  if (!url) {
+    return '';
+  }
+
+  const campaignOverride = (typeof values != 'undefined' && values.length > 0 && values[0] ? values[0] : null);
+  const sourceOverride = (typeof values != 'undefined' && values.length > 1 && values[1] ? values[1] : null);
+  const mediumOverride = (typeof values != 'undefined' && values.length > 2 && values[2] ? values[2] : null);
+
+  let returnURL = null;
+  try {
+      returnURL = new URL(url);
+  } catch(error) {
+      console.log('Error parsing URL: ' + url);
+  }
+  if (!returnURL) {
+    return '';
+  }
+
+  const validDomain = returnURL.host === 'matomo.org' || returnURL.host.endsWith('.matomo.org');
+  const urlParams = new URLSearchParams(window.location.search);
+  const module = urlParams.get('module');
+  const action = urlParams.get('action');
+
+  // Apply campaign parameters if domain is ok, config is not disabled and a value for medium exists
+  if (validDomain && !window.piwik.disableTrackingMatomoAppLinks
+    && ((module && action) || mediumOverride)) {
+    const campaign = (campaignOverride === null ? 'Matomo_App' : campaignOverride);
+    let source = (window.Cloud === undefined ? 'Matomo_App_OnPremise' : 'Matomo_App_Cloud');
+    if (sourceOverride !== null) {
+      source = sourceOverride;
+    }
+
+    const medium = (mediumOverride === null ? 'App.' + module + '.' + action : mediumOverride);
+
+    returnURL.searchParams.set('mtm_campaign', campaign);
+    returnURL.searchParams.set('mtm_source', source);
+    returnURL.searchParams.set('mtm_medium', medium);
+  }
+
+  return returnURL.toString();
+}
+
+
+window.piwikHelper = {
 
     htmlDecode: function(value)
     {
@@ -108,11 +156,12 @@ var piwikHelper = {
         return value;
     },
 
+    /**
+     * @deprecated use window.vueSanitize instead
+     */
     escape: function (value)
     {
-        var escape = angular.element(document).injector().get('$sanitize');
-
-        return escape(value);
+        return window.vueSanitize(value);
     },
 
 	/**
@@ -142,70 +191,192 @@ var piwikHelper = {
 		return url;
 	},
 
-    getAngularDependency: function (dependency) {
-        return angular.element(document).injector().get(dependency);
-    },
+    // initial call for 'body' later in this file
+    compileVueEntryComponents: function (selector, extraProps) {
+      function toCamelCase(arg) {
+        return arg[0] + arg.substring(1)
+          .replace(/-[a-z]/g, function (s) { return s[1].toUpperCase(); });
+      }
 
-    /**
-     * As we still have a lot of old jQuery code and copy html from node to node we sometimes have to trigger the
-     * compiling of angular components manually.
-     *
-     * @param selector
-     * @param {object} options
-     * @param {object} options.scope if supplied, the given scope will be used when compiling the template. Shouldn't
-     *                               be a plain object but an actual angular scope.
-     * @param {object} options.params if supplied, the properties in this object are
-     *                               added to the new scope.
-     */
-    compileAngularComponents: function (selector, options) {
-        options = options || {};
+      function toKebabCase(arg) {
+        return arg[0].toLowerCase() + arg.substring(1)
+          .replace(/[A-Z]/g, function (s) { return '-' + s[0].toLowerCase(); });
+      }
 
-        var $element = $(selector);
-
-        if (!$element.length) {
-            return;
+      // process vue-entry attributes
+      $('[vue-entry]', selector).add($(selector).filter('[vue-entry]')).each(function () {
+        if ($(this).closest('[vue-entry-ignore]').length) {
+          return;
         }
 
-        angular.element(document).injector().invoke(function($compile, $rootScope) {
-            var scope = null;
-            if (options.scope) {
-                scope = options.scope;
-            } else if (!options.forceNewScope) { // TODO: docs
-                scope = angular.element($element).scope();
-            }
-            if (!scope) {
-                scope = $rootScope.$new(true);
-            }
-
-            if (options.params) {
-                $.extend(scope, options.params);
-            }
-
-            $compile($element)(scope);
+        var entry = $(this).attr('vue-entry');
+        var componentsToRegister = ($(this).attr('vue-components') || '').split(/\s+/).filter(function (s) {
+          return !!s.length;
         });
+
+        var parts = entry.split('.');
+        if (parts.length !== 2) {
+          throw new Error('Expects vue-entry to have format Plugin.Component, where Component is exported Vue component. Got: ' + entry);
+        }
+
+        var useExternalPluginComponent = CoreHome.useExternalPluginComponent;
+        var createVueApp = CoreHome.createVueApp;
+        var component;
+
+        var shouldLoadOnDemand = (piwik.pluginsToLoadOnDemand || []).indexOf(parts[0]) !== -1;
+        if (!shouldLoadOnDemand) {
+          var plugin = window[parts[0]];
+          if (!plugin) {
+            // plugin may not be activated
+            return;
+          }
+
+          component = plugin[parts[1]];
+          if (!component) {
+            throw new Error('Unknown component in vue-entry: ' + entry);
+          }
+        } else {
+          component = useExternalPluginComponent(parts[0], parts[1]);
+        }
+
+        var paramsStr = '';
+        var componentParams = {};
+
+        function handleProperty(name, value) {
+          if (name === 'vue-entry' || name === 'class' || name === 'style' || name === 'id') {
+            return;
+          }
+
+          // append '_' to avoid accidentally using javascript keywords
+          var camelName = toCamelCase(name) + '_';
+          paramsStr += ':' + name + '=' + JSON.stringify(camelName) + ' ';
+
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            // pass
+          }
+
+          componentParams[camelName] = value;
+        }
+
+        $.each(this.attributes, function () {
+          handleProperty(this.name, this.value);
+        });
+        Object.entries(extraProps || {}).forEach(([name, value]) => {
+          handleProperty(name, value);
+        });
+
+        var element = this;
+
+        // NOTE: we could just do createVueApp(component, componentParams), but Vue will not allow
+        // slots to be in the vue-entry element this way. So instead, we create a quick
+        // template that references the root component and wraps the vue-entry component's html.
+        // this allows using slots in twig.
+        var app = createVueApp({
+          template: '<root ' + paramsStr + '>' + this.innerHTML + '</root>',
+          data: function () {
+            return componentParams;
+          },
+        });
+        app.component('root', component);
+
+        componentsToRegister.forEach(function (componentRef) {
+          var parts = componentRef.split('.');
+          var pluginName = parts[0];
+          var componentName = parts[1];
+
+          var component = useExternalPluginComponent(pluginName, componentName);
+
+          // the component is made available via kebab case, since casing is lost in HTML,
+          // and tag names will appear all lower case when vue processes them
+          app.component(toKebabCase(componentName), component);
+        });
+
+        var appInstance = app.mount(this);
+        $(this).data('vueAppInstance', appInstance);
+
+        var self = this;
+        this.addEventListener('matomoVueDestroy', function () {
+          $(self).data('vueAppInstance', null);
+          app.unmount();
+        });
+      });
+
+      // process vue-directive attributes (only uses .mounted/.unmounted hooks)
+      piwikHelper.compileVueDirectives(selector);
+
+      if (window.Vue) {
+        window.Vue.nextTick(function () {
+          piwikHelper.processDynamicHtml($(selector).parent());
+        });
+      }
+    },
+
+    compileVueDirectives: function (selector) {
+      $('[vue-directive]', selector).add($(selector).filter('[vue-directive]')).each(function () {
+        var vueDirectiveName = $(this).attr('vue-directive');
+        if (!vueDirectiveName) {
+          return;
+        }
+
+        var parts = vueDirectiveName.split('.');
+        if (parts.length !== 2) {
+          throw new Error('Expects vue-entry to have format Plugin.Component, where Component is exported Vue component. Got: ' + vueDirectiveName);
+        }
+
+        var plugin = window[parts[0]];
+        if (!plugin) {
+          throw new Error('Unknown plugin in vue-entry: ' + vueDirectiveName);
+        }
+
+        var directive = plugin[parts[1]];
+        if (!directive) {
+          throw new Error('Unknown component in vue-entry: ' + vueDirectiveName);
+        }
+
+        var directiveArgument = $(this).attr('vue-directive-value');
+
+        var value;
+        try {
+          value = JSON.parse(directiveArgument || '{}');
+        } catch (e) {
+          console.log('failed to parse directive value ' + value + ': ' + directiveArgument);
+          return;
+        }
+
+        var binding = { value: value };
+
+        if (directive.mounted) {
+          directive.mounted(this, binding);
+        }
+
+        this.addEventListener('matomoVueDestroy', function () {
+          if (directive.unmounted) {
+            directive.unmounted(this, binding);
+          }
+        });
+      });
+    },
+
+    destroyVueComponent: function (selector) {
+      $('[vue-entry]', selector).each(function () {
+        this.dispatchEvent(new CustomEvent('matomoVueDestroy'));
+      });
+    },
+
+    processDynamicHtml: function ($element) {
+        piwik.postEvent('Matomo.processDynamicHtml', $element);
     },
 
     /**
-     * Detection works currently only for directives defining an isolated scope. Functionality might need to be
-     * extended if needed. Under circumstances you might call this method before calling compileAngularComponents()
-     * to avoid compiling the same element twice.
-     * @param selector
-     */
-    isAlreadyCompiledAngularComponent: function (selector) {
-        var $element = $(selector);
-
-        return ($element.length && $element.hasClass('ng-isolate-scope'));
-    },
-
-    /**
-     * Detects whether angular is rendering the page. If so, the page will be reloaded automatically
-     * via angular as soon as it detects a $locationChange
+     * Detects whether the current page is a reporting page or not.
      *
-     * @returns {number|jQuery}
+     * @returns {number}
      */
-    isAngularRenderingThePage: function ()
+    isReportingPage: function ()
     {
-        return $('[piwik-reporting-page]').length;
+        return $('.reporting-page').length;
     },
 
     /**
@@ -267,14 +438,30 @@ var piwikHelper = {
         var $content = $(content).hide();
         var $footer = $content.find('.modal-footer');
 
-        $('[role]', domElem).each(function(){
+        $('[role]', domElem).not('li').each(function(){
             var $button = $(this);
+
+            // skip this button if it's part of another modal, the current modal can launch
+            // (which is true if there are more than one parent elements contained in domElem,
+            // w/ css class ui-confirm)
+            var uiConfirm = $button.parents('.ui-confirm,[ui-confirm]').filter(function () {
+              return domElem[0] === this || $.contains(domElem[0], this);
+            });
+            if (uiConfirm.length > 1) {
+              return;
+            }
+
             var role  = $button.attr('role');
             var title = $button.attr('title');
             var text  = $button.val();
             $button.hide();
 
             var button = $('<a href="javascript:;" class="modal-action modal-close waves-effect waves-light btn-flat "></a>');
+
+            if(role === 'validation'){
+                button = $('<a href="javascript:;" class="modal-action waves-effect waves-light btn"></a>');
+            }
+
             button.text(text);
             if (title) {
                 button.attr('title', title);
@@ -290,7 +477,6 @@ var piwikHelper = {
                     window.location.href = $button.data('href');
                 })
             }
-            
 
             $footer.append(button);
         });
@@ -309,8 +495,8 @@ var piwikHelper = {
             delete options.extraWide;
         }
 
-        if (options && !options.ready) {
-            options.ready = function () {
+        if (options && !options.onOpenEnd) {
+            options.onOpenEnd = function () {
                 $(".modal.open a").focus();
                 var modalContent = $(".modal.open");
                 if (modalContent && modalContent[0]) {
@@ -321,7 +507,7 @@ var piwikHelper = {
         }
 
         domElem.show();
-        $content.openModal(options);
+        $content.modal(options).modal('open');
     },
 
     getQueryStringWithParametersModified: function (queryString, newParameters) {
@@ -570,7 +756,11 @@ var piwikHelper = {
         } else {
             return Math.round((dividend / divisor) * 1000) / 1000;
         }
-    }
+    },
+
+    showVisitorProfilePopup: function (visitorId, idSite) {
+      require('piwik/UI').VisitorProfileControl.showPopover(visitorId, idSite);
+    },
 };
 if (typeof String.prototype.trim !== 'function') {
     String.prototype.trim = function() {
@@ -598,33 +788,38 @@ function isEscapeKey(e)
 }
 
 // workarounds
-(function($){
-try {
-    // this code is not vital, so we make sure any errors are ignored
+document.addEventListener('DOMContentLoaded', function () {
+  (function($){
+    try {
+      // this code is not vital, so we make sure any errors are ignored
 
-    //--------------------------------------
-    //
-    // monkey patch that works around bug in arc function of some browsers where
-    // nothing gets drawn if angles are 2 * PI apart and in counter-clockwise direction.
-    // affects some versions of chrome & IE 8
-    //
-    //--------------------------------------
-    var oldArc = CanvasRenderingContext2D.prototype.arc;
-    CanvasRenderingContext2D.prototype.arc = function(x, y, r, sAngle, eAngle, clockwise) {
+      //--------------------------------------
+      //
+      // monkey patch that works around bug in arc function of some browsers where
+      // nothing gets drawn if angles are 2 * PI apart and in counter-clockwise direction.
+      // affects some versions of chrome & IE 8
+      //
+      //--------------------------------------
+      var oldArc = CanvasRenderingContext2D.prototype.arc;
+      CanvasRenderingContext2D.prototype.arc = function(x, y, r, sAngle, eAngle, clockwise) {
         if (Math.abs(eAngle - sAngle - Math.PI * 2) < 0.000001 && !clockwise)
-            eAngle -= 0.000001;
+          eAngle -= 0.000001;
         oldArc.call(this, x, y, r, sAngle, eAngle, clockwise);
-    };
+      };
 
-    // Fix jQuery UI dialogs scrolling when click on links with tooltips
-    jQuery.ui.dialog.prototype._focusTabbable = $.noop;
+      // Fix jQuery UI dialogs scrolling when click on links with tooltips
+      jQuery.ui.dialog.prototype._focusTabbable = $.noop;
 
-    // Fix jQuery UI tooltip displaying when dialog is closed by Esc key
-    jQuery(document).keyup(function(e) {
-      if (e.keyCode == 27) {
+      // Fix jQuery UI tooltip displaying when dialog is closed by Esc key
+      jQuery(document).keyup(function(e) {
+        if (e.keyCode == 27) {
           $('.ui-tooltip').hide();
-      }
-    });
+        }
+      });
 
-} catch (e) {}
-}(jQuery));
+    } catch (e) {}
+
+    piwikHelper.compileVueEntryComponents('body');
+
+  }(jQuery));
+}, false);

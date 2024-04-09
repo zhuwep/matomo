@@ -11,7 +11,8 @@ namespace Piwik\Plugins\Tour\tests\Integration;
 use Piwik\Plugins\Tour\Engagement\Challenge;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
-class CustomTestChallenge extends Challenge {
+class CustomTestChallenge extends Challenge
+{
     public function getId()
     {
         return 'test_challenge';
@@ -22,7 +23,8 @@ class CustomTestChallenge extends Challenge {
     }
 }
 
-class CustomTest2Challenge extends Challenge {
+class CustomTest2Challenge extends Challenge
+{
     public function getId()
     {
         return 'test_challenge2';
@@ -50,7 +52,7 @@ class ChallengeTest extends IntegrationTestCase
      */
     private $challenge2;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -58,7 +60,7 @@ class ChallengeTest extends IntegrationTestCase
         $this->challenge2 = new CustomTest2Challenge();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         Challenge::clearCache();
         parent::tearDown();
@@ -66,32 +68,35 @@ class ChallengeTest extends IntegrationTestCase
 
     public function test_skip()
     {
-        $this->assertFalse($this->challenge->isSkipped());
-        $this->assertFalse($this->challenge2->isSkipped());
-        $this->assertFalse($this->challenge->isCompleted());
-        $this->assertFalse($this->challenge2->isCompleted());
+        $login = 'foo';
+        $this->assertFalse($this->challenge->isSkipped($login));
+        $this->assertFalse($this->challenge2->isSkipped($login));
+        $this->assertFalse($this->challenge->isCompleted($login));
+        $this->assertFalse($this->challenge2->isCompleted($login));
 
-        $this->challenge2->skipChallenge();
+        $this->challenge2->skipChallenge($login);
 
-        $this->assertFalse($this->challenge->isSkipped());
-        $this->assertTrue($this->challenge2->isSkipped());
-        $this->assertFalse($this->challenge->isCompleted());
-        $this->assertFalse($this->challenge2->isCompleted());
+        $this->assertFalse($this->challenge->isSkipped($login));
+        $this->assertTrue($this->challenge2->isSkipped($login));
+        $this->assertFalse($this->challenge2->isSkipped('barbaz'));
+        $this->assertFalse($this->challenge->isCompleted($login));
+        $this->assertFalse($this->challenge2->isCompleted($login));
     }
 
     public function test_complete()
     {
-        $this->assertFalse($this->challenge->isSkipped());
-        $this->assertFalse($this->challenge2->isSkipped());
-        $this->assertFalse($this->challenge->isCompleted());
-        $this->assertFalse($this->challenge2->isCompleted());
+        $login = 'foo';
+        $this->assertFalse($this->challenge->isSkipped($login));
+        $this->assertFalse($this->challenge2->isSkipped($login));
+        $this->assertFalse($this->challenge->isCompleted($login));
+        $this->assertFalse($this->challenge2->isCompleted($login));
 
-        $this->challenge->setCompleted();
+        $this->challenge->setCompleted($login);
 
-        $this->assertFalse($this->challenge->isSkipped());
-        $this->assertFalse($this->challenge2->isSkipped());
-        $this->assertTrue($this->challenge->isCompleted());
-        $this->assertFalse($this->challenge2->isCompleted());
+        $this->assertFalse($this->challenge->isSkipped($login));
+        $this->assertFalse($this->challenge2->isSkipped($login));
+        $this->assertTrue($this->challenge->isCompleted($login));
+        $this->assertFalse($this->challenge->isCompleted('barbaz'));
+        $this->assertFalse($this->challenge2->isCompleted($login));
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,13 +12,14 @@ use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\NumberFormatter;
+use Piwik\Piwik;
 use Piwik\Site;
 
 /**
  * A {@link DataTable} filter that calculates the evolution of a metric and adds
  * it to each row as a percentage.
  *
- * **This filter cannot be used as an argument to {@link Piwik\DataTable::filter()}** since
+ * **This filter cannot be used as an argument to {@link \Piwik\DataTable::filter()}** since
  * it requires corresponding data from another DataTable. Instead,
  * you must manually perform a binary filter (see the **MultiSites** API for an
  * example).
@@ -56,11 +57,17 @@ class CalculateEvolutionFilter extends ColumnCallbackAddColumnPercentage
     public function __construct($table, $pastDataTable, $columnToAdd, $columnToRead, $quotientPrecision = 0)
     {
         parent::__construct(
-            $table, $columnToAdd, $columnToRead, $columnToRead, $quotientPrecision, $shouldSkipRows = true);
+            $table,
+            $columnToAdd,
+            $columnToRead,
+            $columnToRead,
+            $quotientPrecision,
+            $shouldSkipRows = true
+        );
 
         $this->pastDataTable = $pastDataTable;
 
-        $this->isRevenueEvolution = $columnToAdd == 'revenue_evolution';
+        $this->isRevenueEvolution = $columnToAdd === 'revenue_evolution';
     }
 
     /**
@@ -76,7 +83,8 @@ class CalculateEvolutionFilter extends ColumnCallbackAddColumnPercentage
 
         // if the site this is for doesn't support ecommerce & this is for the revenue_evolution column,
         // we don't add the new column
-        if ($currentValue === false
+        if (
+            $currentValue === false
             && $this->isRevenueEvolution
             && !Site::isEcommerceEnabledFor($row->getColumn('label'))
         ) {
@@ -151,17 +159,24 @@ class CalculateEvolutionFilter extends ColumnCallbackAddColumnPercentage
      *                                      from this value to $currentValue.
      * @param float|int $quotientPrecision The quotient precision to round to.
      * @param bool $appendPercentSign Whether to append a '%' sign to the end of the number or not.
+     * @param bool $prependPlusSignWhenPositive Whether to prepend a '+' sign before the number if it's not negative.
      *
      * @return string The evolution percent, eg `'15%'`.
      */
-    public static function calculate($currentValue, $pastValue, $quotientPrecision = 0, $appendPercentSign = true)
+    public static function calculate($currentValue, $pastValue, $quotientPrecision = 0, $appendPercentSign = true, $prependPlusSignWhenPositive = false)
     {
         $number = self::getPercentageValue($currentValue - $pastValue, $pastValue, $quotientPrecision);
         if ($appendPercentSign) {
-            return NumberFormatter::getInstance()->formatPercent($number, $quotientPrecision);
+            $formatted = NumberFormatter::getInstance()->formatPercent($number, $quotientPrecision);
+        } else {
+            $formatted = NumberFormatter::getInstance()->format($number, $quotientPrecision);
         }
 
-        return NumberFormatter::getInstance()->format($number, $quotientPrecision);
+        if ($prependPlusSignWhenPositive && $number >= 0) {
+            $formatted = Piwik::translate('Intl_NumberSymbolPlus') . $formatted;
+        }
+
+        return $formatted;
     }
 
     public static function appendPercentSign($number)
@@ -171,8 +186,8 @@ class CalculateEvolutionFilter extends ColumnCallbackAddColumnPercentage
 
     public static function prependPlusSignToNumber($number)
     {
-        if ($number > 0) {
-            $number = '+' . $number;
+        if ((float) $number > 0) {
+            return '+' . $number;
         }
 
         return $number;

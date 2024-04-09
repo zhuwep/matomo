@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,7 @@ namespace Piwik\Plugins\Diagnostics\Diagnostic;
 /**
  * @api
  */
-class DiagnosticResultItem
+class DiagnosticResultItem implements \JsonSerializable
 {
     /**
      * @var string
@@ -45,5 +45,13 @@ class DiagnosticResultItem
     public function getComment()
     {
         return $this->comment;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'status' => $this->status,
+            'comment' => $this->comment,
+        ];
     }
 }

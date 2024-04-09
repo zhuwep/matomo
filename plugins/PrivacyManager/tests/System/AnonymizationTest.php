@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +10,6 @@ namespace Piwik\Plugins\PrivacyManager\tests\System;
 
 use Piwik\Common;
 use Piwik\Db;
-use Piwik\Plugins\PrivacyManager\API;
 use Piwik\Plugins\PrivacyManager\tests\Fixtures\FewVisitsAnonymizedFixture;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
 
@@ -27,22 +26,11 @@ class AnonymizationTest extends SystemTestCase
     public static $fixture = null; // initialized below class definition
 
     /**
-     * @var API
-     */
-    private $api;
-
-    public function setUp()
-    {
-        parent::setUp();
-        $this->api = API::getInstance();
-    }
-
-    /**
      * @dataProvider getApiForTesting
      */
     public function testApi($api, $params)
     {
-        $params['xmlFieldsToRemove'] = array();
+        $params['xmlFieldsToRemove'] = [];
         $this->runApiTests($api, $params);
     }
 
@@ -55,16 +43,16 @@ class AnonymizationTest extends SystemTestCase
 
     public function getApiForTesting()
     {
-        $apiToTest = array();
-        $apiToTest[] = array(array('Live.getLastVisitsDetails'),
-            array(
+        $apiToTest = [];
+        $apiToTest[] = [['Live.getLastVisitsDetails', 'Referrers.getAll'],
+            [
                 'idSite'     => self::$fixture->idSite,
                 'date'       => self::$fixture->dateTime,
-                'periods'    => array('year'),
-                'otherRequestParameters' => array('doNotFetchActions' => '1', 'filter_limit' => '-1'),
+                'periods'    => ['year'],
+                'otherRequestParameters' => ['doNotFetchActions' => '1', 'filter_limit' => '-1'],
                 'testSuffix' => 'userIdAnonymized'
-            )
-        );
+            ]
+        ];
 
         return $apiToTest;
     }
@@ -78,7 +66,6 @@ class AnonymizationTest extends SystemTestCase
     {
         return dirname(__FILE__);
     }
-
 }
 
 AnonymizationTest::$fixture = new FewVisitsAnonymizedFixture();

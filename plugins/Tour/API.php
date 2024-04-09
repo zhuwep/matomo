@@ -19,7 +19,6 @@ use Piwik\Plugins\Tour\Engagement\Challenges;
  */
 class API extends \Piwik\Plugin\API
 {
-
     /**
      * @var Challenges
      */
@@ -29,6 +28,7 @@ class API extends \Piwik\Plugin\API
      * Levels
      */
     private $levels;
+
 
     public function __construct(Challenges $challenges, Levels $levels)
     {
@@ -47,15 +47,22 @@ class API extends \Piwik\Plugin\API
 
         $challenges = array();
 
+        $login = Piwik::getCurrentUserLogin();
+
         foreach ($this->challenges->getChallenges() as $challenge) {
-            $challenges[] = array(
+
+            if ($challenge->isDisabled()) {
+                continue;
+            }
+
+            $challenges[] = [
                 'id' => $challenge->getId(),
                 'name' => $challenge->getName(),
                 'description' => $challenge->getDescription(),
-                'isCompleted' => $challenge->isCompleted(),
-                'isSkipped' => $challenge->isSkipped(),
+                'isCompleted' => $challenge->isCompleted($login),
+                'isSkipped' => $challenge->isSkipped($login),
                 'url' => $challenge->getUrl()
-            );
+            ];
         }
 
         return $challenges;
@@ -72,10 +79,12 @@ class API extends \Piwik\Plugin\API
     {
         Piwik::checkUserHasSuperUserAccess();
 
+        $login = Piwik::getCurrentUserLogin();
+
         foreach ($this->challenges->getChallenges() as $challenge) {
             if ($challenge->getId() === $id) {
-                if (!$challenge->isCompleted()) {
-                    $challenge->skipChallenge();
+                if (!$challenge->isCompleted($login)) {
+                    $challenge->skipChallenge($login);
                     return true;
                 }
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ use Piwik\Archive\DataTableFactory;
 use Piwik\Columns\Dimension;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\DataTable\Row;
 use Piwik\Metrics\Formatter;
 use Piwik\Piwik;
 
@@ -148,10 +147,7 @@ class ArchivedMetric extends Metric
             case Dimension::TYPE_DURATION_S:
                 return $formatter->getPrettyTimeFromSeconds($value, $displayAsSentence = true);
             case Dimension::TYPE_DURATION_MS:
-                $val = number_format($value / 1000, 2);
-                if ($val > 60) {
-                    $val = round($val);
-                }
+                $val = round(($value / 1000), ($value / 1000) > 60 ? 0 : 2);
                 return $formatter->getPrettyTimeFromSeconds($val, $displayAsSentence = true);
             case Dimension::TYPE_PERCENT:
                 return $formatter->getPrettyPercentFromQuotient($value);
@@ -160,6 +156,11 @@ class ArchivedMetric extends Metric
         }
 
         return $value;
+    }
+
+    public function getType()
+    {
+        return $this->type;
     }
 
     public function getTranslatedName()
@@ -194,6 +195,10 @@ class ArchivedMetric extends Metric
 
         $column = $this->dbTable . '.'  . $this->dimension->getColumnName();
 
+        if ($this->dimension->getSqlSegment()) {
+            $column = str_replace($this->dimension->getDbTableName(), $this->dbTable, $this->dimension->getSqlSegment());
+        }
+
         if (!empty($this->aggregation)) {
             return sprintf($this->aggregation, $column);
         }
@@ -208,5 +213,10 @@ class ArchivedMetric extends Metric
             $this->idSite = Common::getRequestVar('idSite', 0, 'int');
         }
         return !empty($this->idSite); // skip formatting if there is no site to get currency info from
+    }
+
+    public function getSemanticType(): ?string
+    {
+        return $this->type;
     }
 }

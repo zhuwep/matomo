@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,9 +8,9 @@
  */
 namespace Piwik\Plugins\Referrers;
 
+use Piwik\Columns\Dimension;
 use Piwik\Common;
 use Piwik\Piwik;
-use Piwik\Plugins\Referrers\Reports\Get;
 use Piwik\Plugins\SitesManager\SiteUrls;
 
 /**
@@ -36,6 +36,7 @@ class Referrers extends \Piwik\Plugin
             'AssetManager.getStylesheetFiles'   => 'getStylesheetFiles',
             'API.getPagesComparisonsDisabledFor'     => 'getPagesComparisonsDisabledFor',
             'Metrics.getDefaultMetricTranslations' => 'getDefaultMetricTranslations',
+            'Metrics.getDefaultMetricSemanticTypes'  => 'addMetricSemanticTypes',
         );
     }
 
@@ -63,6 +64,30 @@ class Referrers extends \Piwik\Plugin
         $translations[Archiver::METRIC_DISTINCT_CAMPAIGN_RECORD_NAME] = ucfirst(Piwik::translate('Referrers_DistinctCampaigns'));
     }
 
+    public function addMetricSemanticTypes(array &$types): void
+    {
+        $types['Referrers_visitorsFromSearchEngines'] = Dimension::TYPE_NUMBER;
+        $types['Referrers_visitorsFromSearchEngines_percent'] = Dimension::TYPE_PERCENT;
+
+        $types['Referrers_visitorsFromSocialNetworks'] = Dimension::TYPE_NUMBER;
+        $types['Referrers_visitorsFromSocialNetworks_percent'] = Dimension::TYPE_PERCENT;
+
+        $types['Referrers_visitorsFromDirectEntry'] = Dimension::TYPE_NUMBER;
+        $types['Referrers_visitorsFromDirectEntry_percent'] = Dimension::TYPE_PERCENT;
+
+        $types['Referrers_visitorsFromWebsites'] = Dimension::TYPE_NUMBER;
+        $types['Referrers_visitorsFromWebsites_percent'] = Dimension::TYPE_PERCENT;
+
+        $types['Referrers_visitorsFromCampaigns'] = Dimension::TYPE_NUMBER;
+        $types['Referrers_visitorsFromCampaigns_percent'] = Dimension::TYPE_PERCENT;
+
+        $types[Archiver::METRIC_DISTINCT_SEARCH_ENGINE_RECORD_NAME] = Dimension::TYPE_NUMBER;
+        $types[Archiver::METRIC_DISTINCT_SOCIAL_NETWORK_RECORD_NAME] = Dimension::TYPE_NUMBER;
+        $types[Archiver::METRIC_DISTINCT_WEBSITE_RECORD_NAME] = Dimension::TYPE_NUMBER;
+        $types[Archiver::METRIC_DISTINCT_KEYWORD_RECORD_NAME] = Dimension::TYPE_NUMBER;
+        $types[Archiver::METRIC_DISTINCT_CAMPAIGN_RECORD_NAME] = Dimension::TYPE_NUMBER;
+    }
+
     public function getPagesComparisonsDisabledFor(&$pages)
     {
         $pages[] = 'Referrers_Referrers.Referrers_URLCampaignBuilder';
@@ -70,7 +95,7 @@ class Referrers extends \Piwik\Plugin
 
     public function getStylesheetFiles(&$stylesheets)
     {
-        $stylesheets[] = 'plugins/Referrers/angularjs/campaign-builder/campaign-builder.directive.less';
+        $stylesheets[] = 'plugins/Referrers/vue/src/CampaignBuilder/CampaignBuilder.less';
     }
 
     public function getClientSideTranslationKeys(&$translationKeys)
@@ -86,6 +111,12 @@ class Referrers extends \Piwik\Plugin
         $translationKeys[] = 'Referrers_CampaignContentHelp';
         $translationKeys[] = 'Referrers_CampaignMedium';
         $translationKeys[] = 'Referrers_CampaignMediumHelp';
+        $translationKeys[] = 'Referrers_CampaignGroup';
+        $translationKeys[] = 'Referrers_CampaignGroupHelp';
+        $translationKeys[] = 'Referrers_CampaignPlacement';
+        $translationKeys[] = 'Referrers_CampaignPlacementHelp';
+        $translationKeys[] = 'Referrers_CampaignId';
+        $translationKeys[] = 'Referrers_CampaignIdHelp';
         $translationKeys[] = 'Referrers_CampaignPageUrlHelp';
         $translationKeys[] = 'Referrers_CampaignNameHelp';
         $translationKeys[] = 'Referrers_CampaignKeywordHelp';
@@ -96,8 +127,6 @@ class Referrers extends \Piwik\Plugin
 
     public function getJsFiles(&$jsFiles)
     {
-        $jsFiles[] = 'plugins/Referrers/angularjs/campaign-builder/campaign-builder.controller.js';
-        $jsFiles[] = 'plugins/Referrers/angularjs/campaign-builder/campaign-builder.directive.js';
     }
 
     public function setTrackerCacheGeneral(&$cacheContent)

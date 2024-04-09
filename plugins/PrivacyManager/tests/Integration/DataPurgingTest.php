@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,6 +10,7 @@ namespace Piwik\Plugins\PrivacyManager\tests\Integration;
 use Piwik\Archive;
 use Piwik\Common;
 use Piwik\Config;
+use Piwik\Container\StaticContainer;
 use Piwik\DataAccess\RawLogDao;
 use Piwik\Date;
 use Piwik\Db;
@@ -28,7 +29,7 @@ use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Tracker\GoalManager;
 use Piwik\Tests\Framework\Fixture;
 
-class DataPurgingTest_RawLogDao extends RawLogDao
+class DataPurgingTestRawLogDao extends RawLogDao
 {
     public $insertActionsOlderThanCallback;
     public $insertActionsNewerThanCallback;
@@ -65,7 +66,7 @@ class DataPurgingTest extends IntegrationTestCase
     const JAN_METRIC_ARCHIVE_COUNT = 11; // 5 days + 4 weeks + 1 month + 1 year
     const FEB_METRIC_ARCHIVE_COUNT = 11; // 6 days + 4 weeks + 1 month
 
-    const JAN_DONE_FLAGS_COUNT = 171;
+    const JAN_DONE_FLAGS_COUNT = 61;
 
     // fake metric/report name used to make sure unwanted metrics are purged
     const GARBAGE_FIELD = 'abcdefg';
@@ -95,9 +96,11 @@ class DataPurgingTest extends IntegrationTestCase
         $fixture->createSuperUser = true;
     }
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
+
+        $GLOBALS['DISABLE_GET_TABLES_INSTALLED_EVENTS_FOR_TEST'] = 1;
 
         LogDataPurger::$selectSegmentSize = 2;
         ReportsPurger::$selectSegmentSize = 2;
@@ -123,6 +126,7 @@ class DataPurgingTest extends IntegrationTestCase
         $settings['delete_logs_older_than'] = 35 + $daysSinceToday;
         $settings['delete_logs_schedule_lowest_interval'] = 7;
         $settings['delete_logs_max_rows_per_query'] = 100000;
+        $settings['delete_logs_unused_actions_max_rows_per_query'] = 100000;
         $settings['delete_reports_enable'] = 1;
         $settings['delete_reports_older_than'] = $monthsSinceToday;
         $settings['delete_reports_keep_basic_metrics'] = 0;
@@ -137,8 +141,10 @@ class DataPurgingTest extends IntegrationTestCase
         $this->instance = new PrivacyManager();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
+        $GLOBALS['DISABLE_GET_TABLES_INSTALLED_EVENTS_FOR_TEST'] = 0;
+
         parent::tearDown();
 
         $tempTableName = Common::prefixTable(RawLogDao::DELETE_UNUSED_ACTIONS_TEMP_TABLE_NAME);
@@ -155,7 +161,7 @@ class DataPurgingTest extends IntegrationTestCase
         $this->_checkNoDataChanges();
 
         // Check it does not run
-        $this->assertFalse( $this->instance->deleteLogData() );
+        $this->assertFalse($this->instance->deleteLogData());
 
         // check that initial option is set
         $this->assertEquals(1, Option::get(PrivacyManager::OPTION_LAST_DELETE_PIWIK_LOGS_INITIAL));
@@ -169,7 +175,7 @@ class DataPurgingTest extends IntegrationTestCase
      */
     public function testDeleteReportDataInitialRun()
     {
-        $this->assertFalse($this->instance->deleteReportData() );
+        $this->assertFalse($this->instance->deleteReportData());
 
         // check that initial option is set
         $this->assertEquals(1, Option::get(PrivacyManager::OPTION_LAST_DELETE_PIWIK_LOGS_INITIAL));
@@ -188,8 +194,8 @@ class DataPurgingTest extends IntegrationTestCase
         Option::set(PrivacyManager::OPTION_LAST_DELETE_PIWIK_LOGS_INITIAL, 1);
         Option::set(PrivacyManager::OPTION_LAST_DELETE_PIWIK_LOGS, $yesterdaySecs);
         Option::set(PrivacyManager::OPTION_LAST_DELETE_PIWIK_REPORTS, $yesterdaySecs);
-        $this->assertFalse( $this->instance->deleteLogData() );
-        $this->assertFalse( $this->instance->deleteReportData() );
+        $this->assertFalse($this->instance->deleteLogData());
+        $this->assertFalse($this->instance->deleteReportData());
 
         // perform checks
         $this->_checkNoDataChanges();
@@ -218,8 +224,8 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
@@ -248,7 +254,7 @@ class DataPurgingTest extends IntegrationTestCase
         self::_addReportData();
 
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
+        $this->assertTrue($this->instance->deleteLogData());
 
         $this->checkLogDataPurged();
 
@@ -276,7 +282,7 @@ class DataPurgingTest extends IntegrationTestCase
         $this->_setTimeToRun();
         $hasDeleted = $this->instance->deleteLogData();
         $this->assertFalse($hasDeleted);
-        $this->assertFalse($this->instance->deleteReportData() );
+        $this->assertFalse($this->instance->deleteReportData());
 
         // perform checks
         $this->_checkNoDataChanges();
@@ -299,9 +305,9 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
+        $this->assertTrue($this->instance->deleteLogData());
 
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->assertEquals(0, $this->_getTableCount('log_visit'));
@@ -343,8 +349,8 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
@@ -398,12 +404,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 5, $janNumericRemaining = 197); // 5 blobs for 5 days
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 5, $janNumericRemaining = 87); // 5 blobs for 5 days
     }
 
     /**
@@ -433,12 +439,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 4, $janNumericRemaining = 191); // 4 blobs for 4 weeks
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 4, $janNumericRemaining = 81); // 4 blobs for 4 weeks
     }
 
     /**
@@ -468,12 +474,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 1, $janNumericRemaining = 176);
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 1, $janNumericRemaining = 66);
     }
 
     /**
@@ -503,12 +509,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 1, $janNumericRemaining = 176);
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 1, $janNumericRemaining = 66);
     }
 
     /**
@@ -516,13 +522,14 @@ class DataPurgingTest extends IntegrationTestCase
      */
     public function testPurgeLogDataConcurrency()
     {
-        $rawLogDao = new DataPurgingTest_RawLogDao(new DimensionMetadataProvider());
+        $rawLogDao = new DataPurgingTestRawLogDao(new DimensionMetadataProvider());
         $rawLogDao->insertActionsOlderThanCallback = array($this, 'addReferenceToUnusedAction');
         $purger = new LogDataPurger(new LogDeleter($rawLogDao, new LogTablesProvider()), $rawLogDao);
 
         $this->unusedIdAction = Db::fetchOne(
             "SELECT idaction FROM " . Common::prefixTable('log_action') . " WHERE name = ?",
-            array('whatever.com/_40'));
+            array('whatever.com/_40')
+        );
         $this->assertTrue($this->unusedIdAction > 0);
 
         // purge data
@@ -535,7 +542,8 @@ class DataPurgingTest extends IntegrationTestCase
         // check that the unused action still exists
         $count = Db::fetchOne(
             "SELECT COUNT(*) FROM " . Common::prefixTable('log_action') . " WHERE idaction = ?",
-            array($this->unusedIdAction));
+            array($this->unusedIdAction)
+        );
         $this->assertEquals(1, $count);
 
         $this->unusedIdAction = null; // so the hook won't get executed twice
@@ -568,12 +576,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 2, $janNumericRemaining = 175); // 2 range blobs
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 2, $janNumericRemaining = 65); // 2 range blobs
     }
 
     /**
@@ -604,12 +612,12 @@ class DataPurgingTest extends IntegrationTestCase
 
         // purge data
         $this->_setTimeToRun();
-        $this->assertTrue( $this->instance->deleteLogData() );
-        $this->assertTrue($this->instance->deleteReportData() );
+        $this->assertTrue($this->instance->deleteLogData());
+        $this->assertTrue($this->instance->deleteReportData());
 
         // perform checks
         $this->checkLogDataPurged();
-        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 6, $janNumericRemaining = 224); // 1 segmented blob + 5 day blobs
+        $this->_checkReportsAndMetricsPurged($janBlobsRemaining = 6, $janNumericRemaining = 114); // 1 segmented blob + 5 day blobs
     }
 
     // --- utility functions follow ---
@@ -674,10 +682,21 @@ class DataPurgingTest extends IntegrationTestCase
             $t->doTrackContentImpression('SugarTransportAd', '/path/ad.jpg', 'http://www.satsumaprovince.jp');
 
             $t->setForceVisitDateTime(Date::factory($dateTime)->addHour(0.2));
-            $t->addEcommerceItem($sku = 'SKU2', $name = 'Canon SLR', $category = 'Electronics & Cameras',
-                $price = 1500, $quantity = 1);
-            $t->doTrackEcommerceOrder($orderId = '937nsjusu ' . $dateTime, $grandTotal = 1111.11, $subTotal = 1000,
-                $tax = 111, $shipping = 0.11, $discount = 666);
+            $t->addEcommerceItem(
+                $sku = 'SKU2',
+                $name = 'Canon SLR',
+                $category = 'Electronics & Cameras',
+                $price = 1500,
+                $quantity = 1
+            );
+            $t->doTrackEcommerceOrder(
+                $orderId = '937nsjusu ' . $dateTime,
+                $grandTotal = 1111.11,
+                $subTotal = 1000,
+                $tax = 111,
+                $shipping = 0.11,
+                $discount = 666
+            );
         }
 
         Fixture::checkBulkTrackingResponse($t->doBulkTrack());
@@ -714,7 +733,10 @@ class DataPurgingTest extends IntegrationTestCase
             $archive->getNumeric('nb_visits');
 
             APIVisitorInterest::getInstance()->getNumberOfVisitsPerVisitDuration(
-                self::$idSite, 'week', $dateTime);
+                self::$idSite,
+                'week',
+                $dateTime
+            );
         }
 
         // add segment for one day
@@ -722,7 +744,11 @@ class DataPurgingTest extends IntegrationTestCase
         $archive->getNumeric('nb_visits', 'nb_hits');
 
         APIVisitorInterest::getInstance()->getNumberOfVisitsPerVisitDuration(
-            self::$idSite, 'day', '2012-01-14', 'browserCode==FF');
+            self::$idSite,
+            'day',
+            '2012-01-14',
+            'browserCode==FF'
+        );
 
         // add range within January
         $rangeEnd = Date::factory('2012-01-29');
@@ -740,9 +766,13 @@ class DataPurgingTest extends IntegrationTestCase
         $range = $rangeStart->toString('Y-m-d') . "," . $rangeEnd->toString('Y-m-d');
 
         $rangeArchive = Archive::build(self::$idSite, 'range', $range);
-        $rangeArchive->getNumeric('nb_visits', 'nb_hits');
+        $rangeArchive->getNumeric(['nb_visits']);
 
         APIVisitorInterest::getInstance()->getNumberOfVisitsPerVisitDuration(self::$idSite, 'range', $range);
+
+        // remove invalidated
+        StaticContainer::get(Archive\ArchivePurger::class)->purgeInvalidatedArchivesFrom(Date::factory('2012-01-01'));
+        StaticContainer::get(Archive\ArchivePurger::class)->purgeInvalidatedArchivesFrom(Date::factory('2012-02-01'));
 
         // when archiving is initiated, the archive metrics & reports for EVERY loaded plugin
         // are archived. don't want this test to depend on every possible metric, so get rid of
@@ -774,16 +804,24 @@ class DataPurgingTest extends IntegrationTestCase
                         VALUES (10000,?,1,?,?,?,?,?)";
 
         // one metric for jan & one for feb
-        Db::query(sprintf($sql, Common::prefixTable($archiveTables['numeric'][0])),
-            array(self::GARBAGE_FIELD, $janDate1, $janDate1, 1, $janDate1, 100));
-        Db::query(sprintf($sql, Common::prefixTable($archiveTables['numeric'][1])),
-            array(self::GARBAGE_FIELD, $febDate1, $febDate1, 1, $febDate1, 200));
+        Db::query(
+            sprintf($sql, Common::prefixTable($archiveTables['numeric'][0])),
+            array(self::GARBAGE_FIELD, $janDate1, $janDate1, 1, $janDate1, 100)
+        );
+        Db::query(
+            sprintf($sql, Common::prefixTable($archiveTables['numeric'][1])),
+            array(self::GARBAGE_FIELD, $febDate1, $febDate1, 1, $febDate1, 200)
+        );
 
         // add garbage reports
-        Db::query(sprintf($sql, Common::prefixTable($archiveTables['blob'][0])),
-            array(self::GARBAGE_FIELD, $janDate1, $janDate1, 10, $janDate1, 'blobval'));
-        Db::query(sprintf($sql, Common::prefixTable($archiveTables['blob'][1])),
-            array(self::GARBAGE_FIELD, $febDate1, $febDate1, 20, $febDate1, 'blobval'));
+        Db::query(
+            sprintf($sql, Common::prefixTable($archiveTables['blob'][0])),
+            array(self::GARBAGE_FIELD, $janDate1, $janDate1, 10, $janDate1, 'blobval')
+        );
+        Db::query(
+            sprintf($sql, Common::prefixTable($archiveTables['blob'][1])),
+            array(self::GARBAGE_FIELD, $febDate1, $febDate1, 20, $febDate1, 'blobval')
+        );
     }
 
     protected function _checkNoDataChanges()
@@ -921,22 +959,23 @@ class DataPurgingTest extends IntegrationTestCase
         // + 3 entries per dependent goals segment (2 total) per period w/ visits
         // + 1 entry for every period in the month (the 'done' rows)
         // + 1 garbage metric
-        // log_link_visit_action+ 2 entries per range period (4 total) + 2 'done...' entries per range period (4 total)
-        // + 2 entries per segment (2 total) + 2 'done...' entries per segment (2 total)
-        // +1 done flag for one further week used to create the archive of a month
-        // + 93 entries for dependent Goals segments (3 metrics for periods that have data for those segment combinations) (51 periods + 3 metrics * 2 * 7 periods w/ data)
-        //   + 104 entries for VisitsSummary archives for dependent Goals segments (76 periods + 2 metrics * 2 segments * 7 periods w/ data)
-        return self::JAN_METRIC_ARCHIVE_COUNT * 5 + self::TOTAL_JAN_ARCHIVE_COUNT + 1 + 8 + 4 + 1 + 93 + 104;
+        // + 2 visitorinterest archives (just done flags)
+        // + 2 VisitsSummary archives w/ 2 metrics each
+        // + 1 visitorinterest segment archive (just done flag)
+        // + 1 other vistssummary segment archive w/ 2 metrics
+        // + 64 entries for dependent Goals segments (3 metrics for periods that have data for those segment combinations) (11 * 2 done flags + 3 metrics * 10 periods w/ data + 3 metrics * 4 periods w/ data for other segment)
+        //   + 50 entries for VisitsSummary archives for dependent Goals segments (11 * 2 done flags + 2 metrics * 10 periods w/ data + 2 metrics * 4 periods w/ data for other segment)
+        return self::JAN_METRIC_ARCHIVE_COUNT * 6 + 1 + 2 + 6 + 1 + 3 + 64 + 50;
     }
 
     protected function _getExpectedNumericArchiveCountFeb()
     {
         // (5 metrics per period w/ visits
-        // + 1 'done' archive for every period)
+        // + 1 'done' archive for every period w/ data)
         // + 1 garbage metric
-        // + 78 entries for dependent Goals segments (45 periods + 3 metrics * 11 periods w/ data)
-        //   90 entries for VisitsSummary archives for dependent VisitsSummary segment + (68 periods + 2 metrics * 11 periods w/ data)
-        return self::FEB_METRIC_ARCHIVE_COUNT * 5 + self::TOTAL_FEB_ARCHIVE_COUNT + 1 + 78 + 90;
+        // + 55 entries for dependent Goals segments (11 done flags * 2 + 3 metrics * 11 periods w/ data)
+        //   44 entries for VisitsSummary archives for dependent VisitsSummary segment + (11 done flags * 2 + 2 metrics * 11 periods w/ data)
+        return self::FEB_METRIC_ARCHIVE_COUNT * 6 + 1 + 55 + 44;
     }
 
     /**

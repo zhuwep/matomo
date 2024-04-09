@@ -74,7 +74,10 @@ function logRequest($db, $uri, $data) {
 
     $id = getNextRequestId($db, $token);
 
-    $query = $db->query("INSERT INTO requests (requestid, token, ip, ts, uri, referer, ua) VALUES (\"$id\", \"$token\", \"$ip\", \"$ts\", \"$uri\", \"$referrer\", \"$ua\")");
+    $query = $db->query(
+        "INSERT INTO requests (requestid, token, ip, ts, uri, referer, ua) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [$id, $token, $ip, $ts, $uri, $referrer, $ua]
+    );
 
     return $query;
 }
@@ -85,7 +88,7 @@ if (isset($_GET['requests'])) {
 
 	echo "<html><head><title>$token</title></head><body>\n";
 
-	$result = @$db->fetchAll("SELECT uri FROM requests WHERE token = \"$token\" AND ua = \"$ua\" ORDER BY ts ASC, requestid ASC");
+	$result = @$db->fetchAll("SELECT uri FROM requests WHERE token = ? AND ua = ? ORDER BY ts ASC, requestid ASC", [$token, $ua]);
 	if ($result !== false) {
 		$nofRows = count($result);
 		echo "<span>$nofRows</span>\n";

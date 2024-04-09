@@ -8,9 +8,9 @@
  */
 namespace Piwik\Plugins\Tour\Engagement;
 
-use Piwik\Container\StaticContainer;
 use Piwik\Piwik;
 use Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication;
+use Piwik\Url;
 
 class ChallengeSetupTwoFa extends Challenge
 {
@@ -29,16 +29,13 @@ class ChallengeSetupTwoFa extends Challenge
         return 'setup_twofa';
     }
 
-    public function isCompleted()
+    public function isCompleted(string $login)
     {
-        $twoFa = StaticContainer::get(TwoFactorAuthentication::class);
-        return $twoFa->isUserUsingTwoFactorAuthentication(Piwik::getCurrentUserLogin());
+        return TwoFactorAuthentication::isUserUsingTwoFactorAuthentication($login);
     }
 
     public function getUrl()
     {
-        return 'https://matomo.org/faq/general/faq_27245';
+        return Url::addCampaignParametersToMatomoLink('https://matomo.org/faq/general/faq_27245');
     }
-
-
 }

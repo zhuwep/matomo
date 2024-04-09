@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -25,6 +25,10 @@ class Mysqli extends Zend_Db_Adapter_Mysqli implements AdapterInterface
      *
      * @param array|Zend_Config $config database configuration
      */
+
+    // this is used for indicate TransactionLevel Cache
+    public $supportsUncommitted;
+
     public function __construct($config)
     {
         // Enable LOAD DATA INFILE
@@ -78,6 +82,11 @@ class Mysqli extends Zend_Db_Adapter_Mysqli implements AdapterInterface
             return;
         }
 
+        // The default error reporting of mysqli changed in PHP 8.1. To circumvent problems in our error handling we set
+        // the erroring reporting to the default that was used prior PHP 8.1
+        // See https://php.watch/versions/8.1/mysqli-error-mode for more details
+        mysqli_report(MYSQLI_REPORT_OFF);
+
         parent::_connect();
 
         $this->_connection->query('SET sql_mode = "' . Db::SQL_MODE . '"');
@@ -127,7 +136,8 @@ class Mysqli extends Zend_Db_Adapter_Mysqli implements AdapterInterface
         $clientVersion = $this->getClientVersion();
 
         // incompatible change to DECIMAL implementation in 5.0.3
-        if (version_compare($serverVersion, '5.0.3') >= 0
+        if (
+            version_compare($serverVersion, '5.0.3') >= 0
             && version_compare($clientVersion, '5.0.3') < 0
         ) {
             throw new Exception(Piwik::translate('General_ExceptionIncompatibleClientServerVersions', array('MySQL', $clientVersion, $serverVersion)));
@@ -226,16 +236,6 @@ class Mysqli extends Zend_Db_Adapter_Mysqli implements AdapterInterface
         return $rowsAffected;
     }
 
-    /**
-     * Is the connection character set equal to utf8?
-     *
-     * @return bool
-     */
-    public function isConnectionUTF8()
-    {
-        $charset = mysqli_character_set_name($this->_connection);
-        return $charset === 'utf8';
-    }
 
     /**
      * Get client version

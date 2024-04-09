@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,7 @@ use Piwik\Tracker\Action;
 class ReferrerName extends Base
 {
     protected $columnName = 'referer_name';
-    protected $columnType = 'VARCHAR(70) NULL';
+    protected $columnType = 'VARCHAR(255) NULL';
     protected $type = self::TYPE_TEXT;
 
     protected $nameSingular = 'Referrers_ReferrerName';
@@ -40,7 +40,8 @@ class ReferrerName extends Base
     public function onExistingVisit(Request $request, Visitor $visitor, $action)
     {
         $information = $this->getReferrerInformationFromRequest($request, $visitor);
-        if ($this->isCurrentReferrerDirectEntry($visitor)
+        if (
+            $this->isCurrentReferrerDirectEntry($visitor)
             && $information['referer_type'] != Common::REFERRER_TYPE_DIRECT_ENTRY
         ) {
             return $information['referer_name'];

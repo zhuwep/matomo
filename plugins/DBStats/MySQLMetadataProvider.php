@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Plugins\DBStats;
 use Exception;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\Db;
 use Piwik\DbHelper;
 use Piwik\Option;
 
@@ -142,7 +141,7 @@ class MySQLMetadataProvider
     }
 
     /**
-     * Retruns table statuses for every admin table.
+     * Returns table statuses for every admin table.
      *
      * @return array An array of status arrays. See http://dev.mysql.com/doc/refman/5.5/en/show-table-status.html.
      */
@@ -167,8 +166,12 @@ class MySQLMetadataProvider
         $extraSelects = array("SUM(OCTET_LENGTH(value)) AS 'blob_size'", "SUM(LENGTH(name)) AS 'name_size'");
         $extraCols = array('blob_size', 'name_size');
         return $this->getRowCountsByArchiveName(
-            $this->getAllBlobArchiveStatus(), 'getEstimatedBlobArchiveRowSize', $forceCache, $extraSelects,
-            $extraCols);
+            $this->getAllBlobArchiveStatus(),
+            'getEstimatedBlobArchiveRowSize',
+            $forceCache,
+            $extraSelects,
+            $extraCols
+        );
     }
 
     /**
@@ -184,16 +187,23 @@ class MySQLMetadataProvider
     public function getRowCountsAndSizeByMetricName($forceCache = false)
     {
         return $this->getRowCountsByArchiveName(
-            $this->getAllNumericArchiveStatus(), 'getEstimatedRowsSize', $forceCache);
+            $this->getAllNumericArchiveStatus(),
+            'getEstimatedRowsSize',
+            $forceCache
+        );
     }
 
     /**
      * Utility function. Gets row count of a set of tables grouped by the 'name' column.
      * This is the implementation of the getRowCountsAndSizeBy... functions.
      */
-    private function getRowCountsByArchiveName($statuses, $getRowSizeMethod, $forceCache = false,
-                                               $otherSelects = array(), $otherDataTableColumns = array())
-    {
+    private function getRowCountsByArchiveName(
+        $statuses,
+        $getRowSizeMethod,
+        $forceCache = false,
+        $otherSelects = array(),
+        $otherDataTableColumns = array()
+    ) {
         $extraCols = '';
         if (!empty($otherSelects)) {
             $extraCols = ', ' . implode(', ', $otherSelects);
@@ -223,8 +233,10 @@ class MySQLMetadataProvider
 
             // add estimated_size column
             $getEstimatedSize = array($this, $getRowSizeMethod);
-            $table->filter('ColumnCallbackAddColumn',
-                array($cols, 'estimated_size', $getEstimatedSize, array($status)));
+            $table->filter(
+                'ColumnCallbackAddColumn',
+                array($cols, 'estimated_size', $getEstimatedSize, array($status))
+            );
 
             $dataTable->addDataTable($table);
         }

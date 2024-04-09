@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,17 +8,13 @@
  */
 namespace Piwik\Plugins\ExampleUI;
 
-use Piwik\Common;
 use Piwik\Notification;
-use Piwik\Piwik;
 use Piwik\View;
-use Piwik\ViewDataTable\Factory as ViewDataTableFactory;
 
 /**
  */
 class Controller extends \Piwik\Plugin\Controller
 {
-
     public function notifications()
     {
         $notification = new Notification('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
@@ -45,5 +41,4 @@ class Controller extends \Piwik\Plugin\Controller
         $this->setGeneralVariablesView($view);
         return $view->render();
     }
-
 }

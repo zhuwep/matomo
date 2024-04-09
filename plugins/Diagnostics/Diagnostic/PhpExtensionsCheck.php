@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -59,11 +59,10 @@ class PhpExtensionsCheck implements Diagnostic
     {
         $requiredExtensions = array(
             'zlib',
-            'SPL',
-            'iconv',
             'json',
-            'mbstring',
-            'Reflection',
+            'filter',
+            'hash',
+            'session',
         );
 
         return $requiredExtensions;
@@ -72,12 +71,11 @@ class PhpExtensionsCheck implements Diagnostic
     private function getHelpMessage($missingExtension)
     {
         $messages = array(
-            'zlib'       => 'Installation_SystemCheckZlibHelp',
-            'SPL'        => 'Installation_SystemCheckSplHelp',
-            'iconv'      => 'Installation_SystemCheckIconvHelp',
-            'json'       => 'Installation_SystemCheckWarnJsonHelp',
-            'mbstring'   => 'Installation_SystemCheckMbstringHelp',
-            'Reflection' => 'Required extension that is built in PHP, see http://www.php.net/manual/en/book.reflection.php',
+            'zlib'    => 'Installation_SystemCheckZlibHelp',
+            'json'    => 'Installation_SystemCheckWarnJsonHelp',
+            'filter'  => 'Installation_SystemCheckFilterHelp',
+            'hash'    => 'Installation_SystemCheckHashHelp',
+            'session' => 'Installation_SystemCheckSessionHelp'
         );
 
         return $this->translator->translate($messages[$missingExtension]);

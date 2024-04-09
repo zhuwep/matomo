@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,9 +16,11 @@ class Menu extends \Piwik\Plugin\Menu
     public function configureAdminMenu(MenuAdmin $menu)
     {
         if (UserCountry::isGeoLocationAdminEnabled() && Piwik::hasUserSuperUserAccess()) {
-            $menu->addSystemItem('UserCountry_Geolocation',
-                                 $this->urlForAction('adminIndex'),
-                                 $order = 30);
+            $menu->addSystemItem(
+                'UserCountry_Geolocation',
+                $this->urlForAction('adminIndex'),
+                $order = 30
+            );
         }
     }
 }

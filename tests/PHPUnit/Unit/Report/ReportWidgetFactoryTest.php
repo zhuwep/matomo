@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,6 @@ namespace Piwik\Tests\Unit\Report;
 use Piwik\Plugin\Report;
 use Piwik\Report\ReportWidgetConfig;
 use Piwik\Report\ReportWidgetFactory;
-use Piwik\Widget\WidgetConfig;
 use Piwik\Widget\WidgetContainerConfig;
 
 class GetBasicReport extends Report
@@ -42,14 +41,14 @@ class GetBasicReport extends Report
  * @group ReportWidgetFactory
  * @group ReportWidgetFactoryTest
  */
-class ReportWidgetFactoryTest extends \PHPUnit_Framework_TestCase
+class ReportWidgetFactoryTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ReportWidgetFactory
      */
     private $factory;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -106,6 +105,4 @@ class ReportWidgetFactoryTest extends \PHPUnit_Framework_TestCase
             'idGoal' => '1'
         ), $config->getParameters());
     }
-
-
 }

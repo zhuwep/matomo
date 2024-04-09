@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Tests\Integration\Settings\Plugin;
 
-use Piwik\Db;
 use Piwik\Settings\Plugin\SystemSetting;
 use Piwik\Settings\Plugin\SystemSettings;
 use Piwik\Tests\Integration\Settings\BaseSettingsTestCase;
@@ -39,5 +38,4 @@ class SystemSettingsTest extends BaseSettingsTestCase
 
         $this->assertTrue($setting instanceof SystemSetting);
     }
-
 }

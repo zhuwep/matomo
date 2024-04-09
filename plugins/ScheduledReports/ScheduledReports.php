@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -30,7 +30,6 @@ use Piwik\View;
  */
 class ScheduledReports extends \Piwik\Plugin
 {
-
     const DISPLAY_FORMAT_GRAPHS_ONLY_FOR_KEY_METRICS = 1; // Display Tables Only (Graphs only for key metrics)
     const DISPLAY_FORMAT_GRAPHS_ONLY = 2; // Display Graphs Only for all reports
     const DISPLAY_FORMAT_TABLES_AND_GRAPHS = 3; // Display Tables and Graphs for all reports
@@ -65,6 +64,7 @@ class ScheduledReports extends \Piwik\Plugin
         ReportRenderer::HTML_FORMAT => 'plugins/Morpheus/images/html_icon.png',
         ReportRenderer::PDF_FORMAT  => 'plugins/Morpheus/icons/dist/plugins/pdf.png',
         ReportRenderer::CSV_FORMAT  => 'plugins/Morpheus/images/export.png',
+        ReportRenderer::TSV_FORMAT  => 'plugins/Morpheus/images/export.png',
     );
 
     const OPTION_KEY_LAST_SENT_DATERANGE = 'report_last_sent_daterange_';
@@ -88,7 +88,7 @@ class ScheduledReports extends \Piwik\Plugin
             'ScheduledReports.processReports'           => 'processReports',
             'ScheduledReports.allowMultipleReports'     => 'allowMultipleReports',
             'ScheduledReports.sendReport'               => 'sendReport',
-            'Template.reportParametersScheduledReports' => 'template_reportParametersScheduledReports',
+            'Template.reportParametersScheduledReports' => 'templateReportParametersScheduledReports',
             'UsersManager.deleteUser'                   => 'deleteUserReport',
             'UsersManager.removeSiteAccess'             => 'deleteUserReportForSites',
             'SitesManager.deleteSite.end'               => 'deleteSiteReport',
@@ -96,7 +96,19 @@ class ScheduledReports extends \Piwik\Plugin
             'SegmentEditor.update'                      => 'segmentUpdated',
             'Translate.getClientSideTranslationKeys'    => 'getClientSideTranslationKeys',
             'Request.getRenamedModuleAndAction'         => 'renameDeprecatedModuleAndAction',
+            'Db.getTablesInstalled'                     => 'getTablesInstalled'
         );
+    }
+
+    /**
+     * Register the new tables, so Matomo knows about them.
+     *
+     * @param array $allTablesInstalled
+     */
+    public function getTablesInstalled(&$allTablesInstalled)
+    {
+        $allTablesInstalled[] = Common::prefixTable('report');
+        $allTablesInstalled[] = Common::prefixTable('report_subscriptions');
     }
 
     public function renameDeprecatedModuleAndAction(&$module, &$action)
@@ -113,6 +125,35 @@ class ScheduledReports extends \Piwik\Plugin
         $translationKeys[] = "ScheduledReports_ReportHourWithUTC";
         $translationKeys[] = "ScheduledReports_EvolutionGraphsShowForEachInPeriod";
         $translationKeys[] = "ScheduledReports_EvolutionGraphsShowForPreviousN";
+        $translationKeys[] = 'ScheduledReports_EmailSchedule';
+        $translationKeys[] = 'ScheduledReports_ReportFormat';
+        $translationKeys[] = 'ScheduledReports_SendReportTo';
+        $translationKeys[] = 'ScheduledReports_MustBeLoggedIn';
+        $translationKeys[] = 'Login_LogIn';
+        $translationKeys[] = 'ScheduledReports_ThereIsNoReportToManage';
+        $translationKeys[] = 'ScheduledReports_SegmentDeleted';
+        $translationKeys[] = 'ScheduledReports_NoRecipients';
+        $translationKeys[] = 'ScheduledReports_SendReportNow';
+        $translationKeys[] = 'ScheduledReports_CreateAndScheduleReport';
+        $translationKeys[] = 'ScheduledReports_DescriptionOnFirstPage';
+        $translationKeys[] = 'SegmentEditor_ChooseASegment';
+        $translationKeys[] = 'ScheduledReports_WeeklyScheduleHelp';
+        $translationKeys[] = 'ScheduledReports_MonthlyScheduleHelp';
+        $translationKeys[] = 'ScheduledReports_ReportPeriod';
+        $translationKeys[] = 'ScheduledReports_ReportPeriodHelp';
+        $translationKeys[] = 'ScheduledReports_ReportPeriodHelp2';
+        $translationKeys[] = 'ScheduledReports_ReportHour';
+        $translationKeys[] = 'ScheduledReports_ReportType';
+        $translationKeys[] = 'ScheduledReports_AggregateReportsFormat';
+        $translationKeys[] = 'ScheduledReports_EvolutionGraph';
+        $translationKeys[] = 'ScheduledReports_ReportsIncluded';
+        $translationKeys[] = 'ScheduledReports_ReportIncludeNWebsites';
+        $translationKeys[] = 'SegmentEditor_LoadingSegmentedDataMayTakeSomeTime';
+        $translationKeys[] = 'General_Download';
+        $translationKeys[] = 'ScheduledReports_Segment_Help';
+        $translationKeys[] = 'SegmentEditor_AddNewSegment';
+        $translationKeys[] = 'ScheduledReports_SentToMe';
+        $translationKeys[] = 'ScheduledReports_AlsoSendReportToTheseEmails';
     }
 
     /**
@@ -130,8 +171,6 @@ class ScheduledReports extends \Piwik\Plugin
 
     public function getJsFiles(&$jsFiles)
     {
-        $jsFiles[] = "plugins/ScheduledReports/angularjs/manage-scheduled-report/manage-scheduled-report.controller.js";
-        $jsFiles[] = "plugins/ScheduledReports/angularjs/manage-scheduled-report/manage-scheduled-report.directive.js";
     }
 
     public function getStylesheetFiles(&$stylesheets)
@@ -289,9 +328,32 @@ class ScheduledReports extends \Piwik\Plugin
         }
     }
 
-    public function sendReport($reportType, $report, $contents, $filename, $prettyDate, $reportSubject, $reportTitle,
-                               $additionalFiles, Period $period = null, $force)
-    {
+    /**
+     * @param $reportType
+     * @param $report
+     * @param $contents
+     * @param $filename
+     * @param $prettyDate
+     * @param $reportSubject
+     * @param $reportTitle
+     * @param $additionalFiles
+     * @param Period|null $period
+     * @param $force
+     * @throws \Piwik\Exception\DI\DependencyException
+     * @throws \Piwik\Exception\DI\NotFoundException
+     */
+    public function sendReport(
+        $reportType,
+        $report,
+        $contents,
+        $filename,
+        $prettyDate,
+        $reportSubject,
+        $reportTitle,
+        $additionalFiles,
+        $period,
+        $force
+    ) {
         if (! self::manageEvent($reportType)) {
             return;
         }
@@ -311,7 +373,8 @@ class ScheduledReports extends \Piwik\Plugin
         $reportFormat = $generatedReport->getReportFormat();
 
         $customReplyTo = null;
-        if (Config::getInstance()->General['scheduled_reports_replyto_is_user_email_and_alias']
+        if (
+            Config::getInstance()->General['scheduled_reports_replyto_is_user_email_and_alias']
             || !isset($reportDetails['login'])
         ) {
             $userModel = new UserModel();
@@ -356,9 +419,6 @@ class ScheduledReports extends \Piwik\Plugin
 
         $textContent = $mail->getBodyText();
         $htmlContent = $mail->getBodyHtml();
-        if ($htmlContent instanceof \Zend_Mime_Part) {
-            $htmlContent = $htmlContent->getRawContent();
-        }
 
         foreach ($emails as $email) {
             if (empty($email)) {
@@ -376,7 +436,7 @@ class ScheduledReports extends \Piwik\Plugin
 
             if ($textContent) {
                 $link = SettingsPiwik::getPiwikUrl() . 'index.php?module=ScheduledReports&action=unsubscribe&token=' . $tokens[$email];
-                $mail->setBodyText($textContent . "\n\n".Piwik::translate('ScheduledReports_UnsubscribeFooter', [$link]));
+                $mail->setBodyText($textContent . "\n\n" . Piwik::translate('ScheduledReports_UnsubscribeFooter', [$link]));
             }
 
             try {
@@ -391,7 +451,7 @@ class ScheduledReports extends \Piwik\Plugin
                         ". Error was '" . $e->getMessage() . "'");
                 }
             }
-            $mail->clearRecipients();
+            $mail->clearAllRecipients();
         }
     }
 
@@ -457,14 +517,14 @@ class ScheduledReports extends \Piwik\Plugin
         $recipients = array_values(array_filter($recipients));
     }
 
-    public static function template_reportParametersScheduledReports(&$out)
+    public static function templateReportParametersScheduledReports(&$out)
     {
         $view = new View('@ScheduledReports/reportParametersScheduledReports');
         $view->currentUserEmail = Piwik::getCurrentUserEmail();
         $view->reportType = self::EMAIL_TYPE;
         $view->defaultDisplayFormat = self::DEFAULT_DISPLAY_FORMAT;
-        $view->defaultEmailMe = self::EMAIL_ME_PARAMETER_DEFAULT_VALUE ? 'true' : 'false';
-        $view->defaultEvolutionGraph = self::EVOLUTION_GRAPH_PARAMETER_DEFAULT_VALUE ? 'true' : 'false';
+        $view->defaultEmailMe = self::EMAIL_ME_PARAMETER_DEFAULT_VALUE;
+        $view->defaultEvolutionGraph = self::EVOLUTION_GRAPH_PARAMETER_DEFAULT_VALUE;
         $out .= $view->render();
     }
 

@@ -7,6 +7,8 @@
 			<name>KPI Metric</name>
 			<order>1</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreVisualizations</module>
@@ -21,12 +23,14 @@
 		<isWide>0</isWide>
 	</row>
 	<row>
-		<name>Real Time Visitor Count</name>
+		<name>Real-time visitor count</name>
 		<category>
 			<id>General_Visitors</id>
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory />
 		<module>Live</module>
@@ -48,6 +52,8 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory />
 		<module>Live</module>
@@ -67,6 +73,8 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreHome</module>
@@ -89,11 +97,14 @@
 					<name>Visitors</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>VisitsSummary</module>
 				<action>getEvolutionGraph</action>
@@ -116,11 +127,14 @@
 					<name>Visitors</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>VisitsSummary</module>
 				<action>get</action>
@@ -145,11 +159,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Overview</id>
 			<name>Overview</name>
 			<order>2</order>
+			<help>&lt;p&gt;The Visitors Overview helps you understand the popularity of your site. It does this by providing charts that show how many visits your site is receiving over a selected period and the average level of engagement for key features, such as searches and downloads.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitsSummary</module>
 		<action>getEvolutionGraph</action>
@@ -172,11 +189,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Overview</id>
 			<name>Overview</name>
 			<order>2</order>
+			<help>&lt;p&gt;The Visitors Overview helps you understand the popularity of your site. It does this by providing charts that show how many visits your site is receiving over a selected period and the average level of engagement for key features, such as searches and downloads.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitsSummary</module>
 		<action>get</action>
@@ -199,11 +219,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>Live_VisitorLog</id>
 			<name>Visits Log</name>
 			<order>5</order>
+			<help>&lt;p&gt;The visits log shows you every visit your website receives in detail. Find out which actions each visitor has performed, how they got to your site, a bit about who they are, and more (while still complying with your local privacy regulations).&lt;/p&gt;&lt;p&gt;While other reports in Matomo show how your visitors behave at an aggregate level, the visits log provides granular detail. You can also use segments to narrow it down to specific types of visits to understand your visitors better.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/real-time/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Live.getLastVisitsDetails&quot; target=&quot;_blank&quot; rel=&quot;noreferrer noopener&quot;&gt;Learn more in the visit-log guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Live</module>
 		<action>getLastVisitsDetails</action>
@@ -221,17 +244,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Visits in Real-time</name>
+		<name>Visits in real-time</name>
 		<category>
 			<id>General_Visitors</id>
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_RealTime</id>
 			<name>Real-time</name>
 			<order>7</order>
+			<help>&lt;p&gt;The visits in the real-time report show the real-time flow of visits to your website. It includes a real-time counter of your visits and page views in the last 24 hours and the previous 30 minutes.&lt;/p&gt;&lt;p&gt;This report refreshes every 5 seconds and displays new visits (or existing visitors that view a new page) at the top of the list with a fade-in effect.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Live</module>
 		<action>widget</action>
@@ -250,11 +276,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountryMap_RealTimeMap</id>
 			<name>Real-time Map</name>
 			<order>9</order>
+			<help>&lt;p&gt;Shows the location of website visitors the last 30 minutes, and flashes for new ones. Recent visits are shown as large orange bubbles, and older ones as smaller gray ones. It refreshes every five seconds.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountryMap</module>
 		<action>realtimeMap</action>
@@ -273,11 +302,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountryMap</module>
 		<action>visitorMap</action>
@@ -296,11 +328,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getCity</action>
@@ -321,11 +356,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getContinent</action>
@@ -346,11 +384,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getCountry</action>
@@ -371,11 +412,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getRegion</action>
@@ -390,17 +434,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Browser language</name>
+		<name>Web-browser language</name>
 		<category>
 			<id>General_Visitors</id>
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserLanguage</module>
 		<action>getLanguage</action>
@@ -421,11 +468,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserCountry_SubmenuLocations</id>
 			<name>Locations</name>
 			<order>10</order>
+			<help>&lt;p&gt;The &quot;Locations&quot; section is the best way to find out what countries, continents, regions, and cities your website visitors come from — in table and map form. It also says what language their browser is set to, helping identify international visitors in alternative locations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserLanguage</module>
 		<action>getLanguageCode</action>
@@ -446,11 +496,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Devices</id>
 			<name>Devices</name>
 			<order>15</order>
+			<help>&lt;p&gt;The Devices section helps you understand the technology that your visitors are using to access your site. You will see reports on the type of device and specific models to enable you to optimise your site for the most popular devices.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getBrand</action>
@@ -471,11 +524,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Devices</id>
 			<name>Devices</name>
 			<order>15</order>
+			<help>&lt;p&gt;The Devices section helps you understand the technology that your visitors are using to access your site. You will see reports on the type of device and specific models to enable you to optimise your site for the most popular devices.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getModel</action>
@@ -496,11 +552,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Devices</id>
 			<name>Devices</name>
 			<order>15</order>
+			<help>&lt;p&gt;The Devices section helps you understand the technology that your visitors are using to access your site. You will see reports on the type of device and specific models to enable you to optimise your site for the most popular devices.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getType</action>
@@ -521,11 +580,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Devices</id>
 			<name>Devices</name>
 			<order>15</order>
+			<help>&lt;p&gt;The Devices section helps you understand the technology that your visitors are using to access your site. You will see reports on the type of device and specific models to enable you to optimise your site for the most popular devices.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Resolution</module>
 		<action>getResolution</action>
@@ -546,11 +608,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicePlugins</module>
 		<action>getPlugin</action>
@@ -571,11 +636,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getBrowserEngines</action>
@@ -596,11 +664,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getBrowserVersions</action>
@@ -621,11 +692,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getBrowsers</action>
@@ -646,11 +720,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getOsFamilies</action>
@@ -671,11 +748,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getOsVersions</action>
@@ -696,11 +776,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>DevicesDetection_Software</id>
 			<name>Software</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Software section shows the operating systems, browsers and plugins that your visitors are using to access the site so that you can optimise your site to ensure it is fully compatible with the most popular configurations.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Resolution</module>
 		<action>getConfiguration</action>
@@ -715,17 +798,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Visits by Day of Week</name>
+		<name>Visits by day of the week</name>
 		<category>
 			<id>General_Visitors</id>
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitTime_SubmenuTimes</id>
 			<name>Times</name>
 			<order>35</order>
+			<help>&lt;p&gt;The &quot;Times&quot; section shows when people visit your site. Popular local times helps you cater your site to their lives. The most popular server times reveals technical demand.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitTime</module>
 		<action>getByDayOfWeek</action>
@@ -746,11 +832,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitTime_SubmenuTimes</id>
 			<name>Times</name>
 			<order>35</order>
+			<help>&lt;p&gt;The &quot;Times&quot; section shows when people visit your site. Popular local times helps you cater your site to their lives. The most popular server times reveals technical demand.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitTime</module>
 		<action>getVisitInformationPerLocalTime</action>
@@ -765,17 +854,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Visits per server time</name>
+		<name>Visits per hour in the site's timezone</name>
 		<category>
 			<id>General_Visitors</id>
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitTime_SubmenuTimes</id>
 			<name>Times</name>
 			<order>35</order>
+			<help>&lt;p&gt;The &quot;Times&quot; section shows when people visit your site. Popular local times helps you cater your site to their lives. The most popular server times reveals technical demand.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitTime</module>
 		<action>getVisitInformationPerServerTime</action>
@@ -796,11 +888,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>UserId_UserReportTitle</id>
 			<name>User IDs</name>
 			<order>40</order>
+			<help>&lt;p&gt;The user ID report shows visits associated with all your registered and logged in users. Understand website usage by its specific users and find out who your most and least active users are.&lt;/p&gt;&lt;p&gt;&lt;a target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot; href=&quot;https://matomo.org/docs/user-id?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.UserId.getUsers&quot;&gt;&lt;span class=&quot;icon-info&quot;&gt;&lt;/span&gt; Learn more&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserId</module>
 		<action>getUsers</action>
@@ -821,11 +916,14 @@
 			<name>Visitors</name>
 			<order>5</order>
 			<icon>icon-reporting-visitors</icon>
+			<help>&lt;p&gt;The Visitors pages tell you things about who your visitors are. Things like where your visitors came from, what devices and browsers they're using and when they generally visit your website. Understand, in the aggregate, who your audience is, and look for outliers to see how your audience could grow.&lt;/p&gt;&lt;p&gt;In addition to general information about your visitors, you can also use the &lt;a href=&quot;#&quot; onclick=&quot;this.href=broadcast.buildReportingUrl('category=General_Visitors&amp;subcategory=Live_VisitorLog')&quot;&gt;Visits Log&lt;/a&gt; to see what occurred in every individual visit.&lt;/p&gt;</help>
+			<widget />
 		</category>
 		<subcategory>
 			<id>CustomVariables_CustomVariables</id>
 			<name>Custom Variables</name>
 			<order>45</order>
+			<help>&lt;p&gt;This report contains information about your Custom Variables. Click on a variable name to see the distribution of the values.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/custom-variables/&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Read more about this topic in the online guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>CustomVariables</module>
 		<action>getCustomVariables</action>
@@ -846,11 +944,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Pages</id>
 			<name>Pages</name>
 			<order>5</order>
+			<help>&lt;p&gt;This report contains information about the page URLs that have been visited.&lt;/p&gt;&lt;p&gt;The table is organized hierarchically, the URLs are displayed as a folder structure.&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getPageUrls</action>
@@ -871,11 +972,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuPagesEntry</id>
 			<name>Entry pages</name>
 			<order>10</order>
+			<help>&lt;p&gt;This report contains information about the entry pages that were used during the specified period. An entry page is the first page that a user views during their visit.&lt;/p&gt;&lt;p&gt;The entry URLs are displayed as a folder structure.&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getEntryPageTitles</action>
@@ -896,11 +1000,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuPagesEntry</id>
 			<name>Entry pages</name>
 			<order>10</order>
+			<help>&lt;p&gt;This report contains information about the entry pages that were used during the specified period. An entry page is the first page that a user views during their visit.&lt;/p&gt;&lt;p&gt;The entry URLs are displayed as a folder structure.&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getEntryPageUrls</action>
@@ -921,11 +1028,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuPagesExit</id>
 			<name>Exit pages</name>
 			<order>15</order>
+			<help>&lt;p&gt;This report contains information about the exit pages that occurred during the specified period. An exit page is the last page that a user views during their visit.&lt;/p&gt;&lt;p&gt;The exit URLs are displayed as a folder structure.&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getExitPageTitles</action>
@@ -946,11 +1056,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuPagesExit</id>
 			<name>Exit pages</name>
 			<order>15</order>
+			<help>&lt;p&gt;This report contains information about the exit pages that occurred during the specified period. An exit page is the last page that a user views during their visit.&lt;/p&gt;&lt;p&gt;The exit URLs are displayed as a folder structure.&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getExitPageUrls</action>
@@ -971,11 +1084,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuPageTitles</id>
 			<name>Page titles</name>
 			<order>20</order>
+			<help>&lt;p&gt;This report contains information about the titles of the pages that have been visited.&lt;/p&gt;&lt;p&gt;The page title is the HTML &amp;lt;title&amp;gt; Tag that most browsers show in their window title.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getPageTitles</action>
@@ -996,11 +1112,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuSitesearch</id>
 			<name>Site Search</name>
 			<order>25</order>
+			<help>&lt;p&gt;The Site Search section shows which keywords visitors use when searching your website. It also displays which pages users view after performing a search and which on-site search keywords return no results at all.&lt;/p&gt;&lt;p&gt;These reports can give you ideas about missing content on your site, insight into what your visitors are looking for but can’t find easily, and more.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/site-search/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Actions.getSiteSearchCategories&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Site Search guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getPageTitlesFollowingSiteSearch</action>
@@ -1021,11 +1140,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuSitesearch</id>
 			<name>Site Search</name>
 			<order>25</order>
+			<help>&lt;p&gt;The Site Search section shows which keywords visitors use when searching your website. It also displays which pages users view after performing a search and which on-site search keywords return no results at all.&lt;/p&gt;&lt;p&gt;These reports can give you ideas about missing content on your site, insight into what your visitors are looking for but can’t find easily, and more.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/site-search/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Actions.getSiteSearchCategories&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Site Search guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getPageUrlsFollowingSiteSearch</action>
@@ -1046,11 +1168,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuSitesearch</id>
 			<name>Site Search</name>
 			<order>25</order>
+			<help>&lt;p&gt;The Site Search section shows which keywords visitors use when searching your website. It also displays which pages users view after performing a search and which on-site search keywords return no results at all.&lt;/p&gt;&lt;p&gt;These reports can give you ideas about missing content on your site, insight into what your visitors are looking for but can’t find easily, and more.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/site-search/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Actions.getSiteSearchCategories&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Site Search guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getSiteSearchCategories</action>
@@ -1071,11 +1196,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuSitesearch</id>
 			<name>Site Search</name>
 			<order>25</order>
+			<help>&lt;p&gt;The Site Search section shows which keywords visitors use when searching your website. It also displays which pages users view after performing a search and which on-site search keywords return no results at all.&lt;/p&gt;&lt;p&gt;These reports can give you ideas about missing content on your site, insight into what your visitors are looking for but can’t find easily, and more.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/site-search/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Actions.getSiteSearchCategories&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Site Search guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getSiteSearchKeywords</action>
@@ -1096,11 +1224,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Actions_SubmenuSitesearch</id>
 			<name>Site Search</name>
 			<order>25</order>
+			<help>&lt;p&gt;The Site Search section shows which keywords visitors use when searching your website. It also displays which pages users view after performing a search and which on-site search keywords return no results at all.&lt;/p&gt;&lt;p&gt;These reports can give you ideas about missing content on your site, insight into what your visitors are looking for but can’t find easily, and more.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/site-search/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Actions.getSiteSearchCategories&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Site Search guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getSiteSearchNoResultKeywords</action>
@@ -1121,11 +1252,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Outlinks</id>
 			<name>Outlinks</name>
 			<order>30</order>
+			<help>&lt;p&gt;This report shows a hierarchical list of outlink URLs that were clicked by your visitors. An outlink is a link that leads the visitor away from your website (to another domain).&lt;/p&gt;&lt;p&gt;Use the plus and minus icons on the left to navigate.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getOutlinks</action>
@@ -1146,11 +1280,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Downloads</id>
 			<name>Downloads</name>
 			<order>35</order>
+			<help>&lt;p&gt;In this report, you can see which files your visitors have downloaded.&lt;/p&gt;&lt;p&gt;What Matomo counts as a download is the click on a download link. Whether the download was completed or not isn't known to Matomo.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Actions</module>
 		<action>getDownloads</action>
@@ -1171,11 +1308,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getAction</action>
@@ -1197,11 +1337,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getAction</action>
@@ -1223,11 +1366,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getCategory</action>
@@ -1249,11 +1395,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getCategory</action>
@@ -1275,11 +1424,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getName</action>
@@ -1301,11 +1453,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Events_Events</id>
 			<name>Events</name>
 			<order>40</order>
+			<help>&lt;p&gt;The Events section offers reports on the custom events associated with your site. Events typically require custom configuration. Once configured you can review reports broken down by category, action and name.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/event-tracking/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Events.getCategory&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more about event tracking here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Events</module>
 		<action>getName</action>
@@ -1327,11 +1482,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Contents_Contents</id>
 			<name>Contents</name>
 			<order>45</order>
+			<help>&lt;p&gt;Content tracking helps you determine the popularity of specific pieces of content on any page of your website or app. This section reports the number of impressions and interactions the various pieces of content on your site receive.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/content-tracking?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Contents.getContentNames&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Content Tracking guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Contents</module>
 		<action>getContentNames</action>
@@ -1352,11 +1510,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Contents_Contents</id>
 			<name>Contents</name>
 			<order>45</order>
+			<help>&lt;p&gt;Content tracking helps you determine the popularity of specific pieces of content on any page of your website or app. This section reports the number of impressions and interactions the various pieces of content on your site receive.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/content-tracking?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Contents.getContentNames&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Content Tracking guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Contents</module>
 		<action>getContentNames</action>
@@ -1377,11 +1538,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Contents_Contents</id>
 			<name>Contents</name>
 			<order>45</order>
+			<help>&lt;p&gt;Content tracking helps you determine the popularity of specific pieces of content on any page of your website or app. This section reports the number of impressions and interactions the various pieces of content on your site receive.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/content-tracking?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Contents.getContentNames&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Content Tracking guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Contents</module>
 		<action>getContentPieces</action>
@@ -1402,11 +1566,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Contents_Contents</id>
 			<name>Contents</name>
 			<order>45</order>
+			<help>&lt;p&gt;Content tracking helps you determine the popularity of specific pieces of content on any page of your website or app. This section reports the number of impressions and interactions the various pieces of content on your site receive.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/content-tracking?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Contents.getContentNames&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in the Content Tracking guide.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Contents</module>
 		<action>getContentPieces</action>
@@ -1427,11 +1594,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Transitions_Transitions</id>
 			<name>Transitions</name>
 			<order>46</order>
+			<help>&lt;p&gt;Transitions is a report showing the things your visitors did directly before and after viewing a given page. This page explains how to access, understand, and use the powerful &quot;Transitions&quot; report.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/transitions/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Transitions.getTransitions&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;More details&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>Transitions</module>
 		<action>getTransitions</action>
@@ -1450,11 +1620,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitFrequency</module>
 		<action>getEvolutionGraph</action>
@@ -1477,11 +1650,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitFrequency</module>
 		<action>get</action>
@@ -1498,17 +1674,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Visits by Days Since Last Visit</name>
+		<name>Visits by days since last visit</name>
 		<category>
 			<id>General_Actions</id>
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitorInterest</module>
 		<action>getNumberOfVisitsByDaysSinceLast</action>
@@ -1523,17 +1702,20 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Visits by Visit Number</name>
+		<name>Visits by visit number</name>
 		<category>
 			<id>General_Actions</id>
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitorInterest</module>
 		<action>getNumberOfVisitsByVisitCount</action>
@@ -1554,11 +1736,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitorInterest</module>
 		<action>getNumberOfVisitsPerPage</action>
@@ -1579,11 +1764,14 @@
 			<name>Behaviour</name>
 			<order>10</order>
 			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>VisitorInterest_Engagement</id>
 			<name>Engagement</name>
 			<order>46</order>
+			<help>&lt;p&gt;The Engagement section provides reports that help to quantify how many new and returning visitors you get. You can also review reports that break down the average time and number of pages per visit, as well as the number of times a visitor has been to your site and the most common number of days between visits.&lt;/p&gt;&lt;p&gt;This can help you to optimise for frequency and high-interaction visits in addition to maximising your reach.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitorInterest</module>
 		<action>getNumberOfVisitsPerVisitDuration</action>
@@ -1598,17 +1786,50 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
+		<name>Evolution of page performance metrics</name>
+		<category>
+			<id>General_Actions</id>
+			<name>Behaviour</name>
+			<order>10</order>
+			<icon>icon-reporting-actions</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>PagePerformance_Performance</id>
+			<name>Performance</name>
+			<order>47</order>
+			<help>&lt;p&gt;The Performance section can help you analyse how fast your website or app is performing on the whole and help discover whether you have specific pages that significantly deviate from your averages.&lt;/p&gt;&lt;p&gt;You can also find reports showing exactly how long each page of your website takes to load and what is contributing to their loading time.&lt;/p&gt;</help>
+		</subcategory>
+		<module>PagePerformance</module>
+		<action>getEvolutionGraph</action>
+		<order>1</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>graphStackedBarEvolution</viewDataTable>
+			<module>PagePerformance</module>
+			<action>getEvolutionGraph</action>
+		</parameters>
+		<uniqueId>widgetPagePerformancegetEvolutionGraphforceView1viewDataTablegraphStackedBarEvolution</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>graphStackedBarEvolution</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
 		<name>Referrers</name>
 		<category>
 			<id>Referrers_Referrers</id>
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_WidgetGetAll</id>
 			<name>All Channels</name>
 			<order>5</order>
+			<help>&lt;p&gt;This section shows you the number of visits that arrive from different channel types and referrers. Click on the plus or minus buttons to view the referrers within each type.&lt;/p&gt;&lt;p&gt;You can also analyse the number of actions performed by each of your traffic sources by enabling the table with Visitor engagement metrics view.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getAll</action>
@@ -1629,11 +1850,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_WidgetGetAll</id>
 			<name>All Channels</name>
 			<order>5</order>
+			<help>&lt;p&gt;This section shows you the number of visits that arrive from different channel types and referrers. Click on the plus or minus buttons to view the referrers within each type.&lt;/p&gt;&lt;p&gt;You can also analyse the number of actions performed by each of your traffic sources by enabling the table with Visitor engagement metrics view.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getReferrerType</action>
@@ -1654,11 +1878,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_SubmenuSearchEngines</id>
 			<name>Search Engines &amp; Keywords</name>
 			<order>10</order>
+			<help>&lt;p&gt;This section helps you analyse your search engine optimisation and performance. You can analyse your most popular keywords with the combined keyword reports or see which keywords perform well on specific search engines for more targeted analysis and optimisation.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/matomo-cloud/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Referrers.getSearchEngines&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Matomo Cloud&lt;/a&gt; and &lt;a href=&quot;https://plugins.matomo.org/SearchEngineKeywordsPerformance?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Referrers.getSearchEngines&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Search Engine Keywords Performance&lt;/a&gt; plugin users will receive the best results from this report.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getKeywords</action>
@@ -1679,11 +1906,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_SubmenuSearchEngines</id>
 			<name>Search Engines &amp; Keywords</name>
 			<order>10</order>
+			<help>&lt;p&gt;This section helps you analyse your search engine optimisation and performance. You can analyse your most popular keywords with the combined keyword reports or see which keywords perform well on specific search engines for more targeted analysis and optimisation.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/matomo-cloud/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Referrers.getSearchEngines&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Matomo Cloud&lt;/a&gt; and &lt;a href=&quot;https://plugins.matomo.org/SearchEngineKeywordsPerformance?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Referrers.getSearchEngines&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Search Engine Keywords Performance&lt;/a&gt; plugin users will receive the best results from this report.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getSearchEngines</action>
@@ -1704,11 +1934,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_SubmenuWebsitesOnly</id>
 			<name>Websites</name>
 			<order>15</order>
+			<help>&lt;p&gt;In this table, you can see which websites referred visitors to your site.&lt;/p&gt;&lt;p&gt;By clicking on a row in the table, you can see which URLs the links to your website were on.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getWebsites</action>
@@ -1729,11 +1962,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_Socials</id>
 			<name>Social Networks</name>
 			<order>16</order>
+			<help>&lt;p&gt;In this table, you can see which websites referred visitors to your site.&lt;/p&gt;&lt;p&gt;By clicking on a row in the table, you can see which URLs the links to your website were on.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getSocials</action>
@@ -1754,11 +1990,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_Campaigns</id>
 			<name>Campaigns</name>
 			<order>20</order>
+			<help>&lt;p&gt;The Campaign Tracking section allows you to analyse the visits associated with the various tracking values that have been linked to your digital campaigns. It can reveal things like, how much traffic your campaigns are bringing in, which creatives are performing best, how engaged campaign visitors are, and whether the campaign is resulting in sales or not.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getCampaigns</action>
@@ -1779,11 +2018,14 @@
 			<name>Acquisition</name>
 			<order>15</order>
 			<icon>icon-reporting-referer</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Referrers_URLCampaignBuilder</id>
 			<name>Campaign URL Builder</name>
 			<order>21</order>
+			<help />
 		</subcategory>
 		<module>Referrers</module>
 		<action>getCampaignUrlBuilder</action>
@@ -1802,11 +2044,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Overview</id>
 			<name>Overview</name>
 			<order>2</order>
+			<help>&lt;p&gt;The Ecommerce Overview section is the best place to get a high-level view of your online store’s performance. At a glance, you can see how many sales you’re making, how much revenue you are generating, and your website’s conversion rate.&lt;/p&gt;&lt;p&gt;Click on an individual metric within the sparkline chart to focus on it within the full-sized evolution graph.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/ecommerce-analytics/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Ecommerce.Overview&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in our Ecommerce guide here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>CoreHome</module>
 		<action>renderWidgetContainer</action>
@@ -1828,11 +2073,14 @@
 					<name>Ecommerce</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>getEvolutionGraph</action>
@@ -1856,11 +2104,14 @@
 					<name>Ecommerce</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Ecommerce</module>
 				<action>getSparklines</action>
@@ -1884,11 +2135,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>ecommerceOrder</id>
 					<name>ecommerceOrder</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Ecommerce</module>
 				<action>getConversionsOverview</action>
@@ -1917,11 +2171,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_EcommerceLog</id>
 			<name>Ecommerce Log</name>
 			<order>5</order>
+			<help>&lt;p&gt;The Ecommerce log provides granular session-level data so you can look at the full session for each user that either made a purchase or abandoned their cart. This can help you understand what users do before and after purchasing to reveal optimisation opportunities.&lt;/p&gt;&lt;p&gt;Data on this page is updated in real-time.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Ecommerce</module>
 		<action>getEcommerceLog</action>
@@ -1940,11 +2197,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsCategory</action>
@@ -1965,11 +2225,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsCategory</action>
@@ -1990,11 +2253,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsName</action>
@@ -2015,11 +2281,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsName</action>
@@ -2040,11 +2309,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsSku</action>
@@ -2065,11 +2337,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Goals_Products</id>
 			<name>Products</name>
 			<order>10</order>
+			<help>&lt;p&gt;The Products view can help you identify products and categories that are over-performing or under-performing to reveal trends and opportunities related to your product selection and store pages.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getItemsSku</action>
@@ -2084,21 +2359,156 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
+		<name>Sales by Pages: Entry page titles</name>
+		<category>
+			<id>Goals_Ecommerce</id>
+			<name>Ecommerce</name>
+			<order>20</order>
+			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>Ecommerce_Sales</id>
+			<name>Sales</name>
+			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
+		</subcategory>
+		<module>Actions</module>
+		<action>getEntryPageTitles</action>
+		<order>103</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>tableGoals</viewDataTable>
+			<module>Actions</module>
+			<action>getEntryPageTitles</action>
+			<documentationForGoalsPage>1</documentationForGoalsPage>
+			<idGoal>ecommerceOrder</idGoal>
+			<segmented_visitor_log_segment_suffix>visitEcommerceStatus==ordered</segmented_visitor_log_segment_suffix>
+		</parameters>
+		<uniqueId>widgetActionsgetEntryPageTitlesforceView1viewDataTabletableGoalsdocumentationForGoalsPage1idGoalecommerceOrdersegmented_visitor_log_segment_suffixvisitEcommerceStatus3D3Dordered</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>tableGoals</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
+		<name>Sales by Pages: Entry pages</name>
+		<category>
+			<id>Goals_Ecommerce</id>
+			<name>Ecommerce</name>
+			<order>20</order>
+			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>Ecommerce_Sales</id>
+			<name>Sales</name>
+			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
+		</subcategory>
+		<module>Actions</module>
+		<action>getEntryPageUrls</action>
+		<order>102</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>tableGoals</viewDataTable>
+			<module>Actions</module>
+			<action>getEntryPageUrls</action>
+			<documentationForGoalsPage>1</documentationForGoalsPage>
+			<idGoal>ecommerceOrder</idGoal>
+			<segmented_visitor_log_segment_suffix>visitEcommerceStatus==ordered</segmented_visitor_log_segment_suffix>
+		</parameters>
+		<uniqueId>widgetActionsgetEntryPageUrlsforceView1viewDataTabletableGoalsdocumentationForGoalsPage1idGoalecommerceOrdersegmented_visitor_log_segment_suffixvisitEcommerceStatus3D3Dordered</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>tableGoals</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
+		<name>Sales by Pages: Page titles</name>
+		<category>
+			<id>Goals_Ecommerce</id>
+			<name>Ecommerce</name>
+			<order>20</order>
+			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>Ecommerce_Sales</id>
+			<name>Sales</name>
+			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
+		</subcategory>
+		<module>Actions</module>
+		<action>getPageTitles</action>
+		<order>104</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>tableGoals</viewDataTable>
+			<module>Actions</module>
+			<action>getPageTitles</action>
+			<documentationForGoalsPage>1</documentationForGoalsPage>
+			<idGoal>ecommerceOrder</idGoal>
+			<segmented_visitor_log_segment_suffix>visitEcommerceStatus==ordered</segmented_visitor_log_segment_suffix>
+		</parameters>
+		<uniqueId>widgetActionsgetPageTitlesforceView1viewDataTabletableGoalsdocumentationForGoalsPage1idGoalecommerceOrdersegmented_visitor_log_segment_suffixvisitEcommerceStatus3D3Dordered</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>tableGoals</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
+		<name>Sales by Pages: Page URLs</name>
+		<category>
+			<id>Goals_Ecommerce</id>
+			<name>Ecommerce</name>
+			<order>20</order>
+			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>Ecommerce_Sales</id>
+			<name>Sales</name>
+			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
+		</subcategory>
+		<module>Actions</module>
+		<action>getPageUrls</action>
+		<order>101</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>tableGoals</viewDataTable>
+			<module>Actions</module>
+			<action>getPageUrls</action>
+			<documentationForGoalsPage>1</documentationForGoalsPage>
+			<idGoal>ecommerceOrder</idGoal>
+			<segmented_visitor_log_segment_suffix>visitEcommerceStatus==ordered</segmented_visitor_log_segment_suffix>
+		</parameters>
+		<uniqueId>widgetActionsgetPageUrlsforceView1viewDataTabletableGoalsdocumentationForGoalsPage1idGoalecommerceOrdersegmented_visitor_log_segment_suffixvisitEcommerceStatus3D3Dordered</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>tableGoals</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
 		<name>Sales by User attribute: Custom Variables</name>
 		<category>
 			<id>Goals_Ecommerce</id>
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>CustomVariables</module>
 		<action>getCustomVariables</action>
-		<order>302</order>
+		<order>402</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2120,15 +2530,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getBrand</action>
-		<order>207</order>
+		<order>307</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2144,21 +2557,57 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
+		<name>Sales by User location: Browsers</name>
+		<category>
+			<id>Goals_Ecommerce</id>
+			<name>Ecommerce</name>
+			<order>20</order>
+			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
+		</category>
+		<subcategory>
+			<id>Ecommerce_Sales</id>
+			<name>Sales</name>
+			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
+		</subcategory>
+		<module>DevicesDetection</module>
+		<action>getBrowsers</action>
+		<order>308</order>
+		<parameters>
+			<forceView>1</forceView>
+			<viewDataTable>tableGoals</viewDataTable>
+			<module>DevicesDetection</module>
+			<action>getBrowsers</action>
+			<documentationForGoalsPage>1</documentationForGoalsPage>
+			<idGoal>ecommerceOrder</idGoal>
+			<segmented_visitor_log_segment_suffix>visitEcommerceStatus==ordered</segmented_visitor_log_segment_suffix>
+		</parameters>
+		<uniqueId>widgetDevicesDetectiongetBrowsersforceView1viewDataTabletableGoalsdocumentationForGoalsPage1idGoalecommerceOrdersegmented_visitor_log_segment_suffixvisitEcommerceStatus3D3Dordered</uniqueId>
+		<isWide>0</isWide>
+		<viewDataTable>tableGoals</viewDataTable>
+		<isReport>1</isReport>
+	</row>
+	<row>
 		<name>Sales by User location: Device model</name>
 		<category>
 			<id>Goals_Ecommerce</id>
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getModel</action>
-		<order>206</order>
+		<order>306</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2180,15 +2629,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>DevicesDetection</module>
 		<action>getType</action>
-		<order>205</order>
+		<order>305</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2210,15 +2662,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getDaysToConversion</action>
-		<order>102</order>
+		<order>202</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>table</viewDataTable>
@@ -2240,15 +2695,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Goals</module>
 		<action>getVisitsUntilConversion</action>
-		<order>101</order>
+		<order>201</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>table</viewDataTable>
@@ -2270,11 +2728,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getCampaigns</action>
@@ -2300,11 +2761,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getKeywords</action>
@@ -2330,11 +2794,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getReferrerType</action>
@@ -2360,11 +2827,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getSearchEngines</action>
@@ -2390,11 +2860,14 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>Referrers</module>
 		<action>getWebsites</action>
@@ -2420,15 +2893,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getCity</action>
-		<order>204</order>
+		<order>304</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2450,15 +2926,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getContinent</action>
-		<order>202</order>
+		<order>302</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2480,15 +2959,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getCountry</action>
-		<order>201</order>
+		<order>301</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2510,15 +2992,18 @@
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>UserCountry</module>
 		<action>getRegion</action>
-		<order>203</order>
+		<order>303</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2534,21 +3019,24 @@
 		<isReport>1</isReport>
 	</row>
 	<row>
-		<name>Sales by User attribute: Visits per server time</name>
+		<name>Sales by User attribute: Visits per hour in the site's timezone</name>
 		<category>
 			<id>Goals_Ecommerce</id>
 			<name>Ecommerce</name>
 			<order>20</order>
 			<icon>icon-reporting-ecommerce</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Ecommerce_Sales</id>
 			<name>Sales</name>
 			<order>15</order>
+			<help>&lt;p&gt;This section contains an extensive collection of reports to help you analyse the different conditions that most commonly lead to sales, such as the traffic and campaign sources, user time and location and devices used to access them.&lt;/p&gt;&lt;p&gt;You can also learn exactly how revenue is associated with each dimension, such as specific traffic types or tracked campaigns.&lt;/p&gt;</help>
 		</subcategory>
 		<module>VisitTime</module>
 		<action>getVisitInformationPerServerTime</action>
-		<order>301</order>
+		<order>401</order>
 		<parameters>
 			<forceView>1</forceView>
 			<viewDataTable>tableGoals</viewDataTable>
@@ -2570,11 +3058,14 @@
 			<name>Goals</name>
 			<order>25</order>
 			<icon>icon-reporting-goal</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>General_Overview</id>
 			<name>Overview</name>
 			<order>2</order>
+			<help>&lt;p&gt;The Goals Overview reports on the performance of the goals defined for your website. You can access your goal’s conversion percentages, amount of revenue generated and full reports for each.&lt;/p&gt;&lt;p&gt;Click on an individual metric within the sparkline chart to focus on it within the full-sized evolution graph.&lt;/p&gt;&lt;p&gt;&lt;a href=&quot;https://matomo.org/docs/tracking-goals-web-analytics/?mtm_campaign=Matomo_App&amp;mtm_source=Matomo_App_OnPremise&amp;mtm_medium=App.Goals.Overview&quot; rel=&quot;noreferrer noopener&quot; target=&quot;_blank&quot;&gt;Learn more in our Goals guide here.&lt;/a&gt;&lt;/p&gt;</help>
 		</subcategory>
 		<module>CoreHome</module>
 		<action>renderWidgetContainer</action>
@@ -2596,11 +3087,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>getEvolutionGraph</action>
@@ -2623,114 +3117,55 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
-				<action>get</action>
+				<action>getMetrics</action>
 				<order>15</order>
 				<parameters>
 					<forceView>1</forceView>
 					<viewDataTable>sparklines</viewDataTable>
 					<module>Goals</module>
-					<action>get</action>
+					<action>getMetrics</action>
 				</parameters>
-				<uniqueId>widgetGoalsgetforceView1viewDataTablesparklines</uniqueId>
+				<uniqueId>widgetGoalsgetMetricsforceView1viewDataTablesparklines</uniqueId>
 				<isWide>0</isWide>
 				<viewDataTable>sparklines</viewDataTable>
 				<isReport>1</isReport>
 			</row>
 			<row>
-				<name>Goal Goal 1 - Thank you</name>
+				<name />
 				<category>
 					<id>Goals_Goals</id>
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>General_Overview</id>
 					<name>Overview</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
-				<action>get</action>
+				<action>getSparklines</action>
 				<order>25</order>
 				<parameters>
-					<forceView>1</forceView>
-					<viewDataTable>sparklines</viewDataTable>
 					<module>Goals</module>
-					<action>get</action>
-					<idGoal>1</idGoal>
-					<allow_multiple>1</allow_multiple>
-					<only_summary>1</only_summary>
+					<action>getSparklines</action>
 				</parameters>
-				<uniqueId>widgetGoalsgetforceView1viewDataTablesparklinesidGoal1allow_multiple1only_summary1</uniqueId>
+				<uniqueId>widgetGoalsgetSparklines</uniqueId>
 				<isWide>0</isWide>
-				<viewDataTable>sparklines</viewDataTable>
-				<isReport>1</isReport>
-			</row>
-			<row>
-				<name>Goal Goal 2 - Hello</name>
-				<category>
-					<id>Goals_Goals</id>
-					<name>Goals</name>
-					<order>99</order>
-					<icon />
-				</category>
-				<subcategory>
-					<id>General_Overview</id>
-					<name>Overview</name>
-					<order>99</order>
-				</subcategory>
-				<module>Goals</module>
-				<action>get</action>
-				<order>25</order>
-				<parameters>
-					<forceView>1</forceView>
-					<viewDataTable>sparklines</viewDataTable>
-					<module>Goals</module>
-					<action>get</action>
-					<idGoal>2</idGoal>
-					<allow_multiple>0</allow_multiple>
-					<only_summary>1</only_summary>
-				</parameters>
-				<uniqueId>widgetGoalsgetforceView1viewDataTablesparklinesidGoal2allow_multiple0only_summary1</uniqueId>
-				<isWide>0</isWide>
-				<viewDataTable>sparklines</viewDataTable>
-				<isReport>1</isReport>
-			</row>
-			<row>
-				<name>Goal triggered js</name>
-				<category>
-					<id>Goals_Goals</id>
-					<name>Goals</name>
-					<order>99</order>
-					<icon />
-				</category>
-				<subcategory>
-					<id>General_Overview</id>
-					<name>Overview</name>
-					<order>99</order>
-				</subcategory>
-				<module>Goals</module>
-				<action>get</action>
-				<order>25</order>
-				<parameters>
-					<forceView>1</forceView>
-					<viewDataTable>sparklines</viewDataTable>
-					<module>Goals</module>
-					<action>get</action>
-					<idGoal>3</idGoal>
-					<allow_multiple>0</allow_multiple>
-					<only_summary>1</only_summary>
-				</parameters>
-				<uniqueId>widgetGoalsgetforceView1viewDataTablesparklinesidGoal3allow_multiple0only_summary1</uniqueId>
-				<isWide>0</isWide>
-				<viewDataTable>sparklines</viewDataTable>
+				<viewDataTable />
 				<isReport>1</isReport>
 			</row>
 		</widgets>
@@ -2742,11 +3177,14 @@
 			<name>Goals</name>
 			<order>25</order>
 			<icon>icon-reporting-goal</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>1</id>
 			<name>Goal 1 - Thank you</name>
 			<order>900</order>
+			<help />
 		</subcategory>
 		<module>CoreHome</module>
 		<action>renderWidgetContainer</action>
@@ -2768,11 +3206,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>1</id>
 					<name>1</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>getEvolutionGraph</action>
@@ -2796,11 +3237,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>1</id>
 					<name>1</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>get</action>
@@ -2825,11 +3269,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>1</id>
 					<name>1</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>goalConversionsOverview</action>
@@ -2858,11 +3305,14 @@
 			<name>Goals</name>
 			<order>25</order>
 			<icon>icon-reporting-goal</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>2</id>
 			<name>Goal 2 - Hello</name>
 			<order>901</order>
+			<help />
 		</subcategory>
 		<module>CoreHome</module>
 		<action>renderWidgetContainer</action>
@@ -2884,11 +3334,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>2</id>
 					<name>2</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>getEvolutionGraph</action>
@@ -2912,11 +3365,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>2</id>
 					<name>2</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>get</action>
@@ -2941,11 +3397,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>2</id>
 					<name>2</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>goalConversionsOverview</action>
@@ -2974,11 +3433,14 @@
 			<name>Goals</name>
 			<order>25</order>
 			<icon>icon-reporting-goal</icon>
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>3</id>
 			<name>triggered js</name>
 			<order>902</order>
+			<help />
 		</subcategory>
 		<module>CoreHome</module>
 		<action>renderWidgetContainer</action>
@@ -3000,11 +3462,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>3</id>
 					<name>3</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>getEvolutionGraph</action>
@@ -3028,11 +3493,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>3</id>
 					<name>3</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>get</action>
@@ -3057,11 +3525,14 @@
 					<name>Goals</name>
 					<order>99</order>
 					<icon />
+					<help />
+					<widget />
 				</category>
 				<subcategory>
 					<id>3</id>
 					<name>3</name>
 					<order>99</order>
+					<help />
 				</subcategory>
 				<module>Goals</module>
 				<action>goalConversionsOverview</action>
@@ -3090,11 +3561,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Pie graph</id>
 			<name>Pie graph</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getPlanetRatios</action>
@@ -3115,11 +3589,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Tag clouds</id>
 			<name>Tag clouds</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getPlanetRatiosWithLogos</action>
@@ -3140,11 +3617,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Tag clouds</id>
 			<name>Tag clouds</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getPlanetRatios</action>
@@ -3167,11 +3647,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>ExampleUI_GetTemperaturesDataTable</id>
 			<name>Data tables</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getTemperatures</action>
@@ -3192,11 +3675,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Evolution Graph</id>
 			<name>Evolution Graph</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getTemperaturesEvolution</action>
@@ -3223,11 +3709,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Sparklines</id>
 			<name>Sparklines</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getTemperaturesEvolution</action>
@@ -3250,11 +3739,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Bar graph</id>
 			<name>Bar graph</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getTemperatures</action>
@@ -3277,11 +3769,14 @@
 			<name>UI Framework</name>
 			<order>90</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory>
 			<id>Treemap</id>
 			<name>Treemap</name>
 			<order>99</order>
+			<help />
 		</subcategory>
 		<module>ExampleUI</module>
 		<action>getTemperatures</action>
@@ -3304,6 +3799,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreAdminHome</module>
@@ -3323,6 +3820,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreHome</module>
@@ -3336,12 +3835,14 @@
 		<isWide>0</isWide>
 	</row>
 	<row>
-		<name>Welcome!</name>
+		<name>Welcome</name>
 		<category>
 			<id>About Matomo</id>
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreHome</module>
@@ -3361,6 +3862,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreHome</module>
@@ -3380,6 +3883,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>CoreHome</module>
@@ -3399,6 +3904,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>ExamplePlugin</module>
@@ -3418,6 +3925,8 @@
 			<name>Insights</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>Insights</module>
@@ -3437,6 +3946,8 @@
 			<name>Insights</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>Insights</module>
@@ -3456,6 +3967,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>Installation</module>
@@ -3475,6 +3988,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>ProfessionalServices</module>
@@ -3494,6 +4009,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>RssWidget</module>
@@ -3513,6 +4030,8 @@
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>RssWidget</module>
@@ -3532,6 +4051,8 @@
 			<name>SEO</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>SEO</module>
@@ -3545,12 +4066,14 @@
 		<isWide>0</isWide>
 	</row>
 	<row>
-		<name>Become a Matomo Expert</name>
+		<name>Become a Matomo expert</name>
 		<category>
 			<id>About Matomo</id>
 			<name>About Matomo</name>
 			<order>99</order>
 			<icon />
+			<help />
+			<widget />
 		</category>
 		<subcategory />
 		<module>Tour</module>
@@ -3569,7 +4092,9 @@
 			<id>Marketplace_Marketplace</id>
 			<name>Marketplace</name>
 			<order>200</order>
-			<icon> icon-open-source</icon>
+			<icon />
+			<help />
+			<widget>Marketplace.RichMenuButton</widget>
 		</category>
 		<subcategory />
 		<module>Marketplace</module>
@@ -3588,12 +4113,15 @@
 			<id>Marketplace_Marketplace</id>
 			<name>Marketplace</name>
 			<order>200</order>
-			<icon> icon-open-source</icon>
+			<icon />
+			<help />
+			<widget>Marketplace.RichMenuButton</widget>
 		</category>
 		<subcategory>
 			<id>Marketplace_PaidPlugins</id>
 			<name>Premium Features</name>
-			<order>10</order>
+			<order>99</order>
+			<help />
 		</subcategory>
 		<module>Marketplace</module>
 		<action>getPremiumFeatures</action>

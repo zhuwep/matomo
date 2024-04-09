@@ -8,7 +8,6 @@
 
 namespace Piwik\Plugins\TwoFactorAuth\tests\Integration\Dao;
 
-use Piwik\Common;
 use Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -24,7 +23,7 @@ class TwoFaSecretRandomGeneratorTest extends IntegrationTestCase
      */
     private $generator;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -33,12 +32,11 @@ class TwoFaSecretRandomGeneratorTest extends IntegrationTestCase
 
     public function test_generatorCode_length()
     {
-        $this->assertSame(16, Common::mb_strlen($this->generator->generateSecret()));
+        $this->assertSame(16, mb_strlen($this->generator->generateSecret()));
     }
 
     public function test_generatorCode_alwaysDifferent()
     {
         $this->assertNotEquals($this->generator->generateSecret(), $this->generator->generateSecret());
     }
-
 }

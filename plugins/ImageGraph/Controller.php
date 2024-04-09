@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -60,11 +60,11 @@ class Controller extends \Piwik\Plugin\Controller
         $view->availableReports = $availableReports;
         $view->graphTypes = array(
             '', // default graph type
-//			'evolution',
-//			'verticalBar',
-//			'horizontalBar',
-//			'pie',
-//			'3dPie',
+//            'evolution',
+//            'verticalBar',
+//            'horizontalBar',
+//            'pie',
+//            '3dPie',
         );
         $view->graphSizes = array(
             array(null, null), // default graph size

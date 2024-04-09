@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Visitor Map screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -21,7 +21,7 @@ describe("VisitorMap", function () {
             $('.userCountryMapSelectMetrics').val('bounce_rate').trigger('change');
         });
         await page.mouse.move(900, 140);
-        await page.waitFor(100); // wait for tooltip
+        await page.waitForTimeout(100); // wait for tooltip
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('bounce_rate');
     });
@@ -32,7 +32,7 @@ describe("VisitorMap", function () {
             $('.userCountryMapSelectMetrics').val('avg_time_on_site').trigger('change');
         });
         await page.mouse.move(900, 140);
-        await page.waitFor(100); // wait for tooltip
+        await page.waitForTimeout(100); // wait for tooltip
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('avg_time_on_site');
     });
@@ -40,19 +40,19 @@ describe("VisitorMap", function () {
     it("should display the regions layer correctly", async function() {
         await page.goto(urlWithCities);
         await page.waitForNetworkIdle();
-        await page.waitFor(1000);
+        await page.waitForFunction('window.visitorMap && window.visitorMap.map && window.visitorMap.map.getLayer(\'countries\') !== null');
         await page.webpage.evaluate(function () {
             // zoom into USA
             var path = window.visitorMap.map.getLayer('countries').getPaths({iso: "USA"})[0].svgPath[0];
             $(path).click();
         });
-        await page.waitFor(1000);
+        await page.waitForTimeout(1000);
         await page.webpage.evaluate(function () {
             // go to regions view
             var path = window.visitorMap.map.getLayer('countries').getPaths({iso: "USA"})[0].svgPath[0];
             $(path).click();
         });
-        await page.waitFor(1000);
+        await page.waitForTimeout(1000);
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('regions');
     });
@@ -60,7 +60,7 @@ describe("VisitorMap", function () {
     it("should display the cities layer correctly", async function() {
         await page.click('.UserCountryMap-btn-city');
         await page.waitForNetworkIdle();
-        await page.waitFor(1000); // wait for map
+        await page.waitForTimeout(1000); // wait for map
 
         expect(await page.screenshot({ fullPage: true })).to.matchImage('cities');
     });

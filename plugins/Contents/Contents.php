@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
  */
 namespace Piwik\Plugins\Contents;
 
+use Piwik\Columns\Dimension;
 use Piwik\Common;
 use Piwik\Piwik;
 
@@ -21,6 +22,7 @@ class Contents extends \Piwik\Plugin
         return array(
             'Metrics.getDefaultMetricTranslations' => 'addMetricTranslations',
             'Metrics.getDefaultMetricDocumentationTranslations' => 'addMetricDocumentationTranslations',
+            'Metrics.getDefaultMetricSemanticTypes' => 'addMetricSemanticTypes',
             'AssetManager.getJavaScriptFiles' => 'getJsFiles',
             'Actions.getCustomActionDimensionFieldsAndJoins' => 'provideActionDimensionFields'
         );
@@ -31,6 +33,12 @@ class Contents extends \Piwik\Plugin
         $translations['nb_impressions']   = 'Contents_Impressions';
         $translations['nb_interactions']  = 'Contents_ContentInteractions';
         $translations['interaction_rate'] = 'Contents_InteractionRate';
+    }
+
+    public function addMetricSemanticTypes(array &$types): void
+    {
+        $types['nb_impressions']   = Dimension::TYPE_NUMBER;
+        $types['nb_interactions']  = Dimension::TYPE_NUMBER;
     }
 
     public function getJsFiles(&$jsFiles)

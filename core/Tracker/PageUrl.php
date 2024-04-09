@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,14 +9,17 @@
 
 namespace Piwik\Tracker;
 
+use Piwik\Cache;
+use Piwik\CacheId;
+use Piwik\Tracker\Cache as TrackerCache;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Piwik;
+use Piwik\Plugins\SitesManager\API as APISitesManager;
 use Piwik\UrlHelper;
 
 class PageUrl
 {
-
     /**
      * Map URL prefixes to integers.
      * @see self::normalizeUrl(), self::reconstructNormalizedUrl()
@@ -32,17 +35,18 @@ class PageUrl
      * Given the Input URL, will exclude all query parameters set for this site
      *
      * @static
-     * @param $originalUrl
+     * @param string $originalUrl
      * @param $idSite
+     * @param array $additionalParametersToExclude
      * @return bool|string Returned URL is HTML entities decoded
      */
-    public static function excludeQueryParametersFromUrl($originalUrl, $idSite)
+    public static function excludeQueryParametersFromUrl($originalUrl, $idSite, $additionalParametersToExclude = [])
     {
         $originalUrl = self::cleanupUrl($originalUrl);
 
         $parsedUrl = @parse_url($originalUrl);
         $parsedUrl = self::cleanupHostAndHashTag($parsedUrl, $idSite);
-        $parametersToExclude = self::getQueryParametersToExclude($idSite);
+        $parametersToExclude = array_merge(self::getQueryParametersToExclude($idSite), $additionalParametersToExclude);
 
         if (empty($parsedUrl['query'])) {
             if (empty($parsedUrl['fragment'])) {
@@ -79,12 +83,15 @@ class PageUrl
             $campaignTrackingParameters[1] // campaign keyword parameters
         );
 
-        $website = Cache::getCacheWebsiteAttributes($idSite);
+        $website = TrackerCache::getCacheWebsiteAttributes($idSite);
         $excludedParameters = self::getExcludedParametersFromWebsite($website);
 
-        $parametersToExclude = array_merge($excludedParameters,
-                                           self::getUrlParameterNamesToExcludeFromUrl(),
-                                           $campaignTrackingParameters);
+        $parametersToExclude = array_merge(
+            ['ignore_referrer', 'ignore_referer'],
+            $excludedParameters,
+            self::getUrlParameterNamesToExcludeFromUrl(),
+            $campaignTrackingParameters
+        );
 
         /**
          * Triggered before setting the action url in Piwik\Tracker\Action so plugins can register
@@ -126,7 +133,7 @@ class PageUrl
      */
     public static function shouldRemoveURLFragmentFor($idSite)
     {
-        $websiteAttributes = Cache::getCacheWebsiteAttributes($idSite);
+        $websiteAttributes = TrackerCache::getCacheWebsiteAttributes($idSite);
         return empty($websiteAttributes['keep_url_fragment']);
     }
 
@@ -144,7 +151,8 @@ class PageUrl
     {
         // if we should discard the url fragment for this site, return an empty string as
         // the processed url fragment
-        if ($idSite !== false
+        if (
+            $idSite !== false
             && PageUrl::shouldRemoveURLFragmentFor($idSite)
         ) {
             return '';
@@ -174,7 +182,7 @@ class PageUrl
         }
 
         if (!empty($parsedUrl['host'])) {
-            $parsedUrl['host'] = Common::mb_strtolower($parsedUrl['host']);
+            $parsedUrl['host'] = mb_strtolower($parsedUrl['host']);
         }
 
         if (!empty($parsedUrl['fragment'])) {
@@ -236,9 +244,15 @@ class PageUrl
     {
         if (is_string($value)) {
             $decoded = urldecode($value);
-            if (function_exists('mb_check_encoding')
-                && @mb_check_encoding($decoded, $encoding)) {
-                $value = urlencode(mb_convert_encoding($decoded, 'UTF-8', $encoding));
+            try {
+                if (
+                    function_exists('mb_check_encoding')
+                    && @mb_check_encoding($decoded, $encoding)) {
+                    $value = urlencode(mb_convert_encoding($decoded, 'UTF-8', $encoding));
+                }
+            } catch (\Error $e) {
+                // mb_check_encoding might throw an ValueError on PHP 8 if the given encoding does not exist
+                // we can't simply catch ValueError as it was introduced in PHP 8
             }
         }
 
@@ -277,8 +291,9 @@ class PageUrl
         if (function_exists('mb_check_encoding')) {
             // if query params are encoded w/ non-utf8 characters (due to browser bug or whatever),
             // encode to UTF-8.
-            if (strtolower($encoding) != 'utf-8'
-                && $encoding != false
+            if (
+                is_string($encoding) &&
+                strtolower($encoding) !== 'utf-8'
             ) {
                 Common::printDebug("Encoding page URL query parameters to $encoding.");
 
@@ -330,6 +345,44 @@ class PageUrl
     }
 
     /**
+     * Returns if the given host is also configured as https in page urls of given site
+     *
+     * @param $idSite
+     * @param $host
+     * @return false|mixed
+     * @throws \Exception
+     */
+    public static function shouldUseHttpsHost($idSite, $host)
+    {
+        $cache = Cache::getTransientCache();
+
+        $cacheKeySiteUrls = CacheId::siteAware('siteurls', [$idSite]);
+        $cacheKeyHttpsForHost = CacheId::siteAware(sprintf('shouldusehttps-%s', $host), [$idSite]);
+
+        $siteUrlCache = $cache->fetch($cacheKeySiteUrls);
+
+        if (empty($siteUrlCache)) {
+            $siteUrlCache = APISitesManager::getInstance()->getSiteUrlsFromId($idSite);
+            $cache->save($cacheKeySiteUrls, $siteUrlCache);
+        }
+
+        if (!$cache->contains($cacheKeyHttpsForHost)) {
+            $hostSiteCache = false;
+
+            foreach ($siteUrlCache as $siteUrl) {
+                if (strpos(mb_strtolower($siteUrl), mb_strtolower('https://' . $host)) === 0) {
+                    $hostSiteCache = true;
+                    break;
+                }
+            }
+
+            $cache->save($cacheKeyHttpsForHost, $hostSiteCache);
+        }
+
+        return $cache->fetch($cacheKeyHttpsForHost);
+    }
+
+    /**
      * Extract the prefix from a URL.
      * Return the prefix ID and the rest.
      *
@@ -375,7 +428,8 @@ class PageUrl
     public static function urldecodeValidUtf8($value)
     {
         $value = urldecode($value);
-        if (function_exists('mb_check_encoding')
+        if (
+            function_exists('mb_check_encoding')
             && !@mb_check_encoding($value, 'utf-8')
         ) {
             return urlencode($value);

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,13 +12,12 @@ use Piwik\DbHelper;
 
 /**
  * Class DbHelperTest
- * @package Piwik\Tests\Unit
  * @group Core
  * @group Core_Unit
+ * @group DbHelper
  */
-class DbHelperTest extends \PHPUnit_Framework_TestCase
+class DbHelperTest extends \PHPUnit\Framework\TestCase
 {
-
     /**
      * @dataProvider getVariousDbNames
      * @param string $dbName
@@ -57,5 +56,25 @@ class DbHelperTest extends \PHPUnit_Framework_TestCase
                 'expectation' => false
             ),
         );
+    }
+
+    /**
+     * @dataProvider getTestQueries
+     */
+    public function testAddMaxExecutionTimeHintToQuery($expected, $query, $timeLimit)
+    {
+        $result = DbHelper::addMaxExecutionTimeHintToQuery($query, $timeLimit);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function getTestQueries()
+    {
+        return [
+            ['SELECT  /*+ MAX_EXECUTION_TIME(1500) */  * FROM table', 'SELECT * FROM table', 1.5],
+            ['SELECT  /*+ MAX_EXECUTION_TIME(20000) */  column FROM (SELECT * FROM table)', 'SELECT column FROM (SELECT * FROM table)', 20],
+            ['SELECT * FROM table', 'SELECT * FROM table', 0],
+            ['SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM table', 'SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM table', 3.5], // should not append/change MAX_EXECUTION_TIME hint if already present
+            ['UPDATE table SET column = value', 'UPDATE table SET column = value', 150],
+        ];
     }
 }

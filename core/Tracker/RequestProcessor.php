@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -133,6 +133,8 @@ abstract class RequestProcessor
      *
      * Only implement this method if you cannot use a Dimension for the same thing.
      *
+     * Please note that the `onNewAction` hook in an action dimension is executed after this method.
+     *
      * @param VisitProperties $visitProperties
      * @param Request $request
      */
@@ -146,6 +148,8 @@ abstract class RequestProcessor
      * here to change what gets recorded in `log_visit`.
      *
      * Only implement this method if you cannot use a Dimension for the same thing.
+     *
+     * Please note that the `onNewAction` hook in an action dimension is executed before this method.
      *
      * @param array &$valuesToUpdate
      * @param VisitProperties $visitProperties

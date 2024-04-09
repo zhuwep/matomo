@@ -1,5 +1,6 @@
 {
     "Installation": {
+        "CollaborativeProject": "A Matomo egy kollaboratív platform, szeretettel készítve.",
         "ConfirmDeleteExistingTables": "Biztos vagy benne, hogy törölni akarod a %s táblákat az adatbázisból? FIGYELEM: A TÖRÖLT TÁBLÁK ADATAI NEM ÁLLÍTHATÓK VISSZA!",
         "Congratulations": "Gratulálunk",
         "DatabaseCreation": "Adatbázis létrehozása",
@@ -11,7 +12,7 @@
         "DatabaseSetupLogin": "felhasználó",
         "DatabaseSetupServer": "Adatbázisszerver",
         "DatabaseSetupTablePrefix": "táblanév előtagja",
-        "Email": "E-mail cím",
+        "Email": "E-mail-cím",
         "Extension": "kiterjesztés",
         "GoBackAndDefinePrefix": "Lépj vissza, és add meg a Matomo táblák nevének előtagját!",
         "Installation": "Telepítés",
@@ -31,7 +32,6 @@
         "SuperUserSetupSuccess": "Mindenható (Super User) felhasználó sikeresen létrehozva!",
         "SystemCheck": "rendszerellenőrzés",
         "SystemCheckAutoUpdateHelp": "Megjegyzés: Az egyklikkes Matomo frissítés működéséhez írási jogosultság szükséges a Matomo mappára és annak tartalmára egyaránt.",
-        "SystemCheckCreateFunctionHelp": "A Matomo anonim funkciókat használ a callback-okhoz.",
         "SystemCheckDatabaseHelp": "A Matomo-nek szüksége van vagy a mysqli kiterjesztésre vagy a PDO és a pdo_mysql kiterjesztésekre.",
         "SystemCheckDebugBacktraceHelp": "View::factory nem áll rendelkezésre a nézetek legenerálásához az azt meghívó modul számára.",
         "SystemCheckError": "Hiba lépet fel - ki kell javítanod, mielőtt folytatnád",
@@ -43,9 +43,7 @@
         "SystemCheckGlobHelp": "Ez a beépített funkció le van tiltva a szervereden. Matomo megpróbálja emulálni ezt a funkciót, de további biztonsági korlátozások akadályozhatják ezt. A Matomo működésére kihatással lehet mindez.",
         "SystemCheckGzcompressHelp": "Engedélyezned kell a zlib kiterjesztést és a gzcompress funkciót.",
         "SystemCheckGzuncompressHelp": "Engedélyezned kell a zlib kiterjesztést és a gzuncompress funkciót.",
-        "SystemCheckIconvHelp": "Konfigurálni és rebuildelni kell a PHP-t az \"iconv\" támogatás engedélyezésével: --with-iconv",
         "SystemCheckMailHelp": "A Matomo fejlesztőknek szóló visszajelzés és az elveszett jelszó pótlása céljából generált e-mail üzenetek nem lesznek elküldve a mail() nélkül.",
-        "SystemCheckMbstring": "mbstring",
         "SystemCheckMemoryLimit": "Memória limit",
         "SystemCheckMemoryLimitHelp": "Egy nagy forgalmú weboldalon az archiválási folyamathoz több memória kell, mint a jelenleg engedélyezett. Ha szükséges, változtasd meg a memory_limit direktívát a php.ini fájlodban.",
         "SystemCheckOpenURL": "URL megnyitása",
@@ -57,14 +55,12 @@
         "SystemCheckPdoAndMysqliHelp": "Linux szerveren a következő opciókkal fordíthatja a php-t: %1$s majd a php.ini fájlban a következő sorokat kell hozzáadni: %2$s",
         "SystemCheckPhp": "PHP verzió",
         "SystemCheckPhpPdoAndMysqli": "További információ a %1$sPHP PDO-ról%2$sés %3$sMYSQLI-ról%4$s.",
-        "SystemCheckSplHelp": "Konfigurálni és rebuildelni kell a PHP-t a Standard PHP Library (SPL) engedélyezésével (alapértelmezettként).",
         "SystemCheckTimeLimitHelp": "Egy nagy forgalmú weboldalon az archiválási folyamat végrehajtásához több idő kell, mint a jelenleg engedélyezett. Ha szükséges, változtasd meg a max_execution_time direktívát a php.ini fájlodban.",
         "SystemCheckTracker": "Tracker státusz",
-        "SystemCheckWarnDomHelp": "Engedélyezned kell a \"dom\" kiterjesztést (például a \"php-dom\" és\/vagy a \"php-xml\" csomag installálásával).",
-        "SystemCheckWarning": "A Matomo működni fog normálisan, de néhány funkció hiányozhat",
-        "SystemCheckWarnJsonHelp": "Engedélyezned kell a \"json\" kiterjesztést (például a \"php-json\" csomag installálásával) a jobb teljesítmény érdekében.",
+        "SystemCheckWarnDomHelp": "Engedélyezned kell a \"dom\" kiterjesztést (például a \"php-dom\" és/vagy a \"php-xml\" csomag installálásával).",
         "SystemCheckWarnLibXmlHelp": "Engedélyezned kell a \"libxml\" kiterjesztést (például a \"php-libxml\" csomag installásával), mivel erre szüksége van más, PHP core kiterjesztésnek.",
-        "SystemCheckWarnSimpleXMLHelp": "Engedélyezned kell a \"SimpleXML\" kiterjesztést (például a \"php-simplexml\" és\/vagy a \"php-xml\" csomag installálásával).",
+        "SystemCheckWarnSimpleXMLHelp": "Engedélyezned kell a \"SimpleXML\" kiterjesztést (például a \"php-simplexml\" és/vagy a \"php-xml\" csomag installálásával).",
+        "SystemCheckWarning": "A Matomo működni fog normálisan, de néhány funkció hiányozhat",
         "SystemCheckWinPdoAndMysqliHelp": "Windows szerveren a következő sorokat adhatja hozzá a php.ini fájhoz: %s",
         "SystemCheckWriteDirs": "Könyvtárak írási jogosultsággal",
         "SystemCheckWriteDirsHelp": "Hogy kijavítsd a hibát Linux rendszereden, próbáld ki a következő parancso(ka)t",
@@ -77,6 +73,6 @@
         "TablesReuse": "Meglévő táblák felhasználása",
         "TablesWarningHelp": "Dönts a meglévő adatbázis táblák újrafelhasználása mellett vagy válaszd az teljes újratelepítést az adatbázisban található korábbi adatok törlésével.",
         "TablesWithSameNamesFound": "Néhány táblának (%1$s) az adatbázisodban (%2$s) ugyanaz a neve, mint amilyet a Matomo próbál létrehozni.",
-        "Welcome": "Üdvözöllek!"
+        "Welcome": "Üdvözöllek"
     }
 }

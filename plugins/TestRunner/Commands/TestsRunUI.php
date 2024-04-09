@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,10 +11,6 @@ use Piwik\AssetManager;
 use Piwik\Config;
 use Piwik\Plugin\ConsoleCommand;
 use Piwik\Tests\Framework\Fixture;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class TestsRunUI extends ConsoleCommand
 {
@@ -26,25 +22,27 @@ class TestsRunUI extends ConsoleCommand
         \nRun one spec:
         \n./console tests:run-ui UIIntegrationTest
         ");
-        $this->addArgument('specs', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Run only a specific test spec. Separate multiple specs by a space, for instance UIIntegrationTest ', array());
-        $this->addOption("persist-fixture-data", null, InputOption::VALUE_NONE, "Persist test data in a database and do not execute tear down.");
-        $this->addOption('keep-symlinks', null, InputOption::VALUE_NONE, "Keep recursive directory symlinks so test pages can be viewed in a browser.");
-        $this->addOption('print-logs', null, InputOption::VALUE_NONE, "Print webpage logs even if tests succeed.");
-        $this->addOption('drop', null, InputOption::VALUE_NONE, "Drop the existing database and re-setup a persisted fixture.");
-        $this->addOption('assume-artifacts', null, InputOption::VALUE_NONE, "Assume the diffviewer and processed screenshots will be stored on the builds artifacts server. For use with travis build.");
-        $this->addOption('plugin', null, InputOption::VALUE_REQUIRED, "Execute all tests for a plugin.");
-        $this->addOption('core', null, InputOption::VALUE_NONE, "Execute only tests for Piwik core & core plugins.");
-        $this->addOption('skip-delete-assets', null, InputOption::VALUE_NONE, "Skip deleting of merged assets (will speed up a test run, but not by a lot).");
-        $this->addOption('screenshot-repo', null, InputOption::VALUE_NONE, "For tests");
-        $this->addOption('store-in-ui-tests-repo', null, InputOption::VALUE_NONE, "For tests");
-        $this->addOption('debug', null, InputOption::VALUE_NONE, "Enable phantomjs debugging");
-        $this->addOption('extra-options', null, InputOption::VALUE_REQUIRED, "Extra options to pass to phantomjs.");
-        $this->addOption('enable-logging', null, InputOption::VALUE_NONE, 'Enable logging to the configured log file during tests.');
-        $this->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Custom test timeout value.');
+        $this->addOptionalArgument('specs', 'Run only a specific test spec. Separate multiple specs by a space, for instance UIIntegrationTest ', [], true);
+        $this->addNoValueOption("persist-fixture-data", null, "Persist test data in a database and do not execute tear down.");
+        $this->addNoValueOption('keep-symlinks', null, "Keep recursive directory symlinks so test pages can be viewed in a browser.");
+        $this->addNoValueOption('print-logs', null, "Print webpage logs even if tests succeed.");
+        $this->addNoValueOption('drop', null, "Drop the existing database and re-setup a persisted fixture.");
+        $this->addNoValueOption('assume-artifacts', null, "Assume the diffviewer and processed screenshots will be stored on the builds artifacts server. For use with CI build.");
+        $this->addRequiredValueOption('plugin', null, "Execute all tests for a plugin.");
+        $this->addNoValueOption('core', null, "Execute only tests for Piwik core & core plugins.");
+        $this->addNoValueOption('skip-delete-assets', null, "Skip deleting of merged assets (will speed up a test run, but not by a lot).");
+        $this->addNoValueOption('screenshot-repo', null, "For tests");
+        $this->addNoValueOption('store-in-ui-tests-repo', null, "For tests");
+        $this->addNoValueOption('debug', null, "Enables node inspector");
+        $this->addRequiredValueOption('extra-options', null, "Extra options to pass to node.");
+        $this->addNoValueOption('enable-logging', null, 'Enable logging to the configured log file during tests.');
+        $this->addRequiredValueOption('timeout', null, 'Custom test timeout value.');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function doExecute(): int
     {
+        $input = $this->getInput();
+        $output = $this->getOutput();
         $specs = $input->getArgument('specs');
         $persistFixtureData = $input->getOption('persist-fixture-data');
         $keepSymlinks = $input->getOption('keep-symlinks');
@@ -58,8 +56,7 @@ class TestsRunUI extends ConsoleCommand
         $storeInUiTestsRepo = $input->getOption('store-in-ui-tests-repo');
         $screenshotRepo = $input->getOption('screenshot-repo');
         $debug = $input->getOption('debug');
-        // @todo remove piwik-domain fallback in Matomo 4
-        $matomoDomain = $input->getOption('matomo-domain') ?: $input->getOption('piwik-domain');
+        $matomoDomain = $input->getOption('matomo-domain');
         $enableLogging = $input->getOption('enable-logging');
         $timeout = $input->getOption('timeout');
 
@@ -69,8 +66,8 @@ class TestsRunUI extends ConsoleCommand
 
         $this->writeJsConfig();
 
-        $options = array();
-        $phantomJsOptions = array();
+        $options = [];
+        $additionalOptions = [];
 
         if ($matomoDomain) {
             $options[] = "--matomo-domain=$matomoDomain";
@@ -113,7 +110,7 @@ class TestsRunUI extends ConsoleCommand
         }
 
         if ($debug) {
-            $phantomJsOptions[] = "--debug=true";
+            $additionalOptions[] = "--inspect";
         }
 
         if ($enableLogging) {
@@ -129,12 +126,12 @@ class TestsRunUI extends ConsoleCommand
         }
 
         $options = implode(" ", $options);
-        $phantomJsOptions = implode(" ", $phantomJsOptions);
+        $additionalOptions = implode(" ", $additionalOptions);
 
         $specs = implode(" ", $specs);
 
         $screenshotTestingDir = PIWIK_INCLUDE_PATH . "/tests/lib/screenshot-testing/";
-        $cmd = "cd '$screenshotTestingDir' && NODE_PATH='$screenshotTestingDir/node_modules' node " . $phantomJsOptions . " run-tests.js $options $specs";
+        $cmd = "cd '$screenshotTestingDir' && NODE_PATH='$screenshotTestingDir/node_modules' node " . $additionalOptions . " run-tests.js $options $specs";
 
         $output->writeln('Executing command: <info>' . $cmd . '</info>');
         $output->writeln('');

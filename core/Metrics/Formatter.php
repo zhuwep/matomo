@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -68,10 +68,10 @@ class Formatter
             $seconds = floor($reminder - $minutes * 60);
             if ($days == 0) {
                 $time    = sprintf("%02s", $hours) . ':' . sprintf("%02s", $minutes) . ':' . sprintf("%02s", $seconds);
-            } else {    
+            } else {
                 $time    = sprintf(Piwik::translate('Intl_NDays'), $days) . " " . sprintf("%02s", $hours) . ':' . sprintf("%02s", $minutes) . ':' . sprintf("%02s", $seconds);
             }
-            $centiSeconds = ($numberOfSeconds * 100) % 100;
+            $centiSeconds = intval($numberOfSeconds * 100) % 100;
             if ($centiSeconds) {
                 $time .= '.' . sprintf("%02s", $centiSeconds);
             }
@@ -167,7 +167,7 @@ class Formatter
      *
      * @param DataTable $dataTable The table to format metrics for.
      * @param Report|null $report The report the table belongs to.
-     * @param string[]|null $metricsToFormat Whitelist of names of metrics to format.
+     * @param string[]|null $metricsToFormat Allow a list of names of metrics to format.
      * @param boolean $formatAll If true, will also apply formatting to non-processed metrics like revenue.
      *                           This parameter is not currently supported and subject to change.
      * @api
@@ -175,7 +175,8 @@ class Formatter
     public function formatMetrics(DataTable $dataTable, Report $report = null, $metricsToFormat = null, $formatAll = false)
     {
         $metrics = $this->getMetricsToFormat($dataTable, $report);
-        if (empty($metrics)
+        if (
+            empty($metrics)
             || $dataTable->getMetadata(self::PROCESSED_METRICS_FORMATTED_FLAG)
         ) {
             return;
@@ -226,7 +227,8 @@ class Formatter
         if ($formatAll) {
             foreach ($dataTable->getRows() as $row) {
                 foreach ($row->getColumns() as $column => $columnValue) {
-                    if (strpos($column, 'revenue') === false
+                    if (
+                        strpos($column, 'revenue') === false
                         || !is_numeric($columnValue)
                     ) {
                         continue;

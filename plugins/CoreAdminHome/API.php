@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,20 +10,26 @@ namespace Piwik\Plugins\CoreAdminHome;
 
 use Exception;
 use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
+use Piwik\Changes\UserChanges;
+use Piwik\Log\Logger;
 use Piwik\Access;
 use Piwik\ArchiveProcessor\Rules;
+use Piwik\ArchiveProcessor;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Archive\ArchiveInvalidator;
 use Piwik\CronArchive;
 use Piwik\Date;
+use Piwik\Log\LoggerInterface;
+use Piwik\Period\Factory;
 use Piwik\Piwik;
 use Piwik\Segment;
 use Piwik\Scheduler\Scheduler;
+use Piwik\SettingsServer;
 use Piwik\Site;
 use Piwik\Tracker\Failures;
 use Piwik\Url;
+use Piwik\Plugins\UsersManager\Model as UsersModel;
 
 /**
  * @method static \Piwik\Plugins\CoreAdminHome\API getInstance()
@@ -45,11 +51,21 @@ class API extends \Piwik\Plugin\API
      */
     private $trackingFailures;
 
-    public function __construct(Scheduler $scheduler, ArchiveInvalidator $invalidator, Failures $trackingFailures)
-    {
+    /**
+     * @var OptOutManager
+     */
+    private $optOutManager;
+
+    public function __construct(
+        Scheduler $scheduler,
+        ArchiveInvalidator $invalidator,
+        Failures $trackingFailures,
+        OptOutManager $optOutManager
+    ) {
         $this->scheduler = $scheduler;
         $this->invalidator = $invalidator;
         $this->trackingFailures = $trackingFailures;
+        $this->optOutManager = $optOutManager;
     }
 
     /**
@@ -126,7 +142,8 @@ class API extends \Piwik\Plugin\API
      * Note: This is done automatically when tracking or importing visits in the past.
      *
      * @param string $idSites Comma separated list of site IDs to invalidate reports for.
-     * @param string $dates Comma separated list of dates of periods to invalidate reports for.
+     * @param string|string[] $dates Comma separated list of dates of periods to invalidate reports for or array of strings
+     *                               (needed if period = range).
      * @param string|bool $period The type of period to invalidate: either 'day', 'week', 'month', 'year', 'range'.
      *                            The command will automatically cascade up, invalidating reports for parent periods as
      *                            well. So invalidating a day will invalidate the week it's in, the month it's in and the
@@ -139,8 +156,14 @@ class API extends \Piwik\Plugin\API
      * @return array
      * @hideExceptForSuperUser
      */
-    public function invalidateArchivedReports($idSites, $dates, $period = false, $segment = false, $cascadeDown = false)
-    {
+    public function invalidateArchivedReports(
+        $idSites,
+        $dates,
+        $period = false,
+        $segment = false,
+        $cascadeDown = false,
+        $_forceInvalidateNonexistent = false
+    ) {
         $idSites = Site::getIdSitesFromIdSitesString($idSites);
         if (empty($idSites)) {
             throw new Exception("Specify a value for &idSites= as a comma separated list of website IDs, for which your token_auth has 'admin' permission");
@@ -154,19 +177,18 @@ class API extends \Piwik\Plugin\API
             $segment = null;
         }
 
-        list($dateObjects, $invalidDates) = $this->getDatesToInvalidateFromString($dates);
+        /** Date[]|string[] $dates */
+        [$dates, $invalidDates] = $this->getDatesToInvalidateFromString($dates, $period);
 
-        $invalidationResult = $this->invalidator->markArchivesAsInvalidated($idSites, $dateObjects, $period, $segment, (bool)$cascadeDown);
+        $invalidationResult = $this->invalidator->markArchivesAsInvalidated($idSites, $dates, $period, $segment, (bool)$cascadeDown, (bool)$_forceInvalidateNonexistent);
 
         $output = $invalidationResult->makeOutputLogs();
         if ($invalidDates) {
-            $output[] = 'Warning: some of the Dates to invalidate were invalid: ' .
-                implode(", ", $invalidDates) . ". Matomo simply ignored those and proceeded with the others.";
+            $output[] = 'Warning: some of the Dates to invalidate were invalid: \'' .
+                implode("', '", $invalidDates) . "'. Matomo simply ignored those and proceeded with the others.";
         }
 
-        Site::clearCache(); // TODO: is this needed? it shouldn't be needed...
-
-        return $invalidationResult->makeOutputLogs();
+        return $output;
     }
 
     /**
@@ -179,8 +201,8 @@ class API extends \Piwik\Plugin\API
         Piwik::checkUserHasSuperUserAccess();
 
         // HTTP request: logs needs to be dumped in the HTTP response (on top of existing log destinations)
-        /** @var \Monolog\Logger $logger */
-        $logger = StaticContainer::get('Psr\Log\LoggerInterface');
+        /** @var \Piwik\Log\Logger $logger */
+        $logger = StaticContainer::get(LoggerInterface::class);
         $handler = new StreamHandler('php://output', Logger::INFO);
         $handler->setFormatter(StaticContainer::get('Piwik\Plugins\Monolog\Formatter\LineMessageFormatter'));
         $logger->pushHandler($handler);
@@ -239,35 +261,197 @@ class API extends \Piwik\Plugin\API
     }
 
     /**
+     * @param $idSite
+     * @param $period
+     * @param $date
+     * @param bool $segment
+     * @param bool $plugin
+     * @param bool $report
+     * @return mixed
+     * @throws \Piwik\Exception\UnexpectedWebsiteFoundException
+     * @internal
+     */
+    public function archiveReports($idSite, $period, $date, $segment = false, $plugin = false, $report = false)
+    {
+        if (\Piwik\API\Request::getRootApiRequestMethod() === 'CoreAdminHome.archiveReports') {
+            Piwik::checkUserHasSuperUserAccess();
+        } else {
+            Piwik::checkUserHasViewAccess($idSite);
+        }
+
+        // if cron archiving is running, we will invalidate in CronArchive, not here
+        $isArchivePhpTriggered = SettingsServer::isArchivePhpTriggered();
+        $invalidateBeforeArchiving = !$isArchivePhpTriggered;
+
+        $period = Factory::build($period, $date);
+        $site = new Site($idSite);
+        $parameters = new ArchiveProcessor\Parameters(
+            $site,
+            $period,
+            new Segment(
+                $segment,
+                [$idSite],
+                $period->getDateTimeStart()->setTimezone($site->getTimezone()),
+                $period->getDateTimeEnd()->setTimezone($site->getTimezone())
+            )
+        );
+        if ($report) {
+            $parameters->setArchiveOnlyReport($report);
+        }
+
+        // TODO: need to test case when there are multiple plugin archives w/ only some data each. does purging remove some that we need?
+        $archiveLoader = new ArchiveProcessor\Loader($parameters, $invalidateBeforeArchiving);
+
+        $result = $archiveLoader->prepareArchive($plugin);
+        if (!empty($result)) {
+            $result = [
+                'idarchives' => $result[0],
+                'nb_visits' => $result[1],
+            ];
+        }
+        return $result;
+    }
+
+    /**
      * Ensure the specified dates are valid.
      * Store invalid date so we can log them
-     * @param array $dates
-     * @return Date[]
+     * @param array|string  $dates
+     * @param string        $period
+     *
+     * @return array
      */
-    private function getDatesToInvalidateFromString($dates)
+    private function getDatesToInvalidateFromString($dates, string $period): array
     {
-        $toInvalidate = array();
-        $invalidDates = array();
+        $toInvalidate = [];
+        $invalidDates = [];
 
-        $dates = explode(',', trim($dates));
+        if (!is_array($dates)) {
+            if ($period !== 'range') {
+                $dates = explode(',', trim($dates));
+            } else {
+                $dates = [trim($dates)];
+            }
+        }
+
         $dates = array_unique($dates);
 
         foreach ($dates as $theDate) {
             $theDate = trim($theDate);
-            try {
-                $date = Date::factory($theDate);
-            } catch (\Exception $e) {
-                $invalidDates[] = $theDate;
-                continue;
-            }
 
-            if ($date->toString() == $theDate) {
-                $toInvalidate[] = $date;
+            if ($period == 'range') {
+                try {
+                    $periodObj = Factory::build('range', $theDate);
+                    $subPeriods = $periodObj->getSubperiods();
+                } catch (\Exception $e) {
+                    $invalidDates[] = $theDate;
+                    continue;
+                }
+                if (count($subPeriods)) {
+                    $toInvalidate[] = $periodObj->getRangeString();
+                } else {
+                    $invalidDates[] = $theDate;
+                }
             } else {
-                $invalidDates[] = $theDate;
+                try {
+                    $date = Date::factory($theDate);
+                } catch (\Exception $e) {
+                    $invalidDates[] = $theDate;
+                    continue;
+                }
+
+                if ($date->toString() == $theDate || $theDate == 'today' || $theDate == 'yesterday') {
+                    $toInvalidate[] = $date;
+                } else {
+                    $invalidDates[] = $theDate;
+                }
             }
         }
 
-        return array($toInvalidate, $invalidDates);
+        return [$toInvalidate, $invalidDates];
+    }
+
+    /**
+     * Show the JavaScript opt out code
+     *
+     * @param string $backgroundColor
+     * @param string $fontColor
+     * @param string $fontSize
+     * @param string $fontFamily
+     * @param bool   $applyStyling
+     * @param bool   $showIntro
+     * @param string $matomoUrl
+     * @param string $language
+     *
+     * @return string
+     *
+     * @internal
+     */
+    public function getOptOutJSEmbedCode(
+        string $backgroundColor,
+        string $fontColor,
+        string $fontSize,
+        string $fontFamily,
+        bool $applyStyling,
+        bool $showIntro,
+        string $matomoUrl,
+        string $language
+    ): string {
+
+        return $this->optOutManager->getOptOutJSEmbedCode(
+            $matomoUrl,
+            $language,
+            $backgroundColor,
+            $fontColor,
+            $fontSize,
+            $fontFamily,
+            $applyStyling,
+            $showIntro
+        );
+    }
+
+    /**
+     * Show the self-contained JavaScript opt out code
+     *
+     * @param string $backgroundColor
+     * @param string $fontColor
+     * @param string $fontSize
+     * @param string $fontFamily
+     * @param bool   $applyStyling
+     * @param bool   $showIntro
+     *
+     * @return string
+     *
+     * @internal
+     */
+    public function getOptOutSelfContainedEmbedCode(
+        string $backgroundColor,
+        string $fontColor,
+        string $fontSize,
+        string $fontFamily,
+        bool $applyStyling = false,
+        bool $showIntro = true
+    ): string {
+        return $this->optOutManager->getOptOutSelfContainedEmbedCode($backgroundColor, $fontColor, $fontSize, $fontFamily, $applyStyling, $showIntro);
+    }
+
+
+    /**
+     * Mark all "what's new" changes as having been read by the user
+     *
+     * @internal
+     */
+    public function whatIsNewMarkAllChangesReadForCurrentUser()
+    {
+        Piwik::checkUserHasSomeViewAccess();
+        Piwik::checkUserIsNotAnonymous();
+
+        $model = new UsersModel();
+        $user = $model->getUser(Piwik::getCurrentUserLogin());
+        if (is_array($user)) {
+            $userChanges = new UserChanges($user);
+            $userChanges->markChangesAsRead();
+            return true;
+        }
+        return false;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
  */
 namespace Piwik\Plugins\Actions;
 
+use Piwik\Columns\Dimension;
 use Piwik\Site;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Tracker\Action;
@@ -32,9 +33,31 @@ class Actions extends \Piwik\Plugin
             'AssetManager.getJavaScriptFiles' => 'getJsFiles',
             'Insights.addReportToOverview'    => 'addReportToInsightsOverview',
             'Metrics.getDefaultMetricTranslations' => 'addMetricTranslations',
+            'Metrics.getDefaultMetricSemanticTypes' => 'addMetricSemanticTypes',
             'Metrics.getDefaultMetricDocumentationTranslations' => 'addMetricDocumentationTranslations',
             'Actions.addActionTypes' => 'addActionTypes'
         );
+    }
+
+    public function addMetricSemanticTypes(array &$types): void
+    {
+        $metrics = array(
+            'nb_pageviews'        => Dimension::TYPE_NUMBER,
+            'nb_uniq_pageviews'   => Dimension::TYPE_NUMBER,
+            'nb_downloads'        => Dimension::TYPE_NUMBER,
+            'nb_uniq_downloads'   => Dimension::TYPE_NUMBER,
+            'nb_outlinks'         => Dimension::TYPE_NUMBER,
+            'nb_uniq_outlinks'    => Dimension::TYPE_NUMBER,
+            'nb_searches'         => Dimension::TYPE_NUMBER,
+            'nb_keywords'         => Dimension::TYPE_NUMBER,
+            'entry_nb_visits'      => Dimension::TYPE_NUMBER,
+            'entry_bounce_count'   => Dimension::TYPE_NUMBER,
+            'exit_nb_visits'       => Dimension::TYPE_NUMBER,
+            'nb_pages_per_search'      => Dimension::TYPE_NUMBER,
+            'nb_hits_following_search' => Dimension::TYPE_NUMBER,
+        );
+
+        $types = array_merge($types, $metrics);
     }
 
     public function addMetricTranslations(&$translations)
@@ -142,17 +165,6 @@ class Actions extends \Piwik\Plugin
         return true;
     }
 
-    public static function checkCustomVariablesPluginEnabled()
-    {
-        if (!self::isCustomVariablesPluginsEnabled()) {
-            throw new \Exception("To Track Site Search Categories, please ask the Piwik Administrator to enable the 'Custom Variables' plugin in Settings > Plugins.");
-        }
-    }
-
-    public static function isCustomVariablesPluginsEnabled()
-    {
-        return \Piwik\Plugin\Manager::getInstance()->isPluginActivated('CustomVariables');
-    }
 
     public function configureViewDataTable(ViewDataTable $view)
     {
@@ -182,6 +194,4 @@ class Actions extends \Piwik\Plugin
             }
         }
     }
-
 }
-

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,6 +15,7 @@ use Piwik\Piwik;
 use Piwik\Plugins\UsersManager\API as UsersManagerApi;
 use Piwik\SettingsPiwik;
 use Piwik\UpdateCheck;
+use Piwik\Url;
 use Piwik\Version;
 use Piwik\View;
 
@@ -23,7 +24,6 @@ use Piwik\View;
  */
 class UpdateCommunication
 {
-
     /**
      * Checks whether update communication in general is enabled or not.
      *
@@ -36,7 +36,7 @@ class UpdateCommunication
         if($isEnabled === true && SettingsPiwik::isInternetEnabled() === true){
             return true;
         }
-        
+
         return false;
     }
 
@@ -83,7 +83,7 @@ class UpdateCommunication
     {
         $version = str_replace('.', '-', $version);
 
-        $link = sprintf('https://matomo.org/changelog/matomo-%s/', $version);
+        $link = Url::addCampaignParametersToMatomoLink(sprintf('https://matomo.org/changelog/matomo-%s/', $version));
 
         return $link;
     }
@@ -132,7 +132,8 @@ class UpdateCommunication
         $latestVersion   = $this->getLatestVersion();
         $lastVersionSent = $this->getLatestVersionSent();
 
-        if (!empty($lastVersionSent)
+        if (
+            !empty($lastVersionSent)
             && ($latestVersion == $lastVersionSent
                 || version_compare($latestVersion, $lastVersionSent) == -1)) {
             return true;

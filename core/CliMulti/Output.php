@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,9 +10,8 @@ namespace Piwik\CliMulti;
 use Piwik\CliMulti;
 use Piwik\Filesystem;
 
-class Output
+class Output implements OutputInterface
 {
-
     private $tmpFile  = '';
     private $outputId = null;
 
@@ -44,21 +43,29 @@ class Output
         return $this->tmpFile;
     }
 
-    public function isAbnormal()
+    public function isAbnormal(): bool
     {
         $size = Filesystem::getFileSize($this->tmpFile, 'MB');
 
         return $size !== null && $size >= 100;
     }
 
-    public function exists()
+    public function exists(): bool
     {
         return file_exists($this->tmpFile);
     }
 
     public function get()
     {
-        return @file_get_contents($this->tmpFile);
+        $content = @file_get_contents($this->tmpFile);
+        $search = '#!/usr/bin/env php';
+        if (
+            !empty($content)
+            && is_string($content)
+            && mb_substr(trim($content), 0, strlen($search)) === $search) {
+            $content = trim(mb_substr(trim($content), strlen($search)));
+        }
+        return $content;
     }
 
     public function destroy()

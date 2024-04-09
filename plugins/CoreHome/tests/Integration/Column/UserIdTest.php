@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,8 +9,6 @@
 namespace Piwik\Plugins\CoreHome\tests\Integration\Column;
 
 use Piwik\Cache;
-use Piwik\DataAccess\ArchiveTableCreator;
-use Piwik\Db;
 use Piwik\Metrics;
 use Piwik\Plugins\CoreHome\Columns\UserId;
 use Piwik\Tests\Framework\Fixture;
@@ -33,26 +31,21 @@ class UserIdTest extends IntegrationTestCase
 
     protected $date = '2014-04-04';
 
-    public function setUp()
+    protected static function beforeTableDataCached()
     {
-        parent::setUp();
-        $this->userId = new UserId();
-
-        $this->setSuperUser();
+        parent::beforeTableDataCached();
 
         Fixture::createSuperUser();
         Fixture::createWebsite('2014-01-01 00:00:00');
         Fixture::createWebsite('2014-01-01 00:00:00');
     }
 
-    public function tearDown()
+    public function setUp(): void
     {
-        // clean up your test here if needed
-        $tables = ArchiveTableCreator::getTablesArchivesInstalled();
-        if (!empty($tables)) {
-            Db::dropTables($tables);
-        }
-        parent::tearDown();
+        parent::setUp();
+        $this->userId = new UserId();
+
+        $this->setSuperUser();
     }
 
     public function test_isUsedInAtLeastOneSite_shouldReturnFalseByDefault_WhenNothingIsTracked()
@@ -244,7 +237,7 @@ class UserIdTest extends IntegrationTestCase
         }
     }
 
-    private function trackPageview(\PiwikTracker $tracker, $userId, $url = null)
+    private function trackPageview(\MatomoTracker $tracker, $userId, $url = null)
     {
         if (null !== $url) {
             $tracker->setUrl('http://www.example.org' . $url);

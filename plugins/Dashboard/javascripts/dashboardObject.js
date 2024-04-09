@@ -1,9 +1,10 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+
 (function ($) {
 
     var layoutColumnSelector = '#dashboardWidgetsArea > .col';
@@ -29,7 +30,7 @@
      */
     var dashboardElement = null;
     /**
-     * Boolean indicating wether the layout config has been changed or not
+     * Boolean indicating weather the layout config has been changed or not
      * @type {boolean}
      */
     var dashboardChanged = false;
@@ -61,6 +62,8 @@
                 generateLayout(options.layout);
             }
 
+            window.CoreHome.Matomo.postEvent('Dashboard.Dashboard.mounted', { element: this });
+
             return this;
         },
 
@@ -70,6 +73,10 @@
          * @return void
          */
         destroy: function () {
+            if (dashboardElement && dashboardElement.length) {
+              window.CoreHome.Matomo.postEvent('Dashboard.Dashboard.unmounted', {element: dashboardElement[0]});
+            }
+
             $(dashboardElement).remove();
             dashboardElement = null;
             destroyWidgets();
@@ -89,14 +96,13 @@
             dashboardLayout = null;
             dashboardId = dashboardIdToLoad;
 
-            if (!forceReload && piwikHelper.isAngularRenderingThePage()) {
-                angular.element(document).injector().invoke(function ($location) {
-                    $location.search('subcategory', '' + dashboardIdToLoad);
-                });
+            if (!forceReload && piwikHelper.isReportingPage()) {
+                var MatomoUrl = window.CoreHome.MatomoUrl;
+                MatomoUrl.updateHash(Object.assign({}, MatomoUrl.hashParsed.value, {
+                  subcategory: dashboardIdToLoad,
+                }));
             } else {
-                var element = $('[piwik-dashboard]');
-                var scope = angular.element(element).scope();
-                scope.fetchDashboard(dashboardIdToLoad);
+                piwik.postEvent('Dashboard.loadDashboard', dashboardIdToLoad);
             }
 
             return this;
@@ -204,8 +210,9 @@
             }, 'get');
             ajaxRequest.setCallback(
                 function () {
-                    methods.loadDashboard.apply(this, [1]);
-                    rebuildMenu();
+                    Promise.resolve(rebuildMenu()).then(function () {
+                      methods.loadDashboard.apply(this, [1]);
+                    });
                 }
             );
             ajaxRequest.withTokenInUrl();
@@ -472,7 +479,7 @@
             return;
         }
 
-        var $widgetContent = $('<div class="sortable" widgetId="' + uniqueId + '"></div>');
+        var $widgetContent = $('<div class="sortable"></div>').attr('widgetId', uniqueId);
 
         if (addWidgetOnTop) {
             $('> .col:nth-child(' + columnNumber + ')', dashboardElement).prepend($widgetContent);
@@ -533,12 +540,9 @@
      */
     function rebuildMenu() {
 
-        if (piwikHelper.isAngularRenderingThePage()) {
+        if (piwikHelper.isReportingPage()) {
             // dashboard in reporting page (regular Piwik UI)
-            angular.element(document).injector().invoke(function (reportingMenuModel) {
-                reportingMenuModel.reloadMenuItems();
-            });
-            return;
+            return window.CoreHome.ReportingMenuStore.reloadMenuItems();
         }
 
         var _self = this;
@@ -595,7 +599,7 @@
         }, 'get');
         ajaxRequest.withTokenInUrl();
         ajaxRequest.setCallback(success);
-        ajaxRequest.send();
+        return ajaxRequest.send();
     }
 
     /**

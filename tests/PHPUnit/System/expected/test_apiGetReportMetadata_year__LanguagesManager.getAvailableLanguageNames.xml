@@ -111,6 +111,11 @@
 		<english_name>Galician</english_name>
 	</row>
 	<row>
+		<code>gu</code>
+		<name>ગુજરાતી</name>
+		<english_name>Gujarati</english_name>
+	</row>
+	<row>
 		<code>he</code>
 		<name>עברית</name>
 		<english_name>Hebrew</english_name>
@@ -161,6 +166,11 @@
 		<english_name>Korean</english_name>
 	</row>
 	<row>
+		<code>ku</code>
+		<name>Kurdî</name>
+		<english_name>Kurdish</english_name>
+	</row>
+	<row>
 		<code>lt</code>
 		<name>Lietuvių</name>
 		<english_name>Lithuanian</english_name>
@@ -182,7 +192,7 @@
 	</row>
 	<row>
 		<code>nn</code>
-		<name>Nynorsk</name>
+		<name>Norsk nynorsk</name>
 		<english_name>Norwegian Nynorsk</english_name>
 	</row>
 	<row>
@@ -192,12 +202,12 @@
 	</row>
 	<row>
 		<code>pt-br</code>
-		<name>Português (Brasil)</name>
+		<name>Português</name>
 		<english_name>Brazilian Portuguese</english_name>
 	</row>
 	<row>
 		<code>pt</code>
-		<name>Português</name>
+		<name>Português europeu</name>
 		<english_name>Portuguese</english_name>
 	</row>
 	<row>

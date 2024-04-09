@@ -1,11 +1,13 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\Actions\Reports;
 
 use Piwik\Piwik;
@@ -38,8 +40,8 @@ class GetEntryPageTitles extends Base
         );
         $this->order   = 6;
         $this->actionToLoadSubTables = $this->action;
-
         $this->subcategoryId = 'Actions_SubmenuPagesEntry';
+        $this->hasGoalMetrics = true;
     }
 
     public function configureWidgets(WidgetsList $widgetsList, ReportWidgetFactory $factory)
@@ -73,8 +75,6 @@ class GetEntryPageTitles extends Base
 
     public function configureView(ViewDataTable $view)
     {
-        $view->config->addTranslations(array('label' => $this->dimension->getName()));
-
         $view->config->columns_to_display = array('label', 'entry_nb_visits', 'entry_bounce_count', 'bounce_rate');
         $view->config->title = $this->name;
 
@@ -82,6 +82,8 @@ class GetEntryPageTitles extends Base
 
         $this->addPageDisplayProperties($view);
         $this->addBaseDisplayProperties($view);
+
+        $view->config->show_goals = true;
     }
 
     public function getRelatedReports()

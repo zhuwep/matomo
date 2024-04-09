@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,12 +12,14 @@ use Exception;
 use Piwik\API\Request;
 use Piwik\Archive\DataTableFactory;
 use Piwik\Common;
+use Piwik\Container\StaticContainer;
 use Piwik\DataTable\Map;
+use Piwik\DataTable\Simple;
+use Piwik\Exception\InvalidDimensionException;
 use Piwik\Filesystem;
 use Piwik\Period;
 use Piwik\Piwik;
 use Piwik\SettingsServer;
-use Piwik\Translate;
 
 /**
  * The ImageGraph.get API call lets you generate beautiful static PNG Graphs for any existing Matomo report.
@@ -124,8 +126,7 @@ class API extends \Piwik\Plugin\API
         $legendAppendMetric = true,
         $segment = false,
         $idDimension = false
-    )
-    {
+    ) {
         $idSite = (int) $idSite;
 
         Piwik::checkUserHasViewAccess($idSite);
@@ -139,7 +140,7 @@ class API extends \Piwik\Plugin\API
         $useUnicodeFont = array(
             'am', 'ar', 'el', 'fa', 'fi', 'he', 'ja', 'ka', 'ko', 'te', 'th', 'zh-cn', 'zh-tw',
         );
-        $languageLoaded = Translate::getLanguageLoaded();
+        $languageLoaded = StaticContainer::get('Piwik\Translation\Translator')->getCurrentLanguage();
         $font = self::getFontPath(self::DEFAULT_FONT);
         if (in_array($languageLoaded, $useUnicodeFont)) {
             $unicodeFontPath = self::getFontPath(self::UNICODE_FONT);
@@ -237,8 +238,18 @@ class API extends \Piwik\Plugin\API
 
             $ordinateColumns = array();
             if (empty($columns)) {
-                $ordinateColumns[] =
-                    empty($reportColumns[self::DEFAULT_ORDINATE_METRIC]) ? key($metadata['metrics']) : self::DEFAULT_ORDINATE_METRIC;
+                if (!empty($reportColumns[self::DEFAULT_ORDINATE_METRIC])) {
+                    $ordinateColumns[] = self::DEFAULT_ORDINATE_METRIC;
+                } else if (!empty($metadata['metrics'])) {
+                    $ordinateColumns[] = key($metadata['metrics']);
+                } else {
+                    throw new Exception(
+                        Piwik::translate(
+                            'ImageGraph_ColumnOrdinateMissing',
+                            array(self::DEFAULT_ORDINATE_METRIC, implode(',', array_keys($reportColumns)))
+                        )
+                    );
+                }
             } else {
                 $ordinateColumns = explode(',', $columns);
                 foreach ($ordinateColumns as $column) {
@@ -263,7 +274,6 @@ class API extends \Piwik\Plugin\API
             switch ($graphType) {
                 case StaticGraph::GRAPH_TYPE_3D_PIE:
                 case StaticGraph::GRAPH_TYPE_BASIC_PIE:
-
                     if (count($ordinateColumns) > 1) {
                         // CpChart doesn't support multiple series on pie charts
                         throw new Exception("Pie charts do not currently support multiple series");
@@ -275,7 +285,6 @@ class API extends \Piwik\Plugin\API
 
                 case StaticGraph::GRAPH_TYPE_VERTICAL_BAR:
                 case StaticGraph::GRAPH_TYPE_BASIC_LINE:
-
                     if (!$isMultiplePeriod && !$constantRowsCount) {
                         $this->setFilterTruncate($defaultFilterTruncate);
                     }
@@ -421,13 +430,11 @@ class API extends \Piwik\Plugin\API
                 }
             } else // if the report has no dimension we have multiple reports each with only one row within the reportData
             {
-                // $periodsData instanceof Simple[]
+                /** @var Simple[] $periodsData */
                 $periodsData = array_values($reportData->getDataTables());
                 $periodsCount = count($periodsData);
 
                 for ($i = 0; $i < $periodsCount; $i++) {
-                    // $periodsData[$i] instanceof Simple
-                    // $rows instanceof Row[]
                     if (empty($periodsData[$i])) {
                         continue;
                     }
@@ -466,7 +473,7 @@ class API extends \Piwik\Plugin\API
                 throw new Exception(Piwik::translate('General_NoDataForGraph'));
             }
 
-            //Setup the graph
+            /** @var StaticGraph $graph */
             $graph = StaticGraph::factory($graphType);
             $graph->setWidth($width);
             $graph->setHeight($height);
@@ -491,8 +498,9 @@ class API extends \Piwik\Plugin\API
                 $graph->setForceSkippedLabels(6);
             }
 
-            // render graph
             $graph->renderGraph();
+        } catch (InvalidDimensionException $e) {
+            throw $e;
         } catch (\Exception $e) {
 
             $graph = new \Piwik\Plugins\ImageGraph\StaticGraph\Exception();
@@ -546,7 +554,7 @@ class API extends \Piwik\Plugin\API
         $ordinateValue = @str_replace(',', '.', $ordinateValue);
 
         // convert hh:mm:ss formatted time values to number of seconds
-        if (preg_match('/([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})/', $ordinateValue, $matches)) {
+        if (preg_match('/([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}(\.[0-9]{2})?)/', $ordinateValue, $matches)) {
             $hour = $matches[1];
             $min = $matches[2];
             $sec = $matches[3];

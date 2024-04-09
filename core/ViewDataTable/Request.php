@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,8 +11,6 @@ namespace Piwik\ViewDataTable;
 
 use Piwik\API\Request as ApiRequest;
 use Piwik\Common;
-use Piwik\DataTable;
-use Piwik\Period;
 
 class Request
 {
@@ -31,12 +29,14 @@ class Request
      * The function init() must have been called before, so that the object knows which API module and action to call.
      * It builds the API request string and uses Request to call the API.
      * The requested DataTable object is stored in $this->dataTable.
+     *
+     * @param array $forcedParams   Optional parameters which will be used to overwrite the request parameters
      */
-    public function loadDataTableFromAPI($extraParams = [])
+    public function loadDataTableFromAPI($forcedParams = [])
     {
         // we build the request (URL) to call the API
         $requestArray = $this->getRequestArray();
-        $requestArray = array_merge($extraParams, $requestArray);
+        $requestArray = array_merge($requestArray, $forcedParams);
 
         // we make the request to the API
         $request = new ApiRequest($requestArray);
@@ -97,7 +97,8 @@ class Request
 
         $requestArray = array_merge($requestArray, $this->requestConfig->request_parameters_to_modify);
 
-        if (!empty($requestArray['filter_limit'])
+        if (
+            !empty($requestArray['filter_limit'])
             && $requestArray['filter_limit'] === 0
         ) {
             unset($requestArray['filter_limit']);

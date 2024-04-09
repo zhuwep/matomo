@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,8 +13,8 @@ use Piwik\Tests\Framework\Mock\Tracker;
 use Piwik\Tests\Framework\TestCase\UnitTestCase;
 use Exception;
 
-class TestResponse extends Response {
-
+class TestResponse extends Response
+{
     protected function logExceptionToErrorLog($e)
     {
         // prevent console from outputting the error_log message
@@ -33,7 +33,7 @@ class ResponseTest extends UnitTestCase
      */
     private $response;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -124,5 +124,4 @@ class ResponseTest extends UnitTestCase
         $tracker->setCountOfLoggedRequests(5);
         return $tracker;
     }
-
 }

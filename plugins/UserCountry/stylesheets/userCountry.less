@@ -11,11 +11,11 @@ input.location-provider {
 }
 
 span.is-installed {
-    color: @color-green-piwik;
+    color: @color-green-matomo;
 }
 
 span.is-broken {
-    color: @color-red-piwik;
+    color: @color-red-matomo;
 }
 
 .loc-provider-status {
@@ -40,4 +40,14 @@ span.is-broken {
 
 #done-updating-updater {
     margin-top: 16px;
+}
+
+[name="geoip-isp-db"] .alert {
+    margin-bottom: 0;
+}
+
+.locationProviderSelection {
+    .loadingPiwik {
+        padding: 1px;
+    }
 }

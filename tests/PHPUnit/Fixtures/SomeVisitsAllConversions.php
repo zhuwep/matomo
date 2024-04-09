@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
@@ -21,13 +21,13 @@ class SomeVisitsAllConversions extends Fixture
     public $idGoal_OneConversionPerVisit = 1;
     public $idGoal_MultipleConversionPerVisit = 2;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -41,16 +41,28 @@ class SomeVisitsAllConversions extends Fixture
         // First, a goal that is only recorded once per visit
         if (!self::goalExists($idSite = 1, $idGoal = 1)) {
             API::getInstance()->addGoal(
-                $this->idSite, 'triggered js ONCE', 'title', 'Thank you', 'contains', $caseSensitive = false,
-                $revenue = 10, $allowMultipleConversions = false
+                $this->idSite,
+                'triggered js ONCE',
+                'title',
+                'Thank you',
+                'contains',
+                $caseSensitive = false,
+                $revenue = 10,
+                $allowMultipleConversions = false
             );
         }
 
         // Second, a goal allowing multiple conversions
         if (!self::goalExists($idSite = 1, $idGoal = 2)) {
             API::getInstance()->addGoal(
-                $this->idSite, 'triggered js MULTIPLE ALLOWED', 'manually', '', '', $caseSensitive = false,
-                $revenue = 10, $allowMultipleConversions = true
+                $this->idSite,
+                'triggered js MULTIPLE ALLOWED',
+                'manually',
+                '',
+                '',
+                $caseSensitive = false,
+                $revenue = 10,
+                $allowMultipleConversions = true
             );
         }
 

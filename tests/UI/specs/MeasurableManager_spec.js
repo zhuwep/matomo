@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Site selector screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -28,29 +28,38 @@ describe("MeasurableManager", function () {
     });
 
     it("should use measurable wording in menu", async function () {
-        const element = await page.jQuery('#secondNavBar li:contains(Manage):first');
+        const element = await page.jQuery('#secondNavBar li:contains(Tracking Code):first');
         expect(await element.screenshot()).to.matchImage('measurable_menu_item');
     });
 
     // '.sitesManagerList,.sitesButtonBar,.sites-manager-header,.ui-dialog.ui-widget,.modal.open'
     it("should show selection of available types when adding a type", async function () {
+        await page.webpage.setViewport({
+            width: 640,
+            height: 480,
+        });
         const element = await page.jQuery('.SitesManager .addSite:first');
         await element.click();
-        await page.waitFor('.modal.open');
-        await page.waitFor(350); // wait for modal animation
+        await page.waitForSelector('.modal.open');
+        await page.waitForTimeout(350); // wait for modal animation
         await assertScreenshotEquals("add_new_dialog", '.modal.open');
     });
 
     it("should load mobile app specific fields", async function () {
+        await page.webpage.setViewport({
+            width: 1350,
+            height: 768,
+        });
         const element = await page.jQuery('.modal.open .btn:contains(Mobile App)');
         await element.click();
+        await page.mouse.move(-10, -10);
 
-        await page.waitFor('input.btn[value=Save]');
+        await page.waitForSelector('input.btn[value=Save]');
         await page.waitForNetworkIdle();
         await page.evaluate(function () {
             $('.form-help:contains(UTC time is)').hide();
         });
-        await page.waitFor(250);
+        await page.waitForTimeout(250);
 
         await assertScreenshotEquals("add_measurable_view", '#content.admin');
     });

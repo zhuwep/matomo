@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
 namespace Piwik\Plugins\Diagnostics\Diagnostic;
 
 use Piwik\Translation\Translator;
+use Piwik\Url;
 
 /**
  * Check the PHP functions that are not required but recommended.
@@ -64,7 +65,7 @@ class RecommendedFunctionsCheck implements Diagnostic
     private function getHelpMessage($function)
     {
         $messages = array(
-            'shell_exec'     => 'Installation_SystemCheckFunctionHelp',
+            'shell_exec'     => 'Installation_SystemCheckShellExecHelp',
             'set_time_limit' => 'Installation_SystemCheckTimeLimitHelp',
             'mail'           => 'Installation_SystemCheckMailHelp',
             'parse_ini_file' => 'Installation_SystemCheckParseIniFileHelp',
@@ -72,6 +73,10 @@ class RecommendedFunctionsCheck implements Diagnostic
             'gzopen'         => 'Installation_SystemCheckZlibHelp',
         );
 
-        return $this->translator->translate($messages[$function]);
+        $translation_params = array(
+            'shell_exec'     => ["<a href='" . Url::addCampaignParametersToMatomoLink('https://matomo.org/faq/troubleshooting/how-to-make-the-diagnostic-managing-processes-via-cli-to-display-ok/') . "' rel='noopener' target='_blank'>", "</a>"]
+        );
+
+        return $this->translator->translate($messages[$function], $translation_params[$function] ?? []);
     }
 }

@@ -1,7 +1,7 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -15,7 +15,7 @@ var sparklineDisplayWidth = 100;
 piwik.getSparklineColors = function () {
     var colors = piwik.ColorManager.getColors('sparkline-colors', sparklineColorNames);
 
-    var comparisonService = piwikHelper.getAngularDependency('piwikComparisonsService');
+    var comparisonService = window.CoreHome.ComparisonsStoreInstance;
     if (comparisonService.isComparing()) {
         var comparisons = comparisonService.getAllComparisonSeries();
         colors.lineColor = comparisons.map(function (comp) { return comp.color; });
@@ -26,33 +26,35 @@ piwik.getSparklineColors = function () {
 
 // initializes each sparkline so they use colors defined in CSS
 piwik.initSparklines = function() {
-    $('.sparkline img').each(function () {
-        var $self = $(this);
+    $(function () {
+        $('.sparkline img').each(function () {
+          var $self = $(this);
 
-        if ($self.attr('src')) {
+          if ($self.attr('src')) {
             return;
-        }
+          }
 
-        var seriesIndices = $self.closest('.sparkline').data('series-indices');
-        var sparklineColors = piwik.getSparklineColors();
+          var seriesIndices = $self.closest('.sparkline').data('series-indices');
+          var sparklineColors = piwik.getSparklineColors();
 
-        if (seriesIndices && sparklineColors.lineColor instanceof Array) {
+          if (seriesIndices && sparklineColors.lineColor instanceof Array) {
             sparklineColors.lineColor = sparklineColors.lineColor.filter(function (c, index) {
-                return seriesIndices.indexOf(index) !== -1;
+              return seriesIndices.indexOf(index) !== -1;
             });
-        }
+          }
 
-        var colors = JSON.stringify(sparklineColors);
-        var appendToSparklineUrl = '&colors=' + encodeURIComponent(colors);
+          var colors = JSON.stringify(sparklineColors);
+          var appendToSparklineUrl = '&colors=' + encodeURIComponent(colors);
 
-        // Append the token_auth to the URL if it was set (eg. embed dashboard)
-        var token_auth = broadcast.getValueFromUrl('token_auth');
-        if (token_auth.length && piwik.shouldPropagateTokenAuth) {
+          // Append the token_auth to the URL if it was set (eg. embed dashboard)
+          var token_auth = broadcast.getValueFromUrl('token_auth');
+          if (token_auth.length && piwik.shouldPropagateTokenAuth) {
             appendToSparklineUrl += '&token_auth=' + token_auth;
-        }
-        $self.attr('width', sparklineDisplayWidth);
-        $self.attr('height', sparklineDisplayHeight);
-        $self.attr('src', $self.attr('data-src') + appendToSparklineUrl);
+          }
+          $self.attr('width', sparklineDisplayWidth);
+          $self.attr('height', sparklineDisplayHeight);
+          $self.attr('src', $self.attr('data-src') + appendToSparklineUrl);
+        });
     });
 };
 
@@ -61,7 +63,7 @@ window.initializeSparklines = function () {
         var graph = $(this);
 
         // we search for .widget to make sure eg in the Dashboard to not update any graph of another report
-        var selectorsToFindParent = ['.widget', '[piwik-widget-container]', '.reporting-page', 'body'];
+        var selectorsToFindParent = ['.widget', '.widget-container', '.reporting-page', 'body'];
         var index = 0, selector, parent;
         for (index; index < selectorsToFindParent.length; index++) {
             selector = selectorsToFindParent[index];

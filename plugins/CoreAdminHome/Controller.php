@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,18 +18,21 @@ use Piwik\Menu\MenuTop;
 use Piwik\Piwik;
 use Piwik\Plugin;
 use Piwik\Plugin\ControllerAdmin;
+use Piwik\Changes\UserChanges;
 use Piwik\Plugins\CorePluginsAdmin\CorePluginsAdmin;
 use Piwik\Plugins\Marketplace\Marketplace;
 use Piwik\Plugins\CustomVariables\CustomVariables;
 use Piwik\Plugins\LanguagesManager\LanguagesManager;
 use Piwik\Plugins\PrivacyManager\DoNotTrackHeaderChecker;
 use Piwik\Plugins\SitesManager\API as APISitesManager;
+use Piwik\Request;
 use Piwik\Site;
 use Piwik\Translation\Translator;
 use Piwik\Url;
 use Piwik\View;
 use Piwik\Widget\WidgetsList;
 use Piwik\SettingsPiwik;
+use Piwik\Plugins\UsersManager\Model as UsersModel;
 
 class Controller extends ControllerAdmin
 {
@@ -52,10 +55,14 @@ class Controller extends ControllerAdmin
     public function home()
     {
         $isInternetEnabled = SettingsPiwik::isInternetEnabled();
-        
+
         $isMarketplaceEnabled = Marketplace::isMarketplaceEnabled();
         $isFeedbackEnabled = Plugin\Manager::getInstance()->isPluginLoaded('Feedback');
         $widgetsList = WidgetsList::get();
+
+        if ($isInternetEnabled && $isMarketplaceEnabled) {
+            $this->securityPolicy->addPolicy('img-src', '*.matomo.org');
+        }
 
         $hasDonateForm = $widgetsList->isDefined('CoreHome', 'getDonateForm');
         $hasPiwikBlog = $widgetsList->isDefined('RssWidget', 'rssPiwik');
@@ -118,12 +125,13 @@ class Controller extends ControllerAdmin
             '' => '',
             'Plain' => 'Plain',
             'Login' => 'Login',
-            'Crammd5' => 'Crammd5',
+            'Cram-md5' => 'Cram-md5',
         );
         $view->mailEncryptions = array(
-            '' => '',
+            '' => 'auto',
             'ssl' => 'SSL',
-            'tls' => 'TLS'
+            'tls' => 'TLS',
+            'none' => 'none',
         );
         $mail = new Mail();
         $view->mailHost = $mail->getMailHost();
@@ -142,25 +150,26 @@ class Controller extends ControllerAdmin
             return '';
         }
 
-        $response = new ResponseBuilder('json2');
+        $response = new ResponseBuilder('json');
         try {
             $this->checkTokenInUrl();
 
             // Update email settings
-            $mail = array();
-            $mail['transport'] = (Common::getRequestVar('mailUseSmtp') == '1') ? 'smtp' : '';
-            $mail['port'] = Common::getRequestVar('mailPort', '');
-            $mail['host'] = Common::unsanitizeInputValue(Common::getRequestVar('mailHost', ''));
-            $mail['type'] = Common::getRequestVar('mailType', '');
-            $mail['username'] = Common::unsanitizeInputValue(Common::getRequestVar('mailUsername', ''));
-            $mail['password'] = Common::unsanitizeInputValue(Common::getRequestVar('mailPassword', ''));
+            $request = Request::fromRequest();
+            $mail = [];
+            $mail['transport'] = $request->getBoolParameter('mailUseSmtp') ? 'smtp' : '';
+            $mail['port'] = $request->getStringParameter('mailPort', '');
+            $mail['host'] = $request->getStringParameter('mailHost', '');
+            $mail['type'] = $request->getStringParameter('mailType', '');
+            $mail['username'] = $request->getStringParameter('mailUsername', '');
+            $mail['password'] = $request->getStringParameter('mailPassword', '');
 
-            if (!array_key_exists('mailPassword', $_POST)) {
-                // use old password if it wasn't set in request
+            if (!array_key_exists('mailPassword', $_POST) && Config::getInstance()->mail['host'] === $mail['host']) {
+                // use old password if it wasn't set in request (and the host wasn't changed)
                 $mail['password'] = Config::getInstance()->mail['password'];
             }
 
-            $mail['encryption'] = Common::getRequestVar('mailEncryption', '');
+            $mail['encryption'] =  $request->getStringParameter('mailEncryption', '');
 
             Config::getInstance()->mail = $mail;
 
@@ -197,7 +206,7 @@ class Controller extends ControllerAdmin
     public function trackingCodeGenerator()
     {
         Piwik::checkUserHasSomeViewAccess();
-        
+
         $view = new View('@CoreAdminHome/trackingCodeGenerator');
         $this->setBasicVariablesView($view);
         $view->topMenu  = MenuTop::getInstance()->getMenu();
@@ -218,9 +227,17 @@ class Controller extends ControllerAdmin
 
         $view->defaultReportSiteName = Site::getNameFor($view->idSite);
         $view->defaultSiteRevenue = Site::getCurrencySymbolFor($view->idSite);
-        $view->maxCustomVariables = CustomVariables::getNumUsableCustomVariables();
+        $view->maxCustomVariables = 0;
+
+        if (Plugin\Manager::getInstance()->isPluginActivated('CustomVariables')) {
+            $view->maxCustomVariables = CustomVariables::getNumUsableCustomVariables();
+        }
 
         $view->defaultSite = array('id' => $view->idSite, 'name' => $view->defaultReportSiteName);
+        $view->defaultSiteDecoded = [
+            'id' => $view->idSite,
+            'name' => Common::unsanitizeInputValue($view->defaultReportSiteName),
+        ];
 
         $allUrls = APISitesManager::getInstance()->getSiteUrlsFromId($view->idSite);
         if (isset($allUrls[1])) {
@@ -240,11 +257,24 @@ class Controller extends ControllerAdmin
     }
 
     /**
-     * Shows the "Track Visits" checkbox.
+     * Shows the "Track Visits" checkbox - iFrame (deprecated)
      */
     public function optOut()
     {
-        return $this->optOutManager->getOptOutView()->render();
+        return $this->optOutManager->getOptOutViewIframe()->render();
+    }
+
+    /**
+     * Shows the Javascript opt out
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function optOutJS(): string
+    {
+        Common::sendHeader('Content-Type: application/javascript; charset=utf-8');
+        Common::sendHeader('Cache-Control: no-store');
+        return $this->optOutManager->getOptOutJS();
     }
 
     public function uploadCustomLogo()
@@ -276,6 +306,7 @@ class Controller extends ControllerAdmin
     {
         // Whether to display or not the general settings (cron, beta, smtp)
         $view->isGeneralSettingsAdminEnabled = self::isGeneralSettingsAdminEnabled();
+        $view->isMultiServerEnvironment = SettingsPiwik::isMultiServerEnvironment();
         $view->isPluginsAdminEnabled = CorePluginsAdmin::isPluginsAdminEnabled();
         if ($view->isGeneralSettingsAdminEnabled) {
             $this->displayWarningIfConfigFileNotWritable();
@@ -284,7 +315,8 @@ class Controller extends ControllerAdmin
         $enableBrowserTriggerArchiving = Rules::isBrowserTriggerEnabled();
         $todayArchiveTimeToLive = Rules::getTodayArchiveTimeToLive();
         $showWarningCron = false;
-        if (!$enableBrowserTriggerArchiving
+        if (
+            !$enableBrowserTriggerArchiving
             && $todayArchiveTimeToLive < 3600
         ) {
             $showWarningCron = true;
@@ -293,11 +325,31 @@ class Controller extends ControllerAdmin
         $view->todayArchiveTimeToLive = $todayArchiveTimeToLive;
         $view->todayArchiveTimeToLiveDefault = Rules::getTodayArchiveTimeToLiveDefault();
         $view->enableBrowserTriggerArchiving = $enableBrowserTriggerArchiving;
+        $view->showSegmentArchiveTriggerInfo = Rules::isBrowserArchivingAvailableForSegments();
 
         $mail = Config::getInstance()->mail;
         $mail['noreply_email_address'] = Config::getInstance()->General['noreply_email_address'];
         $mail['noreply_email_name'] = Config::getInstance()->General['noreply_email_name'];
+        $mail['password'] = !empty($mail['password']) ? '*****' : '';
         $view->mail = $mail;
     }
 
+    /**
+     * Show the what is new changes list
+     */
+    public function whatIsNew()
+    {
+        Piwik::checkUserHasSomeViewAccess();
+        Piwik::checkUserIsNotAnonymous();
+
+        $model = new UsersModel();
+        $user = $model->getUser(Piwik::getCurrentUserLogin());
+        if (is_array($user)) {
+            $userChanges = new UserChanges($user);
+            $changes = $userChanges->getChanges();
+            return $this->renderTemplate('whatIsNew', ['changes' => $changes]);
+        } else {
+            throw new \Exception('Unable to getUser() when attempting to show whatIsNew');
+        }
+    }
 }

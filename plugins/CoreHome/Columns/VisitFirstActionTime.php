@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -26,7 +26,7 @@ class VisitFirstActionTime extends VisitDimension
     protected $sqlSegment = 'HOUR(log_visit.visit_first_action_time)';
     protected $segmentName = 'visitStartServerHour';
     protected $acceptValues = '0, 1, 2, 3, ..., 20, 21, 22, 23';
-    protected $nameSingular = 'VisitTime_ColumnVisitStartServerHour';
+    protected $nameSingular = 'VisitTime_ColumnVisitStartSiteHour';
 
     public function __construct()
     {
@@ -37,7 +37,8 @@ class VisitFirstActionTime extends VisitDimension
 
     public function formatValue($value, $idSite, Formatter $formatter)
     {
-        return \Piwik\Plugins\VisitTime\getTimeLabel($value);
+        $hourInTz = VisitLastActionTime::convertHourToHourInSiteTimezone($value, $idSite);
+        return \Piwik\Plugins\VisitTime\getTimeLabel($hourInTz);
     }
 
     /**

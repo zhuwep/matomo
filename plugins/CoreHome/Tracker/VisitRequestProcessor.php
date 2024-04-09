@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,13 +10,13 @@ namespace Piwik\Plugins\CoreHome\Tracker;
 
 use Piwik\Common;
 use Piwik\Date;
-use Piwik\Config;
 use Piwik\EventDispatcher;
 use Piwik\Exception\UnexpectedWebsiteFoundException;
 use Piwik\Tracker\Cache;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\RequestProcessor;
 use Piwik\Tracker\Settings;
+use Piwik\Tracker\TrackerConfig;
 use Piwik\Tracker\Visit\VisitProperties;
 use Piwik\Tracker\VisitExcluded;
 use Piwik\Tracker\VisitorRecognizer;
@@ -80,9 +80,13 @@ class VisitRequestProcessor extends RequestProcessor
      */
     private $trackerAlwaysNewVisitor;
 
-    public function __construct(EventDispatcher $eventDispatcher, VisitorRecognizer $visitorRecognizer, Settings $userSettings,
-                                $visitStandardLength, $trackerAlwaysNewVisitor)
-    {
+    public function __construct(
+        EventDispatcher $eventDispatcher,
+        VisitorRecognizer $visitorRecognizer,
+        Settings $userSettings,
+        $visitStandardLength,
+        $trackerAlwaysNewVisitor
+    ) {
         $this->eventDispatcher = $eventDispatcher;
         $this->visitorRecognizer = $visitorRecognizer;
         $this->userSettings = $userSettings;
@@ -119,6 +123,8 @@ class VisitRequestProcessor extends RequestProcessor
 
         $isNewVisit = $this->isVisitNew($visitProperties, $request, $this->visitorRecognizer->getLastKnownVisit());
         $request->setMetadata('CoreHome', 'isNewVisit', $isNewVisit);
+
+        $request->setMetadata('CoreHome', 'lastKnownVisit', $this->visitorRecognizer->getLastKnownVisit());
 
         if (!$isNewVisit) { // only copy over known visitor's information, if this is for an ongoing visit
             $this->visitorRecognizer->updateVisitPropertiesFromLastVisitRow($visitProperties);
@@ -181,7 +187,7 @@ class VisitRequestProcessor extends RequestProcessor
         }
 
         $wasLastActionYesterday = $this->wasLastActionNotToday($visitProperties, $request, $lastKnownVisit);
-        $forceNewVisitAtMidnight = (bool) Config::getInstance()->Tracker['create_new_visit_after_midnight'];
+        $forceNewVisitAtMidnight = (bool) TrackerConfig::getConfigValue('create_new_visit_after_midnight', $request->getIdSiteIfExists());
 
         if ($wasLastActionYesterday && $forceNewVisitAtMidnight) {
             Common::printDebug("Visitor detected, but last action was yesterday...");
@@ -189,7 +195,9 @@ class VisitRequestProcessor extends RequestProcessor
             return true;
         }
 
-        if (!$this->lastUserIdWasSetAndDoesMatch($visitProperties, $request)) {
+        if (
+            !TrackerConfig::getConfigValue('enable_userid_overwrites_visitorid', $request->getIdSiteIfExists())
+            && !$this->lastUserIdWasSetAndDoesMatch($visitProperties, $request)) {
             Common::printDebug("Visitor detected, but last user_id does not match...");
             return true;
         }
@@ -276,17 +284,17 @@ class VisitRequestProcessor extends RequestProcessor
     protected function lastUserIdWasSetAndDoesMatch(VisitProperties $visitProperties, Request $request)
     {
         $lastUserId = $visitProperties->getProperty('user_id');
-        
+
         if(empty($lastUserId)) {
             return true;
         }
-        
+
         $currentUserId = $request->getForcedUserId();
-        
+
         if(empty($currentUserId)) {
             return true;
         }
-        
+
         return $lastUserId === $currentUserId;
     }
 }

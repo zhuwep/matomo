@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,7 @@ use Piwik\Widget\WidgetContainerConfig;
  * @group WidgetContainerConfig
  * @group WidgetContainerConfigTest
  */
-class WidgetContainerConfigTest extends \PHPUnit_Framework_TestCase
+class WidgetContainerConfigTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var WidgetContainerConfig
@@ -25,7 +25,7 @@ class WidgetContainerConfigTest extends \PHPUnit_Framework_TestCase
 
     private $id = 'MyTestContainer';
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->config = new WidgetContainerConfig();
@@ -214,15 +214,16 @@ class WidgetContainerConfigTest extends \PHPUnit_Framework_TestCase
 
     public function test_checkIsEnabled_shouldNotThrowException_IfEnabled()
     {
+        self::expectNotToPerformAssertions();
+
         $this->config->enable();
         $this->config->checkIsEnabled();
     }
 
-    /**
-     * @expectedException \Exception
-     */
     public function test_checkIsEnabled_shouldThrowException_IfDisabled()
     {
+        $this->expectException(\Exception::class);
+
         $this->config->disable();
         $this->config->checkIsEnabled();
     }

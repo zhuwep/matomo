@@ -1,25 +1,26 @@
 <?php
 
-use Interop\Container\ContainerInterface;
-use Piwik\Common;
+use Piwik\Container\Container;
+use Piwik\Piwik;
 use Piwik\Tests\Framework\Mock\FakeAccess;
+use Piwik\Tests\Framework\Mock\FakeChangesModel;
 use Piwik\Tests\Framework\Mock\TestConfig;
 
 return array(
 
     // Disable logging
-    'Psr\Log\LoggerInterface' => \DI\decorate(function ($previous, ContainerInterface $c) {
+    \Piwik\Log\LoggerInterface::class => \Piwik\DI::decorate(function ($previous, Container $c) {
         $enableLogging = $c->get('ini.tests.enable_logging') == 1 || !empty(getenv('MATOMO_TESTS_ENABLE_LOGGING'));
         if ($enableLogging) {
             return $previous;
         } else {
-            return $c->get(\Psr\Log\NullLogger::class);
+            return $c->get(\Piwik\Log\NullLogger::class);
         }
     }),
 
     'Tests.log.allowAllHandlers' => false,
 
-    'log.handlers' => \DI\decorate(function ($previous, ContainerInterface $c) {
+    'log.handlers' => \Piwik\DI::decorate(function ($previous, Container $c) {
         if ($c->get('Tests.log.allowAllHandlers')) {
             return $previous;
         }
@@ -29,7 +30,7 @@ return array(
         ];
     }),
 
-    'Piwik\Cache\Backend' => function () {
+    'Matomo\Cache\Backend' => function () {
         return \Piwik\Cache::buildBackend('file');
     },
     'cache.eager.cache_id' => 'eagercache-test-',
@@ -38,7 +39,7 @@ return array(
     'Tests.now' => false,
 
     // Disable loading core translations
-    'Piwik\Translation\Translator' => DI\decorate(function ($previous, ContainerInterface $c) {
+    'Piwik\Translation\Translator' => \Piwik\DI::decorate(function ($previous, Container $c) {
         $loadRealTranslations = $c->get('test.vars.loadRealTranslations');
         if (!$loadRealTranslations) {
             return new \Piwik\Translation\Translator($c->get('Piwik\Translation\Loader\LoaderInterface'), $directories = array());
@@ -47,7 +48,7 @@ return array(
         }
     }),
 
-    'Piwik\Config' => DI\decorate(function ($previous, ContainerInterface $c) {
+    'Piwik\Config' => \Piwik\DI::decorate(function ($previous, Container $c) {
         $testingEnvironment = $c->get('Piwik\Tests\Framework\TestingEnvironmentVariables');
 
         $dontUseTestConfig = $c->get('test.vars.dontUseTestConfig');
@@ -59,7 +60,7 @@ return array(
         }
     }),
 
-    'Piwik\Access' => DI\decorate(function ($previous, ContainerInterface $c) {
+    'Piwik\Access' => \Piwik\DI::decorate(function ($previous, Container $c) {
         $testUseMockAuth = $c->get('test.vars.testUseMockAuth');
         if ($testUseMockAuth) {
             $idSitesAdmin = $c->get('test.vars.idSitesAdminAccess');
@@ -96,42 +97,54 @@ return array(
         }
     }),
 
-    'observers.global' => DI\add(array(
+    // Prevent loading plugin changes, so the What's New popup isn't shown
+    'Piwik\Changes\Model' => \Piwik\DI::decorate(function ($previous, Container $c) {
+        $loadChanges = $c->get('test.vars.loadChanges');
+        if (!$loadChanges) {
+            return new FakeChangesModel();
+        } else {
+            return $previous;
+        }
+    }),
 
-        array('AssetManager.getStylesheetFiles', function (&$stylesheets) {
+    'observers.global' => \Piwik\DI::add(array(
+
+        array('AssetManager.getStylesheetFiles', \Piwik\DI::value(function (&$stylesheets) {
             $useOverrideCss = \Piwik\Container\StaticContainer::get('test.vars.useOverrideCss');
             if ($useOverrideCss) {
                 $stylesheets[] = 'tests/resources/screenshot-override/override.css';
             }
-        }),
+        })),
 
-        array('AssetManager.getJavaScriptFiles', function (&$jsFiles) {
+        array('AssetManager.getJavaScriptFiles', \Piwik\DI::value(function (&$jsFiles) {
             $useOverrideJs = \Piwik\Container\StaticContainer::get('test.vars.useOverrideJs');
             if ($useOverrideJs) {
                 $jsFiles[] = 'tests/resources/screenshot-override/override.js';
             }
-        }),
+        })),
 
-        array('Updater.checkForUpdates', function () {
+        array('Updater.checkForUpdates', \Piwik\DI::value(function () {
             try {
                 @\Piwik\Filesystem::deleteAllCacheOnUpdate();
             } catch (Exception $ex) {
                 // pass
             }
-        }),
+        })),
 
-        array('Test.Mail.send', function (\Zend_Mail $mail) {
-            $outputFile = PIWIK_INCLUDE_PATH . '/tmp/' . Common::getRequestVar('module', '') . '.' . Common::getRequestVar('action', '') . '.mail.json';
-            $outputContent = str_replace("=\n", "", $mail->getBodyHtml($textOnly = true) ?: $mail->getBodyText($textOnly = true));
+        array('Test.Mail.send', \Piwik\DI::value(function (\PHPMailer\PHPMailer\PHPMailer $mail) {
+            $outputFile = PIWIK_INCLUDE_PATH . '/tmp/' . Piwik::getModule() . '.' . Piwik::getAction() . '.mail.json';
+            $outputContent = str_replace("=\n", "", $mail->Body ?: $mail->AltBody);
             $outputContent = str_replace("=0A", "\n", $outputContent);
             $outputContent = str_replace("=3D", "=", $outputContent);
             $outputContents = array(
-                'from' => $mail->getFrom(),
-                'to' => $mail->getRecipients(),
-                'subject' => $mail->getSubject(),
+                'from' => $mail->From,
+                'to' => $mail->getAllRecipientAddresses(),
+                'subject' => $mail->Subject,
                 'contents' => $outputContent
             );
             file_put_contents($outputFile, json_encode($outputContents));
-        }),
+        })),
     )),
+
+    'test.vars.forceCliMultiViaCurl' => false,
 );

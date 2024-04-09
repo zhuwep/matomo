@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,6 @@ use Piwik\ProxyHttp;
 
 class Csv extends ApiRenderer
 {
-
     public function renderSuccess($message)
     {
         Common::sendHeader("Content-Disposition: attachment; filename=piwik-report-export.csv");
@@ -23,7 +22,7 @@ class Csv extends ApiRenderer
 
     /**
      * @param $message
-     * @param Exception|\Throwable $exception
+     * @param \Exception|\Throwable $exception
      * @return string
      */
     public function renderException($message, $exception)
@@ -35,7 +34,11 @@ class Csv extends ApiRenderer
     public function renderDataTable($dataTable)
     {
         $convertToUnicode = Common::getRequestVar('convertToUnicode', true, 'int', $this->request);
-        $idSite = Common::getRequestVar('idSite', false, 'int', $this->request);
+        $idSite = Common::getRequestVar('idSite', 0, 'int', $this->request);
+
+        if (empty($idSite)) {
+            $idSite = 'all';
+        }
 
         /** @var \Piwik\DataTable\Renderer\Csv $tableRenderer */
         $tableRenderer = $this->buildDataTableRenderer($dataTable);

@@ -1,14 +1,14 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Updater\Migration\Db;
 use Piwik\Common;
+use Piwik\Config;
 use Piwik\Db;
-use Piwik\Updater\Migration as MigrationInterface;
 use Piwik\Updater\Migration\Db as DbMigration;
 
 /**
@@ -19,7 +19,6 @@ use Piwik\Updater\Migration\Db as DbMigration;
  */
 class Sql extends DbMigration
 {
-
     /**
      * @var string
      */
@@ -32,6 +31,7 @@ class Sql extends DbMigration
 
     /**
      * Sql constructor.
+     *
      * @param string $sql
      * @param int|int[] $errorCodesToIgnore  If no error should be ignored use an empty array.
      */
@@ -42,7 +42,8 @@ class Sql extends DbMigration
         }
 
         $this->sql = $sql;
-        $this->errorCodesToIgnore = $errorCodesToIgnore;
+        $globalErrorCodesToIgnore = Config::getInstance()->database['ignore_error_codes'] ?? [];
+        $this->errorCodesToIgnore = array_merge($errorCodesToIgnore, (is_array($globalErrorCodesToIgnore) ? $globalErrorCodesToIgnore : []));
     }
 
     public function shouldIgnoreError($exception)
@@ -84,7 +85,7 @@ class Sql extends DbMigration
     {
         $sql = $this->sql;
 
-        if (!Common::stringEndsWith($sql, ';')) {
+        if (!empty($sql) && !Common::stringEndsWith($sql, ';')) {
             $sql .= ';';
         }
 
@@ -93,6 +94,8 @@ class Sql extends DbMigration
 
     public function exec()
     {
-        Db::exec($this->sql);
+        if (!empty($this->sql)) {
+            Db::exec($this->sql);
+        }
     }
 }

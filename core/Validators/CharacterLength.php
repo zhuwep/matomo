@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 
 namespace Piwik\Validators;
 
-use Piwik\Common;
 use Piwik\Piwik;
 
 class CharacterLength extends BaseValidator
@@ -44,7 +43,7 @@ class CharacterLength extends BaseValidator
             return;
         }
 
-        $lenValue = Common::mb_strlen($value);
+        $lenValue = mb_strlen($value);
 
         if (isset($this->min) && $this->min > $lenValue) {
             throw new Exception(Piwik::translate('General_ValidatorErrorCharacterTooShort', array($lenValue, $this->min)));
@@ -53,6 +52,5 @@ class CharacterLength extends BaseValidator
         if (isset($this->max) && $this->max < $lenValue) {
             throw new Exception(Piwik::translate('General_ValidatorErrorCharacterTooLong', array($lenValue, $this->max)));
         }
-
     }
 }

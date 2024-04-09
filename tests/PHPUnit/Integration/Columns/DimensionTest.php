@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,18 +8,19 @@
 
 namespace Piwik\Tests\Integration\Columns;
 
-    // there is a test that requires the class to be defined in a plugin
+// there is a test that requires the class to be defined in a plugin
 
 use Piwik\Columns\Dimension;
+use Piwik\Columns\DimensionSegmentFactory;
 use Piwik\Plugin\Segment;
 use Piwik\Metrics\Formatter;
 use Piwik\Plugin\Dimension\ActionDimension;
 use Piwik\Plugin\Dimension\ConversionDimension;
 use Piwik\Plugin\Dimension\VisitDimension;
 use Piwik\Plugin\Manager;
+use Piwik\Segment\SegmentsList;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
-use Piwik\Translate;
 
 class CustomDimensionTest extends Dimension
 {
@@ -50,13 +51,13 @@ class CustomDimensionTest extends Dimension
         $this->columnType = $columnType;
     }
 
-    protected function configureSegments()
+    public function configureSegments(SegmentsList $segmentsList, DimensionSegmentFactory $dimensionSegmentFactory)
     {
         $segment = new Segment();
         $segment->setSegment('exitPageUrl');
         $segment->setName('Actions_ColumnExitPageURL');
         $segment->setCategory('General_Visit');
-        $this->addSegment($segment);
+        $segmentsList->addSegment($dimensionSegmentFactory->createSegment($segment));
 
         // custom type and sqlSegment
         $segment = new Segment();
@@ -65,7 +66,7 @@ class CustomDimensionTest extends Dimension
         $segment->setType(Segment::TYPE_METRIC);
         $segment->setName('Actions_ColumnExitPageURL');
         $segment->setCategory('General_Visit');
-        $this->addSegment($segment);
+        $segmentsList->addSegment($dimensionSegmentFactory->createSegment($segment));
     }
 }
 
@@ -80,11 +81,11 @@ class ColumnDimensionTest extends IntegrationTestCase
      */
     private $dimension;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
-        Translate::loadEnglishTranslation();
+        Fixture::loadAllTranslations();
 
         Fixture::createWebsite('2014-04-05 01:02:03');
 
@@ -94,9 +95,9 @@ class ColumnDimensionTest extends IntegrationTestCase
         $this->dimension = new CustomDimensionTest();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
-        Translate::unloadEnglishTranslation();
+        Fixture::resetTranslations();
         parent::tearDown();
     }
 
@@ -277,14 +278,6 @@ class ColumnDimensionTest extends IntegrationTestCase
         $this->assertEquals("Test.DimensionTest", $this->dimension->getId());
     }
 
-    public function test_factory_ShouldCreateDimensionFromDimensionId()
-    {
-        Manager::getInstance()->loadPlugins(array('ExampleTracker'));
-
-        $dimension = Dimension::factory("ExampleTracker.ExampleDimension");
-        $this->assertInstanceOf('Piwik\Plugins\ExampleTracker\Columns\ExampleDimension', $dimension);
-    }
-
 
     /**
      * @dataProvider getFormatValueProvider
@@ -306,10 +299,189 @@ class ColumnDimensionTest extends IntegrationTestCase
             array($type = Dimension::TYPE_MONEY, $value = 5.392, $expected = '$5.39'),
             array($type = Dimension::TYPE_PERCENT, $value = 0.343, $expected = '34.3%'),
             array($type = Dimension::TYPE_DURATION_S, $value = 121, $expected = '00:02:01'),
-            array($type = Dimension::TYPE_DURATION_MS, $value = 0.392, $expected = '0.39s'),
+            array($type = Dimension::TYPE_DURATION_MS, $value = 392, $expected = '0.39s'),
             array($type = Dimension::TYPE_BYTE, $value = 3912, $expected = '3.8 K'),
             array($type = Dimension::TYPE_BOOL, $value = 0, $expected = 'No'),
             array($type = Dimension::TYPE_BOOL, $value = 1, $expected = 'Yes'),
         );
+    }
+
+    protected static $availableColumnDimensions = [
+        'Piwik\Plugins\Actions\Columns\EntryPageTitle',
+        'Piwik\Plugins\Actions\Columns\EntryPageUrl',
+        'Piwik\Plugins\Actions\Columns\ExitPageTitle',
+        'Piwik\Plugins\Actions\Columns\ExitPageUrl',
+        'Piwik\Plugins\Actions\Columns\IdPageview',
+        'Piwik\Plugins\Actions\Columns\PageTitle',
+        'Piwik\Plugins\Actions\Columns\PageUrl',
+        'Piwik\Plugins\Actions\Columns\SearchCategory',
+        'Piwik\Plugins\Actions\Columns\SearchCount',
+        'Piwik\Plugins\Actions\Columns\TimeSpentRefAction',
+        'Piwik\Plugins\Actions\Columns\VisitTotalActions',
+        'Piwik\Plugins\Actions\Columns\VisitTotalInteractions',
+        'Piwik\Plugins\Actions\Columns\VisitTotalSearches',
+        'Piwik\Plugins\Bandwidth\Columns\Bandwidth',
+        'Piwik\Plugins\Contents\Columns\ContentInteraction',
+        'Piwik\Plugins\Contents\Columns\ContentName',
+        'Piwik\Plugins\Contents\Columns\ContentPiece',
+        'Piwik\Plugins\Contents\Columns\ContentTarget',
+        'Piwik\Plugins\CoreHome\Columns\Profilable',
+        'Piwik\Plugins\CoreHome\Columns\ServerTime',
+        'Piwik\Plugins\CoreHome\Columns\UserId',
+        'Piwik\Plugins\CoreHome\Columns\VisitFirstActionTime',
+        'Piwik\Plugins\CoreHome\Columns\VisitGoalBuyer',
+        'Piwik\Plugins\CoreHome\Columns\VisitGoalConverted',
+        'Piwik\Plugins\CoreHome\Columns\VisitTotalTime',
+        'Piwik\Plugins\CoreHome\Columns\VisitorReturning',
+        'Piwik\Plugins\CoreHome\Columns\VisitorSecondsSinceFirst',
+        'Piwik\Plugins\CoreHome\Columns\VisitorSecondsSinceOrder',
+        'Piwik\Plugins\CoreHome\Columns\VisitsCount',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginCookie',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginFlash',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginJava',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginPdf',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginQuickTime',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginRealPlayer',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginSilverlight',
+        'Piwik\Plugins\DevicePlugins\Columns\PluginWindowsMedia',
+        'Piwik\Plugins\DevicesDetection\Columns\BrowserEngine',
+        'Piwik\Plugins\DevicesDetection\Columns\BrowserName',
+        'Piwik\Plugins\DevicesDetection\Columns\BrowserVersion',
+        'Piwik\Plugins\DevicesDetection\Columns\ClientType',
+        'Piwik\Plugins\DevicesDetection\Columns\DeviceBrand',
+        'Piwik\Plugins\DevicesDetection\Columns\DeviceModel',
+        'Piwik\Plugins\DevicesDetection\Columns\DeviceType',
+        'Piwik\Plugins\DevicesDetection\Columns\Os',
+        'Piwik\Plugins\DevicesDetection\Columns\OsVersion',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewCategory',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewCategory2',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewCategory3',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewCategory4',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewCategory5',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewName',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewPrice',
+        'Piwik\Plugins\Ecommerce\Columns\ProductViewSku',
+        'Piwik\Plugins\Ecommerce\Columns\Revenue',
+        'Piwik\Plugins\Events\Columns\EventAction',
+        'Piwik\Plugins\Events\Columns\EventCategory',
+        'Piwik\Plugins\Events\Columns\TotalEvents',
+        'Piwik\Plugins\Goals\Columns\PageviewsBefore',
+        'Piwik\Plugins\PagePerformance\Columns\TimeDomCompletion',
+        'Piwik\Plugins\PagePerformance\Columns\TimeDomProcessing',
+        'Piwik\Plugins\PagePerformance\Columns\TimeNetwork',
+        'Piwik\Plugins\PagePerformance\Columns\TimeOnLoad',
+        'Piwik\Plugins\PagePerformance\Columns\TimeServer',
+        'Piwik\Plugins\PagePerformance\Columns\TimeTransfer',
+        'Piwik\Plugins\Referrers\Columns\Keyword',
+        'Piwik\Plugins\Referrers\Columns\ReferrerName',
+        'Piwik\Plugins\Referrers\Columns\ReferrerType',
+        'Piwik\Plugins\Referrers\Columns\ReferrerUrl',
+        'Piwik\Plugins\Resolution\Columns\Resolution',
+        'Piwik\Plugins\UserCountry\Columns\City',
+        'Piwik\Plugins\UserCountry\Columns\Country',
+        'Piwik\Plugins\UserCountry\Columns\Latitude',
+        'Piwik\Plugins\UserCountry\Columns\Longitude',
+        'Piwik\Plugins\UserCountry\Columns\Region',
+        'Piwik\Plugins\UserLanguage\Columns\Language',
+        'Piwik\Plugins\VisitTime\Columns\LocalTime',
+        'Piwik\Plugins\VisitorInterest\Columns\VisitorSecondsSinceLast',
+    ];
+
+    /**
+     * Check all available dimensions are listed above
+     */
+    public function testNoNewDimensionsAvailable()
+    {
+        self::expectNotToPerformAssertions();
+        Manager::getInstance()->loadAllPluginsAndGetTheirInfo();
+
+        $dimensions = Dimension::getAllDimensions();
+
+        foreach ($dimensions as $dimension) {
+            if (!$dimension->getColumnName() || !$dimension->getVersion()) {
+                continue; // ignore dimensions that don't manage their database column
+            }
+
+            if (!in_array(get_class($dimension), self::$availableColumnDimensions)) {
+                $this->fail("New dimension found: " . get_class($dimension) . "\nPlease update list of available column dimensions");
+            }
+        }
+    }
+
+    /**
+     * Check all dimensions listed above, still exist and manage their column
+     */
+    public function testNoDimensionWasRemoved()
+    {
+        self::expectNotToPerformAssertions();
+        Manager::getInstance()->loadAllPluginsAndGetTheirInfo();
+
+        $removedDimensions = Dimension::getRemovedDimensions();
+
+        foreach (self::$availableColumnDimensions as $dimension) {
+            if (!class_exists($dimension)) {
+                $this->fail("Dimension does no longer exist: $dimension\nPlease update list of available column dimensions and don't forget to add dimension to Dimension::getRemovedDimensions()");
+            }
+
+            $dimensionObj = new $dimension();
+
+            if (!$dimensionObj->getColumnName() || !$dimensionObj->getVersion()) {
+                $this->fail("Dimension does no longer manage a column: $dimension\nPlease remove it from the list of available column dimensions");
+            }
+
+            if (in_array($dimension, $removedDimensions)) {
+                $this->fail("Dimension listed as available found in list of removed dimensions: $dimension");
+            }
+        }
+    }
+
+    /**
+     * Check non of the dimensions marked as removed still exist
+     */
+    public function testRemovedDimensionNoLongerExists()
+    {
+        Manager::getInstance()->loadAllPluginsAndGetTheirInfo();
+
+        $removedDimensions = Dimension::getRemovedDimensions();
+
+        foreach ($removedDimensions as $removedDimension) {
+            $this->assertFalse(class_exists($removedDimension), "Dimension marked as removed but still exist: $removedDimension");
+        }
+    }
+
+    public function test_groupValue()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(800.0, $this->dimension->groupValue(800, 1));
+    }
+
+    public function test_groupValue_stringValue()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(800.0, $this->dimension->groupValue('800', 1));
+    }
+
+    public function test_groupValue_largerValue()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(80000000.0, $this->dimension->groupValue(80000000, 1));
+    }
+
+    public function test_groupValue_largerStringValue()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(80000000.0, $this->dimension->groupValue('80000000', 1));
+    }
+
+    public function test_groupValue_largerValueWithDecimal()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(80000000.0, $this->dimension->groupValue(80000000.123, 1));
+    }
+
+    public function test_groupValue_largerStringValueWithDecimal()
+    {
+        $this->dimension->setType(Dimension::TYPE_DURATION_MS);
+        $this->assertSame(80000000.0, $this->dimension->groupValue('80000000.123', 1));
     }
 }

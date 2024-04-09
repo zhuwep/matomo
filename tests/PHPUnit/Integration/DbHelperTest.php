@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,20 +8,34 @@
 
 namespace Piwik\Tests\Integration;
 
+use Piwik\Common;
+use Piwik\Date;
 use Piwik\Db;
 use Piwik\DbHelper;
 use Piwik\Option;
+use Piwik\Segment;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Version;
 
+/**
+ * @group Core
+ * @group DbHelper
+ */
 class DbHelperTest extends IntegrationTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         DbHelper::dropDatabase('newdb; create database anotherdb;');
         DbHelper::dropDatabase('testdb');
+    }
+
+    public function test_tableExists()
+    {
+        $this->assertFalse(DbHelper::tableExists('foobar'));
+        $this->assertTrue(DbHelper::tableExists(Common::prefixTable('user_token_auth')));
+        $this->assertFalse(DbHelper::tableExists(Common::prefixTable('user_t%oke%n_auth')));
     }
 
     public function test_getInstallVersion_isCurrentVersion()
@@ -32,7 +46,8 @@ class DbHelperTest extends IntegrationTestCase
     public function test_recordInstallVersion_setsCurrentVersion()
     {
         Option::delete(Db\Schema\Mysql::OPTION_NAME_MATOMO_INSTALL_VERSION);
-        $this->assertNull(DbHelper::getInstallVersion());
+        $this->assertEmpty(DbHelper::getInstallVersion());
+        $this->assertEquals('0', DbHelper::getInstallVersion()); // since php 8.1 this is required
 
         DbHelper::recordInstallVersion();
         $this->assertSame(Version::VERSION, DbHelper::getInstallVersion());
@@ -89,18 +104,32 @@ class DbHelperTest extends IntegrationTestCase
         $this->assertDbNotExists('anotherdb');
     }
 
+    public function test_addOriginHintToQuery()
+    {
+        $expected = 'SELECT /* segmenthash 37d1b27c81afefbcf0961472b9abdb0f */ /* sites 1 */ /* 2022-01-01,2022-01-02 */ /* origin test */ idvisit FROM log_visit WHERE idvisit > 1 LIMIT 1';
+
+        $segment = new Segment('countryCode==fr', [1]);
+        $sql = "SELECT idvisit FROM " . Common::prefixTable('log_visit') . " WHERE idvisit > 1 LIMIT 1";
+        $startDate = Date::factory('2022-01-01 00:00:00');
+        $endDate = Date::factory('2022-01-02 23:59:59');
+        $sites = [1];
+
+        $result = DbHelper::addOriginHintToQuery($sql, 'origin test', $startDate, $endDate, $sites, $segment);
+        self::assertEquals($expected, $result);
+    }
+
     private function assertDbExists($dbName)
     {
         $dbs = Db::fetchAll("SHOW DATABASES");
         $dbs = array_column($dbs, 'Database');
-        $this->assertContains($this->cleanName($dbName), $dbs);
+        self::assertTrue(in_array($this->cleanName($dbName), $dbs));
     }
 
     private function assertDbNotExists($dbName)
     {
         $dbs = Db::fetchAll("SHOW DATABASES");
         $dbs = array_column($dbs, 'Database');
-        $this->assertNotContains($this->cleanName($dbName), $dbs);
+        self::assertTrue(!in_array($this->cleanName($dbName), $dbs));
     }
 
     private function cleanName($dbName)

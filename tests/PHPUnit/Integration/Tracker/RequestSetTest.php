@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,30 +8,19 @@
 
 namespace Piwik\Tests\Integration\Tracker;
 
-use Piwik\EventDispatcher;
 use Piwik\Piwik;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\RequestSet;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
-class TestRequestSet extends RequestSet {
-
+class TestRequestSet extends RequestSet
+{
     private $redirectUrl = '';
-
-    public function setRedirectUrl($url)
-    {
-        $this->redirectUrl = $url;
-    }
 
     public function getAllSiteIdsWithinRequest()
     {
         return parent::getAllSiteIdsWithinRequest();
-    }
-
-    public function getRedirectUrl()
-    {
-        return $this->redirectUrl;
     }
 }
 /**
@@ -49,16 +38,21 @@ class RequestSetTest extends IntegrationTestCase
     private $post;
     private $time;
 
-    public function setUp()
+    protected static function beforeTableDataCached()
     {
-        parent::setUp();
+        parent::beforeTableDataCached();
 
         Fixture::createWebsite('2014-01-01 00:00:00');
         Fixture::createWebsite('2014-01-01 00:00:00', 0, false, 'http://www.example.com');
 
-        foreach (range(3,10) as $idSite) {
+        foreach (range(3, 10) as $idSite) {
             Fixture::createWebsite('2014-01-01 00:00:00');
         }
+    }
+
+    public function setUp(): void
+    {
+        parent::setUp();
 
         $this->requestSet = $this->buildNewRequestSetThatIsNotInitializedYet();
         $this->requestSet->setRequests(array(array('idsite' => 1), array('idsite' => 2)));
@@ -72,7 +66,7 @@ class RequestSetTest extends IntegrationTestCase
         $_POST = array();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $_GET  = $this->get;
         $_POST = $this->post;
@@ -126,49 +120,6 @@ class RequestSetTest extends IntegrationTestCase
         $request->setCurrentTimestamp($this->time);
 
         return $request;
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldNotRedirect_IfNoUrlIsSet()
-    {
-        $this->assertFalse($this->requestSet->shouldPerformRedirectToUrl());
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldNotRedirect_IfUrlIsSetButNoRequests()
-    {
-        $this->requestSet->setRedirectUrl('http://localhost');
-        $this->assertEquals('http://localhost', $this->requestSet->getRedirectUrl());
-
-        $this->requestSet->setRequests(array());
-
-        $this->assertFalse($this->requestSet->shouldPerformRedirectToUrl());
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldNotRedirect_IfUrlHasNoHostOrIsNotUrl()
-    {
-        $this->requestSet->setRedirectUrl('abc');
-
-        $this->assertFalse($this->requestSet->shouldPerformRedirectToUrl());
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldNotRedirect_IfUrlIsNotWhitelistedInAnySiteId()
-    {
-        $this->requestSet->setRedirectUrl('http://example.org');
-
-        $this->assertFalse($this->requestSet->shouldPerformRedirectToUrl());
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldRedirect_IfUrlIsGivenAndWhitelistedInAnySiteId()
-    {
-        $this->requestSet->setRedirectUrl('http://www.example.com');
-
-        $this->assertEquals('http://www.example.com', $this->requestSet->shouldPerformRedirectToUrl());
-    }
-
-    public function test_shouldPerformRedirectToUrl_shouldRedirect_IfBaseDomainIsGivenAndWhitelistedInAnySiteId()
-    {
-        $this->requestSet->setRedirectUrl('http://example.com');
-
-        $this->assertEquals('http://example.com', $this->requestSet->shouldPerformRedirectToUrl());
     }
 
     public function test_initRequestsAndTokenAuth_shouldTriggerEventToInitRequestsButOnlyOnce()

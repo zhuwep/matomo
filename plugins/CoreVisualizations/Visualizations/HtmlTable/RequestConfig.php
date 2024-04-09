@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,7 +19,6 @@ use Piwik\ViewDataTable\RequestConfig as VisualizationRequestConfig;
  */
 class RequestConfig extends VisualizationRequestConfig
 {
-
     /**
      * Controls whether the summary row is displayed on every page of the datatable view or not.
      * If false, the summary row will be treated as the last row of the dataset and will only visible
@@ -68,5 +67,4 @@ class RequestConfig extends VisualizationRequestConfig
             'show_dimensions',
         ));
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,9 @@ namespace Piwik;
 
 use Exception;
 use Piwik\API\Request;
+use Piwik\Config\GeneralConfig;
 use Piwik\Container\StaticContainer;
+use Piwik\DataTable\Manager;
 use Piwik\Exception\AuthenticationFailedException;
 use Piwik\Exception\DatabaseSchemaIsNewerThanCodebaseException;
 use Piwik\Exception\PluginDeactivatedException;
@@ -21,7 +23,9 @@ use Piwik\Http\ControllerResolver;
 use Piwik\Http\Router;
 use Piwik\Plugins\CoreAdminHome\CustomLogo;
 use Piwik\Session\SessionAuth;
-use Psr\Log\LoggerInterface;
+use Piwik\Session\SessionInitializer;
+use Piwik\SupportedBrowser;
+use Piwik\Log\LoggerInterface;
 
 /**
  * This singleton dispatches requests to the appropriate plugin Controller.
@@ -106,7 +110,7 @@ class FrontController extends Singleton
      * @param Exception $e
      * @return string
      */
-    private static function generateSafeModeOutputFromException($e)
+    public static function generateSafeModeOutputFromException($e)
     {
         StaticContainer::get(LoggerInterface::class)->error('Uncaught exception: {exception}', [
             'exception' => $e,
@@ -176,9 +180,15 @@ class FrontController extends Singleton
              * @param \Piwik\NoAccessException $exception The exception that was caught.
              */
             Piwik::postEvent('User.isNotAuthorized', array($exception), $pending = true);
-        } catch (\Twig_Error_Runtime $e) {
-            echo $this->generateSafeModeOutputFromException($e);
-            exit;
+        } catch (\Twig\Error\RuntimeError $e) {
+            if ($e->getPrevious() && !$e->getPrevious() instanceof \Twig\Error\RuntimeError) {
+                // a regular exception unrelated to twig was triggered while rendering an a view, for example as part of a triggered event
+                // we want to ensure to show the regular error message response instead of the safemode as it's likely wrong user input
+                throw $e;
+            } else {
+                echo $this->generateSafeModeOutputFromException($e);
+                exit;
+            }
         } catch(StylesheetLessCompileException $e) {
             echo $this->generateSafeModeOutputFromException($e);
             exit;
@@ -199,7 +209,6 @@ class FrontController extends Singleton
      * @param string $actionName The controller action name, eg, `'realtimeMap'`.
      * @param array $parameters Array of parameters to pass to the controller action method.
      * @return string The `echo`'d data or the return value of the controller action.
-     * @deprecated
      */
     public function fetchDispatch($module = null, $actionName = null, $parameters = null)
     {
@@ -222,7 +231,8 @@ class FrontController extends Singleton
     public function __destruct()
     {
         try {
-            if (class_exists('Piwik\\Profiler')
+            if (
+                class_exists('Piwik\\Profiler')
                 && !SettingsServer::isTrackerApiRequest()
             ) {
                 // in tracker mode Piwik\Tracker\Db\Pdo\Mysql does currently not implement profiling
@@ -252,6 +262,8 @@ class FrontController extends Singleton
 
     public static function triggerSafeModeWhenError()
     {
+        Manager::getInstance()->deleteAll();
+
         $lastError = error_get_last();
 
         if (!empty($lastError) && isset(self::$requestId)) {
@@ -301,7 +313,7 @@ class FrontController extends Singleton
             $tmpPath . '/cache/',
             $tmpPath . '/logs/',
             $tmpPath . '/tcpdf/',
-            $tmpPath . '/templates_c/',
+            StaticContainer::get('path.tmp.templates'),
         );
 
         Filechecks::dieIfDirectoriesNotWritable($directoriesToCheck);
@@ -378,7 +390,8 @@ class FrontController extends Singleton
         $module = Piwik::getModule();
         $action = Piwik::getAction();
 
-        if (empty($module)
+        if (
+            empty($module)
             || empty($action)
             || $module !== 'Installation'
             || !in_array($action, array('getInstallationCss', 'getInstallationJs'))) {
@@ -392,6 +405,12 @@ class FrontController extends Singleton
 
         $loggedIn = false;
 
+        //move this up unsupported Browser do not create session
+        if ($this->isSupportedBrowserCheckNeeded()) {
+            SupportedBrowser::checkIfBrowserSupported();
+        }
+
+        // don't use sessionauth in cli mode
         // try authenticating w/ session first...
         $sessionAuth = $this->makeSessionAuthenticator();
         if ($sessionAuth) {
@@ -401,16 +420,36 @@ class FrontController extends Singleton
         // ... if session auth fails try normal auth (which will login the anonymous user)
         if (!$loggedIn) {
             $authAdapter = $this->makeAuthenticator();
-            Access::getInstance()->reloadAccess($authAdapter);
+            $success = Access::getInstance()->reloadAccess($authAdapter);
+
+            if (
+                $success
+                && Piwik::isUserIsAnonymous()
+                && $authAdapter->getLogin() === 'anonymous' //double checking the login
+                && Piwik::isUserHasSomeViewAccess()
+                && Session::isSessionStarted()
+                && Session::isWritable()) { // only if session was started and writable, don't do it eg for API
+                // usually the session would be started when someone logs in using login controller. But in this
+                // case we need to init session here for anoynymous users
+                $init = StaticContainer::get(SessionInitializer::class);
+                $init->initSession($authAdapter);
+            }
         } else {
             $this->makeAuthenticator($sessionAuth); // Piwik\Auth must be set to the correct Login plugin
         }
 
+
+
         // Force the auth to use the token_auth if specified, so that embed dashboard
         // and all other non widgetized controller methods works fine
-        if (Common::getRequestVar('token_auth', false, 'string') !== false) {
+        if (
+            Common::getRequestVar('token_auth', '', 'string') !== ''
+            && Request::shouldReloadAuthUsingTokenAuth(null)
+        ) {
             Request::reloadAuthUsingTokenAuth();
+            Request::checkTokenAuthIsNotLimited($module, $action);
         }
+
         SettingsServer::raiseMemoryLimitIfNecessary();
 
         \Piwik\Plugin\Manager::getInstance()->postLoadPlugins();
@@ -432,6 +471,10 @@ class FrontController extends Singleton
 
         if (is_null($action)) {
             $action = Common::getRequestVar('action', false);
+            if ($action !== false) {
+                // If a value was provided, check it has the correct type.
+                $action = Common::getRequestVar('action', null, 'string');
+            }
         }
 
         if (Session::isSessionStarted()) {
@@ -461,10 +504,14 @@ class FrontController extends Singleton
 
     protected function handleMaintenanceMode()
     {
-        if ((Config::getInstance()->General['maintenance_mode'] != 1) || Common::isPhpCliMode()) {
+        if ((GeneralConfig::getConfigValue('maintenance_mode') != 1) || Common::isPhpCliMode()) {
             return;
         }
-        Common::sendResponseCode(503);
+
+        // as request matomo behind load balancer should not return 503. https://github.com/matomo-org/matomo/issues/18054
+        if (GeneralConfig::getConfigValue('multi_server_environment') != 1) {
+            Common::sendResponseCode(503);
+        }
 
         $logoUrl = 'plugins/Morpheus/images/logo.svg';
         $faviconUrl = 'plugins/CoreHome/images/favicon.png';
@@ -483,9 +530,9 @@ class FrontController extends Singleton
         $trackMessage = '';
 
         if ($recordStatistics) {
-          $trackMessage = 'Your analytics data will continue to be tracked as normal.';
+            $trackMessage = 'Your analytics data will continue to be tracked as normal.';
         } else {
-          $trackMessage = 'While the maintenance mode is active, data tracking is disabled.';
+            $trackMessage = 'While the maintenance mode is active, data tracking is disabled.';
         }
 
         $page = file_get_contents(PIWIK_INCLUDE_PATH . '/plugins/Morpheus/templates/maintenance.tpl');
@@ -502,7 +549,7 @@ class FrontController extends Singleton
     protected function handleSSLRedirection()
     {
         // Specifically disable for the opt out iframe
-        if (Piwik::getModule() == 'CoreAdminHome' && Piwik::getAction() == 'optOut') {
+        if (Piwik::getModule() == 'CoreAdminHome' && (Piwik::getAction() == 'optOut' || Piwik::getAction() == 'optOutJS')) {
             return;
         }
         // Disable Https for VisitorGenerator
@@ -524,14 +571,16 @@ class FrontController extends Singleton
         $isDashboardReferrer = !empty($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'module=CoreHome&action=index') !== false;
         $isAllWebsitesReferrer = !empty($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'module=MultiSites&action=index') !== false;
 
-        if ($isDashboardReferrer
+        if (
+            $isDashboardReferrer
             && !empty($_POST['token_auth'])
             && Common::getRequestVar('widget', 0, 'int') === 1
         ) {
             Session::close();
         }
 
-        if (($isDashboardReferrer || $isAllWebsitesReferrer)
+        if (
+            ($isDashboardReferrer || $isAllWebsitesReferrer)
             && Common::getRequestVar('viewDataTable', '', 'string') === 'sparkline'
         ) {
             Session::close();
@@ -540,6 +589,11 @@ class FrontController extends Singleton
 
     private function handleProfiler()
     {
+        $profilerEnabled = Config::getInstance()->Debug['enable_php_profiler'] == 1;
+        if (!$profilerEnabled) {
+            return;
+        }
+
         if (!empty($_GET['xhprof'])) {
             $mainRun = $_GET['xhprof'] == 1; // core:archive command sets xhprof=2
             Profiler::setupProfilerXHProf($mainRun);
@@ -647,13 +701,26 @@ class FrontController extends Singleton
 
     private function makeSessionAuthenticator()
     {
+        if (
+            Common::isPhpClimode()
+            && !defined('PIWIK_TEST_MODE')
+        ) { // don't use the session auth during CLI requests
+            return null;
+        }
+
+        if (Common::getRequestVar('token_auth', '', 'string') !== '' && !Common::getRequestVar('force_api_session', 0)) {
+             return null;
+        }
+
         $module = Common::getRequestVar('module', self::DEFAULT_MODULE, 'string');
         $action = Common::getRequestVar('action', false);
 
         // the session must be started before using the session authenticator,
         // so we do it here, if this is not an API request.
-        if (SettingsPiwik::isPiwikInstalled()
+        if (
+            SettingsPiwik::isMatomoInstalled()
             && ($module !== 'API' || ($action && $action !== 'index'))
+            && !($module === 'CoreAdminHome' && $action === 'optOutJS')
         ) {
             /**
              * @ignore
@@ -720,5 +787,45 @@ class FrontController extends Singleton
     {
         $requestId = self::getUniqueRequestId();
         Common::sendHeader("X-Matomo-Request-Id: $requestId");
+    }
+
+    private function isSupportedBrowserCheckNeeded()
+    {
+        if (defined('PIWIK_ENABLE_DISPATCH') && !PIWIK_ENABLE_DISPATCH) {
+            return false;
+        }
+
+        $userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        if ($userAgent === '') {
+            return false;
+        }
+
+        $isTestMode = defined('PIWIK_TEST_MODE') && PIWIK_TEST_MODE;
+        if (!$isTestMode && Common::isPhpCliMode() === true) {
+            return false;
+        }
+
+        if (Piwik::getModule() === 'API' && (empty(Piwik::getAction()) || Piwik::getAction() === 'index' || Piwik::getAction() === 'glossary')) {
+            return false;
+        }
+
+        if (Piwik::getModule() === 'Widgetize') {
+            return true;
+        }
+
+        $generalConfig = Config::getInstance()->General;
+        if ($generalConfig['enable_framed_pages'] == '1' || $generalConfig['enable_framed_settings'] == '1') {
+            return true;
+        }
+
+        if (Common::getRequestVar('token_auth', '', 'string') !== '') {
+            return true;
+        }
+
+        if (Piwik::isUserIsAnonymous()) {
+            return true;
+        }
+
+        return false;
     }
 }

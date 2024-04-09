@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -44,7 +44,8 @@ class Json extends Renderer
             }
 
             foreach ($array as $key => $tab) {
-                if ($tab instanceof DataTable\Map
+                if (
+                    $tab instanceof DataTable\Map
                     || $tab instanceof DataTable
                     || $tab instanceof DataTable\Simple) {
                     $array[$key] = $this->convertDataTableToArray($tab);
@@ -76,7 +77,8 @@ class Json extends Renderer
         // silence "Warning: json_encode(): Invalid UTF-8 sequence in argument"
         $str = @json_encode($array);
 
-        if ($str === false
+        if (
+            $str === false
             && json_last_error() === JSON_ERROR_UTF8
             && $this->canMakeArrayUtf8()) {
             $array = $this->makeArrayUtf8($array);
@@ -107,18 +109,6 @@ class Json extends Renderer
     public static function sendHeaderJSON()
     {
         Common::sendHeader('Content-Type: application/json; charset=utf-8');
-    }
-
-    private function convertDataTableToArray($table)
-    {
-        $renderer = new Php();
-        $renderer->setTable($table);
-        $renderer->setRenderSubTables($this->isRenderSubtables());
-        $renderer->setSerialize(false);
-        $renderer->setHideIdSubDatableFromResponse($this->hideIdSubDatatable);
-        $array = $renderer->flatRender();
-
-        return $array;
     }
 
     private function convertDataTableColumnMetadataValues(&$table)

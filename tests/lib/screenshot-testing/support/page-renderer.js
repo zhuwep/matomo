@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * PageRenderer class for screenshot tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -14,7 +14,7 @@ const { EventEmitter } = require('events');
 const parseUrl = urlModule.parse,
     formatUrl = urlModule.format;
 
-const AJAX_IDLE_THRESHOLD = 500; // same as networkIdle event
+const AJAX_IDLE_THRESHOLD = 750; // same as networkIdle event
 const VERBOSE = false;
 const PAGE_METHODS_TO_PROXY = [
     '$',
@@ -40,6 +40,8 @@ const PAGE_METHODS_TO_PROXY = [
     'hover',
     'mainFrame',
     'metrics',
+    'on',
+    'once',
     'queryObjects',
     'reload',
     'screenshot',
@@ -49,16 +51,16 @@ const PAGE_METHODS_TO_PROXY = [
     'setContent',
     'setExtraHTTPHeaders',
     'setUserAgent',
+    'setCookie',
     'tap',
     'target',
     'title',
-    'type',
     'url',
     'viewport',
-    'waitFor',
     'waitForFunction',
     'waitForNavigation',
     'waitForSelector',
+    'waitForTimeout',
     'waitForXPath',
 ];
 
@@ -75,8 +77,9 @@ const AUTO_WAIT_METHODS = {// TODO: remove this to keep it consistent?
     'reload': true,
 };
 
-var PageRenderer = function (baseUrl, page) {
+var PageRenderer = function (baseUrl, page, originalUserAgent) {
     this.webpage = page;
+    this.originalUserAgent = originalUserAgent;
 
     this.selectorMarkerClass = 0;
     this.pageLogs = [];
@@ -110,6 +113,26 @@ PageRenderer.prototype._reset = function () {
     });
 };
 
+/**
+ * For BC only. Puppeteer drop support for waitFor function in Version 10
+ * @param selectorOrTimeoutOrFunction
+ */
+PageRenderer.prototype.waitFor = function (selectorOrTimeoutOrFunction) {
+    console.log('Using page.waitFor is deprecated, please use one of this instead: waitForSelector, waitForFunction, waitForTimeout');
+    if (typeof selectorOrTimeoutOrFunction === 'function') {
+        return this.webpage.waitForFunction(selectorOrTimeoutOrFunction)
+    } else if (typeof selectorOrTimeoutOrFunction === 'number') {
+        return this.webpage.waitForTimeout(selectorOrTimeoutOrFunction)
+    } else if (typeof selectorOrTimeoutOrFunction === 'string') {
+        return this.webpage.waitForSelector(selectorOrTimeoutOrFunction)
+    }
+}
+
+PageRenderer.prototype.type = async function (...args) {
+  await this.webpage.type(...args);
+  await this.waitForTimeout(50); // puppeteer types faster than vue can update the model state
+};
+
 PageRenderer.prototype.isVisible = function (selector) {
     return this.webpage.evaluate(() => {
         return jQuery(selector).is(':visible');
@@ -121,11 +144,11 @@ PageRenderer.prototype.jQuery = async function (selector, options = {}) {
 
     ++this.selectorMarkerClass;
 
-    await this.waitFor(() => !! window.jQuery);
+    await this.waitForFunction(() => !! window.jQuery);
 
     if (options.waitFor) {
         try {
-            await this.waitFor((selector) => {
+            await this.waitForFunction((selector) => {
                 return !!jQuery(selector).length;
             }, {}, selector);
         } catch (err) {
@@ -142,7 +165,7 @@ PageRenderer.prototype.jQuery = async function (selector, options = {}) {
 };
 
 PageRenderer.prototype.screenshotSelector = async function (selector) {
-    await this.waitFor(() => !! window.$);
+    await this.waitForFunction(() => !! window.$, { timeout: 60000 });
 
     const result = await this.webpage.evaluate(function (selector) {
         window.jQuery('html').addClass('uiTest');
@@ -231,7 +254,7 @@ PAGE_METHODS_TO_PROXY.forEach(function (methodName) {
     PageRenderer.prototype[methodName] = function (...args) {
         if (methodName === 'goto') {
             let url = args[0];
-            if (url.indexOf("://") === -1) {
+            if (url.indexOf("://") === -1 && url !== 'about:blank') {
                 url = this.baseUrl + url;
             }
             args[0] = url;
@@ -250,7 +273,7 @@ PAGE_METHODS_TO_PROXY.forEach(function (methodName) {
         let result;
         if (methodName === 'screenshot') {
             // change viewport to entire page before screenshot
-            result = this.webpage.waitFor(() => !! document.documentElement)
+            result = this.webpage.waitForFunction(() => !! document.documentElement)
                 .then(() => {
                     return this.webpage.evaluate(() => JSON.stringify({
                         width: document.documentElement.scrollWidth,
@@ -280,6 +303,47 @@ PageRenderer.prototype.waitForNetworkIdle = async function () {
 
     while (this.activeRequestCount > 0) {
         await new Promise(resolve => setTimeout(resolve, AJAX_IDLE_THRESHOLD));
+    }
+
+    await this.waitForLazyImages();
+
+    // wait for any queued vue logic
+    await this.webpage.evaluate(function () {
+        if (window.Vue) {
+          return window.Vue.nextTick(function () {
+              // wait
+          });
+        }
+    });
+
+    // if the visitor map is shown trigger a window resize, to ensure map always has the same height/width
+    await this.webpage.evaluate(function () {
+        if (window.jQuery && window.jQuery('.UserCountryMap_map').length) {
+            window.jQuery(window).trigger('resize');
+        }
+    });
+};
+
+PageRenderer.prototype.waitForLazyImages = async function () {
+    // remove loading attribute from images
+    const hasImages = await this.webpage.evaluate(function(){
+        if (!window.jQuery) {
+            return false; // skip if no jquery is available
+        }
+
+        var $ = window.jQuery;
+
+        var images = $('img[loading]');
+        if (images.length > 0) {
+            images.removeAttr('loading');
+            return true;
+        }
+        return false;
+    });
+
+    if (hasImages) {
+        await this.webpage.waitForTimeout(200); // wait for the browser to request the images
+        await this.waitForNetworkIdle(); // wait till all requests are finished
     }
 };
 
@@ -382,13 +446,29 @@ PageRenderer.prototype._setupWebpageEvents = function () {
     });
 
     // TODO: self.aborted?
-    this.webpage.on('requestfailed', (request) => {
+    this.webpage.on('requestfailed', async (request) => {
         --this.activeRequestCount;
 
+        const failure = request.failure();
+        const response = request.response();
+        const errorMessage = failure ? failure.errorText : 'Unknown error';
+
         if (!VERBOSE) {
-            const failure = request.failure();
-            const errorMessage = failure ? failure.errorText : 'Unknown error';
             this._logMessage('Unable to load resource (URL:' + request.url() + '): ' + errorMessage);
+        }
+
+        var type = '';
+        if (type = request.url().match(/action=get(Css|CoreJs|NonCoreJs|UmdJs)/)) {
+            if (errorMessage === 'net::ERR_ABORTED' && (!response || response.status() !== 500)) {
+                console.log(type[1]+' request aborted.');
+            } else if (request.url().indexOf('&reload=') === -1) {
+                console.log('Loading '+type[1]+' failed (' + errorMessage + ')... Try adding it with another tag.');
+                var method = type[1] == 'Css' ? 'addStyleTag' : 'addScriptTag';
+                await this.webpage[method]({url: request.url() + '&reload=' + Date.now()}); // add another get parameter to ensure browser doesn't use cache
+                await this.waitForNetworkIdle(); // wait for request to finish before continuing with tests
+            } else {
+                console.log('Reloading '+type[1]+' failed (' + errorMessage + ').');
+            }
         }
     });
 
@@ -397,9 +477,36 @@ PageRenderer.prototype._setupWebpageEvents = function () {
 
         const response = request.response();
         if (VERBOSE || (response.status() >= 400 && this._isUrlThatWeCareAbout(request.url()))) {
-            const body = await response.buffer();
-            const message = 'Response (size "' + body.length + '", status "' + response.status() + '"): ' + request.url() + "\n" + body.toString();
+            let bodyLength = 0;
+            let bodyContent = '';
+            try {
+                const body = await response.buffer();
+                bodyLength = body.length;
+                bodyContent = body.toString();
+            } catch (e) {
+            }
+            const message = 'Response (size "' + bodyLength + '", status "' + response.status() + '"): ' + request.url() + "\n" + bodyContent.substring(0, 2000);
             this._logMessage(message);
+        }
+
+        // if response of css or js request does not start with /*, we assume it had an error and try to load it again
+        // Note: We can't do that in requestfailed only, as the response code might be 200 even if it throws an exception
+        var type = '';
+        if (type = request.url().match(/action=get(Css|CoreJs|NonCoreJs)/)) {
+            var body = await response.buffer();
+            if (body.toString().substring(0, 2) === '/*') {
+                return;
+            }
+            if (request.url().indexOf('&reload=') === -1) {
+                console.log('Loading '+type[1]+' failed... Try adding it with another tag.');
+                var method = type[1] == 'Css' ? 'addStyleTag' : 'addScriptTag';
+                await this.waitForNetworkIdle(); // wait for other requests to finish before trying to reload
+                await this.webpage[method]({url: request.url() + '&reload=' + Date.now()}); // add another get parameter to ensure browser doesn't use cache
+                await this.webpage.waitForTimeout(1000);
+            } else {
+                console.log('Reloading '+type[1]+' failed.');
+            }
+            console.log('Response (size "' + body.length + '", status "' + response.status() + ', headers "' + JSON.stringify(response.headers()) + '"): ' + request.url() + "\n" + body.toString());
         }
     });
 
@@ -409,8 +516,11 @@ PageRenderer.prototype._setupWebpageEvents = function () {
                 return arg.stack || arg.message;
             }
             return arg;
-        }, arg)));
-        const message = args.join(' ');
+        }, arg))).catch((e) => {
+          console.log(`Could not print message: ${e.message}`);
+          console.log(consoleMessage.text());
+        });
+        const message = (args || []).join(' ');
         this._logMessage(`Log: ${message}`);
     });
 
@@ -434,6 +544,7 @@ PageRenderer.prototype.getPageLogsString = function(indent) {
 PageRenderer.prototype.getWholeCurrentUrl = function () {
     return this.webpage.evaluate(() => window.location.href);
 };
+
 
 
 exports.PageRenderer = PageRenderer;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -22,7 +22,7 @@ class SharedSiteIdsTest extends IntegrationTestCase
      */
     private $sharedSiteIds;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -34,7 +34,7 @@ class SharedSiteIdsTest extends IntegrationTestCase
         $this->sharedSiteIds = $this->makeSharedSiteIds(array(1,2,5,9));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         if (!SharedSiteIds::isSupported()) {
             return;
@@ -104,7 +104,7 @@ class SharedSiteIdsTest extends IntegrationTestCase
         $this->assertEquals(2, $this->sharedSiteIds->getNextSiteId());
 
         // we fake to reset the sharedSiteIds by another process
-        $this->sharedSiteIds->setSiteIdsToArchive(array(1,2,5,9));
+        $this->sharedSiteIds->setQueueWasReset();
 
         // it detects that sites must have been processed by now
         $this->assertNull($this->sharedSiteIds->getNextSiteId());
@@ -152,5 +152,25 @@ class SharedSiteIdsTest extends IntegrationTestCase
         $this->assertNull($this->sharedSiteIds->getNextSiteId());
         $this->assertEquals(4, $this->sharedSiteIds->getNumProcessedWebsites());
         $this->assertEquals(array(), $this->sharedSiteIds->getAllSiteIdsToArchive());
+    }
+
+    public function test_usingMultipleSharedSiteIdsDetectsFinishedAlready()
+    {
+        $this->sharedSiteIds = $this->makeSharedSiteIds(array(1), 'test');
+
+        // should ignore his queue and help processing the existing queue
+        $this->assertEquals(1, $this->sharedSiteIds->getNumSites());
+
+        // process the first and only site, the queue should be empty afterwards and will be reset next time
+        $this->assertEquals(1, $this->sharedSiteIds->getNextSiteId());
+
+        $second = $this->makeSharedSiteIds(array(1), 'test');
+        $this->assertEquals(1, $second->getNumSites()); // now the second will init the sites back
+
+        // should return null as it already processed site 1 before meaning there must have been a "reset" of sites
+        // within one archive run we do not want to process same siteID twice as we prefer the archiver to exit and then
+        // the next archiver works on that site again. Otherwise there could be race conditions where a core:archive
+        // process basically never ends
+        $this->assertNull($this->sharedSiteIds->getNextSiteId());
     }
 }

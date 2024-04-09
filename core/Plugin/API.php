@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +11,10 @@
 namespace Piwik\Plugin;
 
 use Piwik\Container\StaticContainer;
-use Psr\Log\LoggerInterface;
+use Piwik\Piwik;
+use Piwik\Plugins\Login\PasswordVerifier;
+use Piwik\Log\LoggerInterface;
+use Exception;
 
 /**
  * The base class of all API singletons.
@@ -44,6 +48,8 @@ abstract class API
 {
     private static $instances;
 
+    protected $autoSanitizeInputParams = true;
+
     /**
      * Returns the singleton instance for the derived class. If the singleton instance
      * has not been created, this method will create it.
@@ -63,11 +69,11 @@ abstract class API
                 self::$instances[$class] = $container->get($class);
             } else {
                 /** @var LoggerInterface $logger */
-                $logger = $container->get('Psr\Log\LoggerInterface');
+                $logger = $container->get(LoggerInterface::class);
 
                 // BC with API defining a protected constructor
-                $logger->notice('The API class {class} defines a protected constructor which is deprecated, make the constructor public instead', array('class' => $class));
-                self::$instances[$class] = new $class;
+                $logger->notice('The API class {class} defines a protected constructor which is deprecated, make the constructor public instead', ['class' => $class]);
+                self::$instances[$class] = new $class();
             }
         }
 
@@ -77,7 +83,7 @@ abstract class API
     /**
      * Used in tests only
      * @ignore
-     * @deprecated
+     * @internal
      */
     public static function unsetInstance()
     {
@@ -88,21 +94,63 @@ abstract class API
     /**
      * Used in tests only
      * @ignore
-     * @deprecated
+     * @internal
      */
     public static function unsetAllInstances()
     {
-        self::$instances = array();
+        self::$instances = [];
     }
 
     /**
      * Sets the singleton instance. For testing purposes.
      * @ignore
-     * @deprecated
+     * @internal
      */
     public static function setSingletonInstance($instance)
     {
         $class = get_called_class();
         self::$instances[$class] = $instance;
+    }
+
+    /**
+     * Verifies if the given password matches the current users password
+     *
+     * @param $passwordConfirmation
+     * @throws Exception
+     */
+    protected function confirmCurrentUserPassword($passwordConfirmation)
+    {
+        $loginCurrentUser = Piwik::getCurrentUserLogin();
+
+        if (!Piwik::doesUserRequirePasswordConfirmation($loginCurrentUser)) {
+            return; // password confirmation disabled for user
+        }
+
+        if (empty($passwordConfirmation)) {
+            throw new Exception(Piwik::translate('UsersManager_ConfirmWithPassword'));
+        }
+
+        try {
+            if (
+                !StaticContainer::get(PasswordVerifier::class)->isPasswordCorrect(
+                    $loginCurrentUser,
+                    $passwordConfirmation
+                )
+            ) {
+                throw new Exception(Piwik::translate('UsersManager_CurrentPasswordNotCorrect'));
+            }
+        } catch (Exception $e) {
+            // in case of any error (e.g. the provided password is too weak)
+            throw new Exception(Piwik::translate('UsersManager_CurrentPasswordNotCorrect'));
+        }
+    }
+
+    /**
+     * @return bool
+     * @internal
+     */
+    public function usesAutoSanitizeInputParams()
+    {
+        return $this->autoSanitizeInputParams;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -31,11 +31,13 @@ class BatchInsert
      */
     public static function tableInsertBatchIterate($tableName, $fields, $values, $ignoreWhenDuplicate = true)
     {
+        $tableName = preg_replace('/[^a-zA-Z\d_-]/', '', $tableName);
         $fieldList = '(' . join(',', $fields) . ')';
         $ignore    = $ignoreWhenDuplicate ? 'IGNORE' : '';
 
         foreach ($values as $row) {
-            $query = "INSERT $ignore INTO " . $tableName . "
+            $row = array_values($row);
+            $query = "INSERT $ignore INTO `" . $tableName . "`
 					  $fieldList
 					  VALUES (" . Common::getSqlStringFieldsArray($row) . ")";
             Db::query($query, $row);
@@ -83,7 +85,8 @@ class BatchInsert
     {
         $loadDataInfileEnabled = Config::getInstance()->General['enable_load_data_infile'];
 
-        if ($loadDataInfileEnabled
+        if (
+            $loadDataInfileEnabled
             && Db::get()->hasBulkLoader()) {
 
             $path = self::getBestPathForLoadData();
@@ -101,7 +104,7 @@ class BatchInsert
                     'escape'           => '\\\\', // chr(92)
                     'escapespecial_cb' => function ($str) {
                             return str_replace(array(chr(92), chr(34)), array(chr(92) . chr(92), chr(92) . chr(34)), $str);
-                        },
+                    },
                     'eol'              => "\r\n",
                     'null'             => 'NULL',
                     'charset'          => $charset
@@ -221,10 +224,9 @@ class BatchInsert
          * @see http://bugs.php.net/bug.php?id=54158
          */
         $openBaseDir = ini_get('open_basedir');
-        $isUsingNonBuggyMysqlnd = function_exists('mysqli_get_client_stats') && version_compare(PHP_VERSION, '5.6.17', '>=');
         $safeMode = ini_get('safe_mode');
 
-        if (($isUsingNonBuggyMysqlnd || empty($openBaseDir)) && empty($safeMode)) {
+        if ((function_exists('mysqli_get_client_stats') || empty($openBaseDir)) && empty($safeMode)) {
             // php 5.x - LOAD DATA LOCAL INFILE only used if open_basedir is not set (or we're using a non-buggy version of mysqlnd)
             //           and if safe mode is not enabled
             $keywords[] = 'LOCAL ';
@@ -244,6 +246,9 @@ class BatchInsert
             } catch (Exception $e) {
                 $code = $e->getCode();
                 $message = $e->getMessage() . ($code ? "[$code]" : '');
+                if (\Piwik_ShouldPrintBackTraceWithMessage()) {
+                    $message .= "\n" . $e->getTraceAsString();
+                }
                 $exceptions[] = "\n  Try #" . (count($exceptions) + 1) . ': ' . $queryStart . ": " . $message;
             }
         }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,6 @@ use Piwik\Tracker;
 
 class ScheduledTasksRunner
 {
-
     public function shouldRun(Tracker $tracker)
     {
         if (Common::isPhpCliMode()) {
@@ -43,12 +42,13 @@ class ScheduledTasksRunner
         // this could be too aggressive minimum interval (some hours would be skipped in case of low traffic)
         $minimumInterval = TrackerConfig::getConfigValue('scheduled_tasks_min_interval');
 
-        // If the user disabled browser archiving, he has already setup a cron
+        // If the user disabled browser archiving, they have already setup a cron
         // To avoid parallel requests triggering the Scheduled Tasks,
         // Get last time tasks started executing
         $cache = Cache::getCacheGeneral();
 
-        if ($minimumInterval <= 0
+        if (
+            $minimumInterval <= 0
             || empty($cache['isBrowserTriggerEnabled'])
         ) {
             Common::printDebug("-> Scheduled tasks not running in Tracker: Browser archiving is disabled.");
@@ -57,7 +57,8 @@ class ScheduledTasksRunner
 
         $nextRunTime = $cache['lastTrackerCronRun'] + $minimumInterval;
 
-        if ((defined('DEBUG_FORCE_SCHEDULED_TASKS') && DEBUG_FORCE_SCHEDULED_TASKS)
+        if (
+            (defined('DEBUG_FORCE_SCHEDULED_TASKS') && DEBUG_FORCE_SCHEDULED_TASKS)
             || $cache['lastTrackerCronRun'] === false
             || $nextRunTime < $now
         ) {

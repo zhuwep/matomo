@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,6 @@ use Piwik\Plugins\UserCountry\LocationProvider;
 use Piwik\Plugins\GeoIp2\LocationProvider\GeoIp2;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
-use Piwik\Translate;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -31,7 +30,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
 
     protected static $idSite;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -49,7 +48,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
         $t->setVisitorId('fed33392d3a48ab2');
         $t->setForceVisitDateTime('2017-05-10 12:36:00');
         $t->setTokenAuth(Fixture::getTokenAuth());
-        $t->setIp(rand(1, 256).'.'.rand(1, 256).'.'.rand(1, 256).'.'.rand(1, 256));
+        $t->setIp(rand(1, 256) . '.' . rand(1, 256) . '.' . rand(1, 256) . '.' . rand(1, 256));
         $t->setUserId('userid.email@example.org');
         $t->setCountry($country);
         $t->setRegion($region);
@@ -69,7 +68,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
         $t->setVisitorId('fed33392d3a48ab2');
         $t->setForceVisitDateTime('2017-05-15 12:36:00');
         $t->setTokenAuth(Fixture::getTokenAuth());
-        $t->setIp(rand(1, 256).'.'.rand(1, 256).'.'.rand(1, 256).'.'.rand(1, 256));
+        $t->setIp(rand(1, 256) . '.' . rand(1, 256) . '.' . rand(1, 256) . '.' . rand(1, 256));
         $t->setUserId('userid.email@example.org');
         $t->setCountry($country);
         $t->setRegion($region);
@@ -82,7 +81,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
         Fixture::checkResponse($t->doTrackPageView('It\'s pitch black...'));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         parent::tearDown();
         Option::delete(ConvertRegionCodesToIso::OPTION_NAME);
@@ -99,7 +98,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
 
     public function testExecute_ShouldConvertRegionCodes()
     {
-        Option::set(GeoIp2::SWITCH_TO_ISO_REGIONS_OPTION_NAME, mktime(0,0,0,5,12,2017));
+        Option::set(GeoIp2::SWITCH_TO_ISO_REGIONS_OPTION_NAME, mktime(0, 0, 0, 5, 12, 2017));
 
         self::trackVisit('gr', '14'); // should become A
         self::trackVisit('ir', '03'); // should become 08
@@ -116,7 +115,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
 
         $result = $this->executeCommand();
 
-        $this->assertContains('All region codes converted', $result);
+        self::assertStringContainsString('All region codes converted', $result);
 
         $queryParams = array(
             'idSite'  => self::$idSite,
@@ -126,7 +125,7 @@ class ConvertRegionCodesToIsoTest extends IntegrationTestCase
         );
 
         // we need to manually reload the translations since they get reset for some reason in IntegrationTestCase::tearDown();
-        Translate::loadAllTranslations();
+        Fixture::loadAllTranslations();
 
         $this->assertApiResponseEqualsExpected("UserCountry.getRegion", $queryParams);
         $this->assertApiResponseEqualsExpected("UserCountry.getCountry", $queryParams);

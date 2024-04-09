@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,7 @@
  */
 namespace Piwik\Plugins\CoreAdminHome;
 
-use DI\NotFoundException;
+use Piwik\Exception\DI\NotFoundException;
 use Piwik\Config;
 use Piwik\Container\StaticContainer;
 use Piwik\Filesystem;
@@ -50,7 +50,7 @@ class CustomLogo
 
     public function isEnabled()
     {
-        return (bool) Option::get('branding_use_custom_logo');
+        return $this->isCustomLogoFeatureEnabled() && Option::get('branding_use_custom_logo');
     }
 
     public function enable()
@@ -108,7 +108,7 @@ class CustomLogo
         $directoryWritable = is_writable($directoryWritingTo);
         $logoFilesWriteable = is_writeable(PIWIK_DOCUMENT_ROOT . '/' . $pathUserLogo)
             && is_writeable(PIWIK_DOCUMENT_ROOT . '/' . $this->getPathUserSvgLogo())
-            && is_writeable(PIWIK_DOCUMENT_ROOT . '/' . $this->getPathUserLogoSmall());;
+            && is_writeable(PIWIK_DOCUMENT_ROOT . '/' . $this->getPathUserLogoSmall());
 
         $isCustomLogoWritable = ($logoFilesWriteable || $directoryWritable) && $this->isFileUploadEnabled();
 
@@ -253,7 +253,8 @@ class CustomLogo
 
     private function uploadImage($uploadFieldName, $targetHeight, $userPath)
     {
-        if (empty($_FILES[$uploadFieldName])
+        if (
+            empty($_FILES[$uploadFieldName])
             || !empty($_FILES[$uploadFieldName]['error'])
         ) {
             return false;
@@ -273,13 +274,13 @@ class CustomLogo
                 $image = @imagecreatefrompng($file);
                 break;
             case 'image/gif':
-                $image = @imagecreatefromgif ($file);
+                $image = @imagecreatefromgif($file);
                 break;
             default:
                 return false;
         }
 
-        if (!is_resource($image)) {
+        if (!is_resource($image) && !($image instanceof \GdImage)) {
             return false;
         }
 
@@ -308,6 +309,4 @@ class CustomLogo
     {
         return file_exists(Filesystem::getPathToPiwikRoot() . '/' . $relativePath);
     }
-
 }
-

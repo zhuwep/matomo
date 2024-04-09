@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,15 +10,11 @@ namespace Piwik\Plugins\ExampleUI\Reports;
 
 use Piwik\Common;
 use Piwik\Piwik;
-use Piwik\Plugin\Report;
 use Piwik\Plugin\ViewDataTable;
 
-use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Bar;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution;
-use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Pie;
 use Piwik\Plugins\CoreVisualizations\Visualizations\Sparklines;
 use Piwik\Report\ReportWidgetFactory;
-use Piwik\View;
 use Piwik\Widget\WidgetsList;
 
 /**
@@ -33,6 +29,7 @@ class GetTemperaturesEvolution extends Base
         parent::init();
 
         $this->name = Piwik::translate('ExampleUI_GetTemperaturesEvolution');
+        $this->documentation = 'This is an example evolution report';
         $this->order = 111;
     }
 
@@ -51,7 +48,6 @@ class GetTemperaturesEvolution extends Base
                     ->forceViewDataTable(Evolution::ID)
                     ->setParameters(array('columns' => array('server1', 'server2')))
         );
-
     }
 
     /**
@@ -69,7 +65,6 @@ class GetTemperaturesEvolution extends Base
             $view->config->addSparklineMetric(array('server2'));
             $view->config->addTranslations(array('server1' => 'Evolution of temperature for server piwik.org'));
             $view->config->addTranslations(array('server2' => 'Evolution of temperature for server dev.piwik.org'));
-
         } elseif ($view->isViewDataTableId(Evolution::ID)) {
 
             /** @var Evolution $view */
@@ -91,5 +86,4 @@ class GetTemperaturesEvolution extends Base
             $view->config->show_goals = false;
         }
     }
-
 }

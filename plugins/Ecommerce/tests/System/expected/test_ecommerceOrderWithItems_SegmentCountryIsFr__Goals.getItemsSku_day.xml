@@ -2,20 +2,22 @@
 <result>
 	<row>
 		<label>SKU2</label>
-		<nb_uniq_visitors>1</nb_uniq_visitors>
 		<nb_visits>1</nb_visits>
+		<nb_uniq_visitors>1</nb_uniq_visitors>
 		<nb_actions>1</nb_actions>
 		<avg_price>1111.11</avg_price>
 		<avg_quantity>0</avg_quantity>
 		<conversion_rate>0%</conversion_rate>
+		<segment>productSku==SKU2</segment>
 	</row>
 	<row>
 		<label>SKU VERY nice indeed</label>
-		<nb_uniq_visitors>1</nb_uniq_visitors>
 		<nb_visits>1</nb_visits>
+		<nb_uniq_visitors>1</nb_uniq_visitors>
 		<nb_actions>3</nb_actions>
 		<avg_price>777</avg_price>
 		<avg_quantity>0</avg_quantity>
 		<conversion_rate>0%</conversion_rate>
+		<segment>productSku==SKU+VERY+nice+indeed</segment>
 	</row>
 </result>

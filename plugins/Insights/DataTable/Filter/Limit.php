@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -40,14 +40,12 @@ class Limit extends BaseFilter
                 if ($countIncreaser > $this->limitPositive && $this->limitPositive > -1) {
                     $table->deleteRow($key);
                 }
-
             } else {
                 $countDecreaser++;
 
                 if ($countDecreaser > $this->limitNegative && $this->limitNegative > -1) {
                     $table->deleteRow($key);
                 }
-
             }
         }
     }

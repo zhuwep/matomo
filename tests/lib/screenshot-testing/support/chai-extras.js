@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * chai assertion extensions
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -92,7 +92,11 @@ module.exports = function makeChaiImageAssert(comparisonCommand = 'compare') {
 
                     // copy to diff dir for ui tests viewer (we don't generate diffs w/ compare since it slows the tests a bit)
                     if (!fs.existsSync(diffPath)) {
-                        fs.linkSync(expectedPath, diffPath);
+                        try {
+                          fs.linkSync(expectedPath, diffPath);
+                        } catch (e) {
+                          console.log(`Failed to copy ${expectedPath} to ${diffPath}`);
+                        }
                     }
                 }
 
@@ -127,15 +131,11 @@ module.exports = function makeChaiImageAssert(comparisonCommand = 'compare') {
                 `the '${comparisonCommand}' command was not found, ('compare' is provided by imagemagick)`);
 
             const allOutput = result.stdout.toString() + result.stderr.toString();
-            const pixelError = parseInt(allOutput);
+            const pixelError = (new Number(allOutput)).valueOf();
 
             chai.assert(!isNaN(pixelError),
                 `the '${comparisonCommand}' command output could not be parsed, should be` +
                 ` an integer, got: ${allOutput.replace(/\s+$/g, '')}`);
-
-            if (result.status !== 0) {
-                return false;
-            }
 
             if (pixelError === 0) {
                 return true;
@@ -153,6 +153,9 @@ module.exports = function makeChaiImageAssert(comparisonCommand = 'compare') {
 
             // allow a 10 pixel difference only
             chai.assert(pixelError <= 10, `images differ in ${pixelError} pixels (command output: ${allOutput.replace(/\s+$/g, '')})`);
+
+            // if pixel error passes, but status is unexpected for some reason
+            chai.assert(result.status === 0 || result.status === 1, `the '${comparisonCommand}' command returned a unexpected status: ${result.status}. Output was ${allOutput.replace(/\s+$/g, '')}`);
 
             return true;
         }
@@ -238,7 +241,7 @@ function assumeFileIsImageIfNotSpecified(filename) {
 
 function endsWith(string, needle)
 {
-    return string.substr(-1 * needle.length, needle.length) === needle;
+    return needle.length === 0 || string.slice(-needle.length) === needle;
 }
 
 // other automatically run assertions

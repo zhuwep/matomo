@@ -2,21 +2,21 @@
 <result>
 	<row>
 		<label>Unknown</label>
-		<nb_visits>33</nb_visits>
+		<nb_visits>32</nb_visits>
 		<nb_actions>40</nb_actions>
 		<max_actions>3</max_actions>
-		<sum_visit_length>553</sum_visit_length>
+		<sum_visit_length>551</sum_visit_length>
 		<bounce_count>27</bounce_count>
-		<nb_visits_converted>29</nb_visits_converted>
+		<nb_visits_converted>28</nb_visits_converted>
 		<goals>
 			<row idgoal='1'>
-				<nb_conversions>29</nb_conversions>
-				<nb_visits_converted>29</nb_visits_converted>
-				<revenue>145</revenue>
+				<nb_conversions>28</nb_conversions>
+				<nb_visits_converted>28</nb_visits_converted>
+				<revenue>140</revenue>
 			</row>
 		</goals>
-		<nb_conversions>29</nb_conversions>
-		<revenue>145</revenue>
+		<nb_conversions>28</nb_conversions>
+		<revenue>140</revenue>
 		<sum_daily_nb_uniq_visitors>31</sum_daily_nb_uniq_visitors>
 		<sum_daily_nb_users>3</sum_daily_nb_users>
 		<city_name>Unknown</city_name>
@@ -144,7 +144,7 @@
 		<logo>plugins/Morpheus/icons/dist/flags/us.png</logo>
 	</row>
 	<row>
-		<label>Seoul, Seoul Teugbyeolsi, South Korea</label>
+		<label>Seoul, Seoul-teukbyeolsi, South Korea</label>
 		<nb_visits>1</nb_visits>
 		<nb_actions>1</nb_actions>
 		<max_actions>1</max_actions>
@@ -169,7 +169,7 @@
 		<region>11</region>
 		<country>kr</country>
 		<country_name>South Korea</country_name>
-		<region_name>Seoul Teugbyeolsi</region_name>
+		<region_name>Seoul-teukbyeolsi</region_name>
 		<logo>plugins/Morpheus/icons/dist/flags/kr.png</logo>
 	</row>
 </result>

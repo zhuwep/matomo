@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@
 namespace Piwik\DataAccess;
 
 use Piwik\Common;
+use Piwik\Config as PiwikConfig;
 use Piwik\Container\StaticContainer;
 use Piwik\Db;
 use Piwik\Plugin\Dimension\DimensionMetadataProvider;
@@ -144,22 +145,6 @@ class RawLogDao
     }
 
     /**
-     * Deletes conversions for the supplied visit IDs from log_conversion. This method does not cascade, so
-     * conversion items will not be deleted.
-     *
-     * @param int[] $visitIds
-     * @return int The number of deleted rows.
-     */
-    public function deleteFromLogTable($tableName, $visitIds)
-    {
-        $sql = "DELETE FROM `" . Common::prefixTable($tableName) . "` WHERE idvisit IN "
-             . $this->getInFieldExpressionWithInts($visitIds);
-
-        $statement = Db::query($sql);
-        return $statement->rowCount();
-    }
-
-    /**
      * Deletes conversion items for the supplied visit IDs from log_conversion_item.
      *
      * @param int[] $visitIds
@@ -191,14 +176,17 @@ class RawLogDao
         // get current max ID in log tables w/ idaction references.
         $maxIds = $this->getMaxIdsInLogTables();
 
+        // get max rows to analyze
+        $max_rows_per_query = PiwikConfig::getInstance()->Deletelogs['delete_logs_unused_actions_max_rows_per_query'];
+
         $this->createTempTableForStoringUsedActions();
 
         // do large insert (inserting everything before maxIds) w/o locking tables...
-        $this->insertActionsToKeep($maxIds, $deleteOlderThanMax = true);
+        $this->insertActionsToKeep($maxIds, $deleteOlderThanMax = true, $max_rows_per_query);
 
         // ... then do small insert w/ locked tables to minimize the amount of time tables are locked.
         $this->lockLogTables();
-        $this->insertActionsToKeep($maxIds, $deleteOlderThanMax = false);
+        $this->insertActionsToKeep($maxIds, $deleteOlderThanMax = false, $max_rows_per_query);
 
         // delete before unlocking tables so there's no chance a new log row that references an
         // unused action will be inserted.
@@ -208,9 +196,10 @@ class RawLogDao
 
         $this->dropTempTableForStoringUsedActions();
     }
-    
+
     /**
-     * Returns the list of the website IDs that received some visits between the specified timestamp.
+     * Returns the list of the website IDs that received some visits between the specified timestamp. The
+     * start date and the end date is included in the time frame.
      *
      * @param string $fromDateTime
      * @param string $toDateTime
@@ -221,8 +210,8 @@ class RawLogDao
         $sites = Db::fetchOne("SELECT 1
                 FROM " . Common::prefixTable('log_visit') . "
                 WHERE idsite = ?
-                AND visit_last_action_time > ?
-                AND visit_last_action_time < ?
+                AND visit_last_action_time >= ?
+                AND visit_last_action_time <= ?
                 LIMIT 1", array($idSite, $fromDateTime, $toDateTime));
 
         return (bool) $sites;
@@ -289,7 +278,7 @@ class RawLogDao
 
                 $bind = array_merge($bind, $value);
             } else {
-                $parts[]= "$column $operator ?";
+                $parts[] = "$column $operator ?";
 
                 $bind[] = $value;
             }
@@ -342,7 +331,7 @@ class RawLogDao
     private function createTempTableForStoringUsedActions()
     {
         $sql = "CREATE TEMPORARY TABLE " . Common::prefixTable(self::DELETE_UNUSED_ACTIONS_TEMP_TABLE_NAME) . " (
-					idaction INT(11),
+					idaction INTEGER(10) UNSIGNED NOT NULL,
 					PRIMARY KEY (idaction)
 				)";
         Db::query($sql);
@@ -363,11 +352,11 @@ class RawLogDao
         foreach ($this->dimensionMetadataProvider->getActionReferenceColumnsByTable() as $table => $columns) {
             $idCol = $idColumns[$table];
             // Create select query for requesting ALL needed fields at once
-            $sql = "SELECT " . implode(',' ,$columns) . " FROM " . Common::prefixTable($table) . " WHERE $idCol >= ? AND $idCol < ?";
+            $sql = "SELECT " . implode(',', $columns) . " FROM " . Common::prefixTable($table) . " WHERE $idCol >= ? AND $idCol < ?";
 
             if ($olderThan) {
                // Why start on zero? When running for a couple of months, this will generate about 10000+ queries with zero result. Use the lowest value instead.... saves a LOT of waiting time!
-                $start = (int) Db::fetchOne("SELECT MIN($idCol) FROM " . Common::prefixTable($table));;
+                $start = (int) Db::fetchOne("SELECT MIN($idCol) FROM " . Common::prefixTable($table));
                 $finish = $maxIds[$table];
             } else {
                 $start = $maxIds[$table];
@@ -385,21 +374,21 @@ class RawLogDao
                 $keepValues = [];
                 foreach ($result as $row) {
                      $keepValues = array_merge($keepValues, array_filter(array_values($row), "is_numeric"));
-                     if (count($keepValues) >= 1000) {
-                        $insert = 'INSERT IGNORE INTO ' . $tempTableName .' VALUES (';
+                    if (count($keepValues) >= 1000) {
+                        $insert = 'INSERT IGNORE INTO ' . $tempTableName . ' VALUES (';
                         $insert .= implode('),(', $keepValues);
                         $insert .= ')';
 
                         Db::exec($insert);
                         $keepValues = [];
-                     }
+                    }
                 }
 
-               $insert = 'INSERT IGNORE INTO ' . $tempTableName .' VALUES (';
-               $insert .= implode('),(', $keepValues);
-               $insert .= ')';
+                $insert = 'INSERT IGNORE INTO ' . $tempTableName . ' VALUES (';
+                $insert .= implode('),(', $keepValues);
+                $insert .= ')';
 
-               Db::exec($insert);
+                Db::exec($insert);
             }
         }
     }

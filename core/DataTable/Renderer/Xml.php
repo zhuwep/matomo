@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -36,26 +36,6 @@ class Xml extends Renderer
     }
 
     /**
-     * Converts the given data table to an array
-     *
-     * @param DataTable|DataTable/Map $table  data table to convert
-     * @return array
-     */
-    protected function getArrayFromDataTable($table)
-    {
-        if (is_array($table)) {
-            return $table;
-        }
-
-        $renderer = new Php();
-        $renderer->setRenderSubTables($this->isRenderSubtables());
-        $renderer->setSerialize(false);
-        $renderer->setTable($table);
-        $renderer->setHideIdSubDatableFromResponse($this->hideIdSubDatatable);
-        return $renderer->flatRender();
-    }
-
-    /**
      * Computes the output for the given data table
      *
      * @param DataTable|DataTable/Map $table
@@ -66,7 +46,7 @@ class Xml extends Renderer
      */
     protected function renderTable($table, $returnOnlyDataTableXml = false, $prefixLines = '')
     {
-        $array = $this->getArrayFromDataTable($table);
+        $array = $this->convertDataTableToArray($table);
         if ($table instanceof Map) {
             $out = $this->renderDataTableMap($table, $array, $prefixLines);
 
@@ -180,7 +160,8 @@ class Xml extends Renderer
                 $result .= $prefixLines . $prefix . "\n";
                 $result .= $this->renderArray((array) $value, $prefixLines . "\t");
                 $result .= $prefixLines . $suffix . "\n";
-            } elseif ($value instanceof DataTable
+            } elseif (
+                $value instanceof DataTable
                 || $value instanceof Map
             ) {
                 if ($value->getRowsCount() == 0) {
@@ -188,18 +169,18 @@ class Xml extends Renderer
                 } else {
                     $result .= $prefixLines . $prefix . "\n";
                     if ($value instanceof Map) {
-                        $result .= $this->renderDataTableMap($value, $this->getArrayFromDataTable($value), $prefixLines);
+                        $result .= $this->renderDataTableMap($value, $this->convertDataTableToArray($value), $prefixLines);
                     } elseif ($value instanceof Simple) {
-                        $result .= $this->renderDataTableSimple($this->getArrayFromDataTable($value), $prefixLines);
+                        $result .= $this->renderDataTableSimple($this->convertDataTableToArray($value), $prefixLines);
                     } else {
-                        $result .= $this->renderDataTable($this->getArrayFromDataTable($value), $prefixLines);
+                        $result .= $this->renderDataTable($this->convertDataTableToArray($value), $prefixLines);
                     }
                     $result .= $prefixLines . $suffix . "\n";
                 }
             } else {
                 $xmlValue = self::formatValueXml($value);
 
-                if (strlen($xmlValue) != 0) {
+                if (strlen(strval($xmlValue)) !== 0) {
                     $result .= $prefixLines . $prefix . $xmlValue . $suffix . "\n";
                 } else {
                     $result .= $prefixLines . $emptyNode . "\n";
@@ -371,7 +352,8 @@ class Xml extends Renderer
             }
             $out .= $prefixLine . "\t<row$rowAttribute>";
 
-            if (count($row) === 1
+            if (
+                count($row) === 1
                 && key($row) === 0
             ) {
                 $value = self::formatValueXml(current($row));
@@ -381,7 +363,7 @@ class Xml extends Renderer
                 foreach ($row as $name => $value) {
                     // handle the recursive dataTable case by XML outputting the recursive table
                     if ($value instanceof DataTable) {
-                        $value = $this->getArrayFromDataTable($value);
+                        $value = $this->convertDataTableToArray($value);
                         if ($value instanceof Simple) {
                             $value = "\n" . $this->renderDataTableSimple($value, $prefixLine . "\t\t");
                         } else {
@@ -401,7 +383,7 @@ class Xml extends Renderer
 
                     list($tagStart, $tagEnd) = $this->getTagStartAndEndFor($name, $columnsHaveInvalidChars);
 
-                    if (strlen($value) == 0) {
+                    if (strlen((string) $value) == 0) {
                         $out .= $prefixLine . "\t\t<$tagStart />\n";
                     } else {
                         $out .= $prefixLine . "\t\t<$tagStart>" . $value . "</$tagEnd>\n";
@@ -436,7 +418,7 @@ class Xml extends Renderer
             if (is_string($xmlValue) && strlen($xmlValue) == 0) {
                 $out .= $prefixLine . "\t<$tagStart />\n";
             } else if ($value instanceof DataTable || is_array($value)) {
-                $arrayValue = $this->getArrayFromDataTable($value);
+                $arrayValue = $this->convertDataTableToArray($value);
                 if (!is_array(reset($arrayValue))) {
                     $xmlTable = $this->renderDataTableSimple($arrayValue, $prefixLine . "\t");
                 } else {

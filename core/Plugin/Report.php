@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -82,14 +82,14 @@ class Report
 
     /**
      * The translation key of the category the report belongs to.
-     * @var string
+     * @var string|null
      * @api
      */
     protected $categoryId;
 
     /**
      * The translation key of the subcategory the report belongs to.
-     * @var string
+     * @var string|null
      * @api
      */
     protected $subcategoryId;
@@ -113,6 +113,15 @@ class Report
      */
     protected $processedMetrics = array('nb_actions_per_visit', 'avg_time_on_site', 'bounce_rate', 'conversion_rate');
     // for a little performance improvement we avoid having to call Metrics::getDefaultProcessedMetrics for each report
+
+    /**
+     * The semantic types for all metrics this report displays (including processed metrics).
+     *
+     * If set to null, the defaults from the `Metrics.getDefaultMetricSemanticTypes` event are used.
+     *
+     * @var null|(string|null)[]
+     */
+    protected $metricSemanticTypes = null;
 
     /**
      * Set this property to true in case your report supports goal metrics. In this case, the goal metrics will be
@@ -199,7 +208,22 @@ class Report
     protected $defaultSortOrderDesc = true;
 
     /**
-     * The constructur initializes the module, action and the default metrics. If you want to overwrite any of those
+     * The column that uniquely identifies a row in this report. Normally
+     * this is the 'label' column, but it is sometimes the case that the label column is
+     * not unique. In this case, another column or metadata is used to uniquely identify a row, but
+     * we don't want to display it to the user, perhaps because it is a numeric ID and not a human
+     * readable value.
+     *
+     * This property is used by features like Row Evolution which compares the same row in
+     * multiple instances of a report. Being able to find corresponding rows in reports for other
+     * periods/sites/etc. is required for such features.
+     *
+     * @var string
+     */
+    protected $rowIdentifier = 'label';
+
+    /**
+     * The constructor initializes the module, action and the default metrics. If you want to overwrite any of those
      * values or if you want to do any work during initializing overwrite the method {@link init()}.
      * @ignore
      */
@@ -449,6 +473,39 @@ class Report
     }
 
     /**
+     * Returns the semantic types for metrics this report displays.
+     *
+     * If the semantic type is not defined by the derived Report class, it defaults to
+     * the value returned by {@link Metrics::getDefaultMetricSemanticTypes()} or
+     * {@link Metric::getSemanticType()}. If the semantic type cannot be found this way,
+     * this method tries to deduce it from the metric name, though this process will
+     * not identify the semantic type for most metrics.
+     *
+     * @return string[] maps metric name => semantic type
+     * @api
+     */
+    public function getMetricSemanticTypes(): array
+    {
+        $metricTypes = $this->metricSemanticTypes ?: [];
+
+        $allMetrics = array_merge($this->metrics ?: [], $this->processedMetrics ?: []);
+
+        foreach ($allMetrics as $metric) {
+            $metricName = $metric instanceof Metric ? $metric->getName() : $metric;
+            if (
+                $metricName == 'label'
+                || !empty($metricTypes[$metricName])
+            ) {
+                continue;
+            }
+
+            $metricTypes[$metricName] = $this->deduceMetricTypeFromName($metric);
+        }
+
+        return $metricTypes;
+    }
+
+    /**
      * Returns the array of all metrics displayed by this report.
      *
      * @return array
@@ -496,8 +553,8 @@ class Report
             } elseif ($metric instanceof Metric) {
                 $name = $metric->getName();
                 $metricDocs = $metric->getDocumentation();
-                if (empty($metricDocs)) {
-                    $metricDocs = @$translations[$name];
+                if (empty($metricDocs) && !empty($translations[$name])) {
+                    $metricDocs = $translations[$name];
                 }
 
                 if (!empty($metricDocs)) {
@@ -513,8 +570,8 @@ class Report
             } elseif ($processedMetric instanceof Metric) {
                 $name = $processedMetric->getName();
                 $metricDocs = $processedMetric->getDocumentation();
-                if (empty($metricDocs)) {
-                    $metricDocs = @$translations[$name];
+                if (empty($metricDocs) && !empty($translations[$name])) {
+                    $metricDocs = $translations[$name];
                 }
 
                 if (!empty($metricDocs)) {
@@ -623,6 +680,11 @@ class Report
         $report['metrics']              = $this->getMetrics();
         $report['metricsDocumentation'] = $this->getMetricsDocumentation();
         $report['processedMetrics']     = $this->getProcessedMetrics();
+
+        $report['metricTypes'] = $this->getMetricSemanticTypes();
+        $report['metricTypes'] = array_map(function ($t) {
+            return $t ?: 'unspecified';
+        }, $report['metricTypes']);
 
         if (!empty($this->actionToLoadSubTables)) {
             $report['actionToLoadSubTables'] = $this->actionToLoadSubTables;
@@ -744,7 +806,7 @@ class Report
 
     /**
      * Get the translated name of the category the report belongs to.
-     * @return string
+     * @return string|null
      * @ignore
      */
     public function getCategoryId()
@@ -754,7 +816,7 @@ class Report
 
     /**
      * Get the translated name of the subcategory the report belongs to.
-     * @return string
+     * @return string|null
      * @ignore
      */
     public function getSubcategoryId()
@@ -921,7 +983,7 @@ class Report
                 $translation = $metric->getTranslatedName();
             } else {
                 $metricName  = $metric;
-                $translation = @$translations[$metric];
+                $translation = $translations[$metric] ?? null;
             }
 
             $metrics[$metricName] = $translation ?: $metricName;
@@ -951,7 +1013,8 @@ class Report
         $provider = new ReportsProvider();
         $reports = $provider->getAllReports();
         foreach ($reports as $report) {
-            if (!$report->isSubtableReport()
+            if (
+                !$report->isSubtableReport()
                 && $report->getDimension()
                 && $report->getDimension()->getId() == $dimension->getId()
             ) {
@@ -972,7 +1035,25 @@ class Report
 
         $result = array();
         foreach ($processedMetrics as $processedMetric) {
-            if ($processedMetric instanceof ProcessedMetric || $processedMetric instanceof ArchivedMetric) { // instanceof check for backwards compatibility
+            if ($processedMetric instanceof ProcessedMetric) { // instanceof check for backwards compatibility
+                $result[$processedMetric->getName()] = $processedMetric;
+            } elseif (
+                $processedMetric instanceof ArchivedMetric
+                && $processedMetric->getType() !== Dimension::TYPE_NUMBER
+                && $processedMetric->getType() !== Dimension::TYPE_FLOAT
+                && $processedMetric->getType() !== Dimension::TYPE_BOOL
+                && $processedMetric->getType() !== Dimension::TYPE_ENUM
+            ) {
+                // we do not format regular numbers from regular archived metrics here because when they are rendered
+                // in a visualisation (eg HtmlTable) they would be formatted again in the regular number filter.
+                // These metrics aren't "processed metrics". Eventually could maybe format them when "&format_metrics=all"
+                // is used but may not be needed. It caused a problem when eg language==de. Then eg 555444 would be formatted
+                // to "555.444" (which is the German version of the English "555,444") in the data table post processor
+                // when formatting metrics. Then when rendering the visualisation it would check "is_numeric()" which is
+                // true for German formatting but false for English formatting. Meaning for English formatting the number
+                // would be correctly printed as is but for the German formatting it would format it again and it would think
+                // it would be assumed the dot is a decimal separator and therefore the number be formatted to "555,44" which
+                // is the English version of "555.44" (because we only show 2 fractions).
                 $result[$processedMetric->getName()] = $processedMetric;
             }
         }
@@ -1061,5 +1142,37 @@ class Report
 
             $callback($name);
         }
+    }
+
+    /**
+     * Returns the name of the column/metadata that uniquely identifies rows in this report. See
+     * {@link self::$rowIdentifier} for more information.
+     *
+     * @return string
+     */
+    public function getRowIdentifier(): string
+    {
+        return $this->rowIdentifier;
+    }
+
+    private function deduceMetricTypeFromName($metric): ?string
+    {
+        $metricName = $metric instanceof Metric ? $metric->getName() : $metric;
+
+        $metricType = null;
+        if ($metric instanceof Metric) {
+            $metricType = $metric->getSemanticType();
+        }
+
+        if (empty($metricType)) {
+            if (preg_match('/_(evolution|rate|percentage)(_|$)/', $metricName)) {
+                $metricType = Dimension::TYPE_PERCENT;
+            } else {
+                $allMetricTypes = Metrics::getDefaultMetricSemanticTypes();
+                $metricType = $allMetricTypes[$metricName] ?? null;
+            }
+        }
+
+        return $metricType;
     }
 }

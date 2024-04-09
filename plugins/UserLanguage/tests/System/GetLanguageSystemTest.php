@@ -1,26 +1,24 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
-namespace Piwik\Plugins\UserLanguage\tests\System;
 
+namespace Piwik\Plugins\UserLanguage\tests\System;
 
 use Piwik\Plugins\UserLanguage\tests\Fixtures\LanguageFixture;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
 
 /**
- * Class GetLanguageSystemTest
- * @package Piwik\Plugins\UserLanguage\tests
  * @group GetLanguageSystemTest
  * @group Plugins
  * @group UserLanguage
  */
-class GetLanguageSystemTest extends SystemTestCase {
-
+class GetLanguageSystemTest extends SystemTestCase
+{
     public static $fixture = null;
 
     public static function getOutputPrefix()
@@ -44,21 +42,21 @@ class GetLanguageSystemTest extends SystemTestCase {
      */
     public function getApiForTesting()
     {
-        $apiToCall = array(
+        $apiToCall = [
             "UserLanguage.getLanguage",
             "UserLanguage.getLanguageCode"
-        );
+        ];
 
-        $apiToTest = array();
+        $apiToTest = [];
 
-        $apiToTest[] = array(
+        $apiToTest[] = [
                             $apiToCall,
-                            array(
+                            [
                                 'idSite'  => self::$fixture->idSite,
                                 'date'    => self::$fixture->dateTime,
-                                'periods' => array('day')
-                            )
-                       );
+                                'periods' => ['day']
+                            ]
+                       ];
 
         return $apiToTest;
     }
@@ -68,7 +66,6 @@ class GetLanguageSystemTest extends SystemTestCase {
     {
         return dirname(__FILE__);
     }
-
 }
 
 GetLanguageSystemTest::$fixture = new LanguageFixture();

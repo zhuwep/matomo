@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\SitesManager;
 
 use Piwik\Access;
-use Piwik\Date;
 use Piwik\Db;
 use Piwik\Common;
 use Exception;
@@ -121,9 +120,8 @@ class Model
             'UNION
                 SELECT idsite FROM ' . $siteUrlTable . '
                     WHERE url IN ( ' . Common::getSqlStringFieldsArray($urls) . ') ',
-
             // Bind
-            array_merge( $urls, $urls)
+            array_merge($urls, $urls)
         );
 
         return $ids;
@@ -152,12 +150,12 @@ class Model
                 FROM ' . $siteUrlTable . '
                     WHERE url IN ( ' . Common::getSqlStringFieldsArray($urls) . ')' .
             'AND idsite IN (' . $sqlAccessSite . ')',
-
             // Bind
-            array_merge(    $urls,
-                            array( $login ),
-                            $urls,
-                            array( $login )
+            array_merge(
+                $urls,
+                array( $login ),
+                $urls,
+                array( $login )
             )
         );
 
@@ -240,7 +238,7 @@ class Model
      * Returns the list of all the website IDs registered.
      * Caller must check access.
      *
-     * @return array The list of website IDs
+     * @return int[]|string[] The list of website IDs
      */
     public function getSitesId()
     {
@@ -383,8 +381,7 @@ class Model
         $db->insert(Common::prefixTable("site_url"), array(
                 'idsite' => (int) $idSite,
                 'url'    => $url
-            )
-        );
+            ));
     }
 
     public function getPatternMatchSites($ids, $pattern, $limit)

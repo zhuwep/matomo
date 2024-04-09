@@ -1,17 +1,16 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-namespace Piwik\Plugins\Insights\tests;
+namespace Piwik\Plugins\Insights\tests\Unit;
 
 use Piwik\DataTable\Row;
 use Piwik\DataTable;
 use Piwik\Plugins\Insights\InsightReport;
-use Piwik\Plugins\Insights\Visualizations\Insight;
 
 /**
  * @group Insights
@@ -19,7 +18,7 @@ use Piwik\Plugins\Insights\Visualizations\Insight;
  * @group Unit
  * @group Core
  */
-class InsightReportTest extends \PHPUnit_Framework_TestCase
+class InsightReportTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var InsightReport
@@ -55,7 +54,7 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
      */
 
     // TODO use data providers
-    public function setUp()
+    public function setUp(): void
     {
         $this->currentTable = new DataTable();
         $this->currentTable->addRowsFromArray(array(
@@ -110,12 +109,11 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage Unsupported orderBy
-     */
     public function test_generateInsight_Order_ShouldThrowException_IfInvalid()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Unsupported orderBy');
+
         $this->generateInsight(2, 2, 2, 17, -17, 'InvalidOrDeRbY');
     }
 
@@ -270,7 +268,7 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
             'minDisappearedPercent' => 8,
         );
 
-        $this->assertInternalType('array', $metadata['report']);
+        self::assertIsArray($metadata['report']);
         $this->assertEquals('TestReport', $metadata['report']['name']);
         unset($metadata['report']);
         unset($metadata['totals']);
@@ -312,7 +310,6 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
         // increase by 1600% --> minGrowth 1640%
         $report = $this->generateMoverAndShaker(1600, 100);
         $this->assertOrder($report, array('val11', 'val6', 'val107', 'val9'));
-
     }
 
     private function assertMoversAndShakers(DataTable $report, $movers, $nonMovers)
@@ -441,8 +438,19 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
         $reportMetadata = array('name' => 'TestReport',  'metrics' => array('nb_visits' => 'Visits'));
 
         $report = $this->insightReport->generateMoverAndShaker(
-            $reportMetadata, 'day', '2012-12-12', '2012-12-11', 'nb_visits', $this->currentTable, $this->pastTable,
-            $totalValue, $lastTotalValue, $orderBy, $limitIncreaser, $limitDecreaser);
+            $reportMetadata,
+            'day',
+            '2012-12-12',
+            '2012-12-11',
+            'nb_visits',
+            $this->currentTable,
+            $this->pastTable,
+            $totalValue,
+            $lastTotalValue,
+            $orderBy,
+            $limitIncreaser,
+            $limitDecreaser
+        );
 
         return $report;
     }
@@ -456,9 +464,23 @@ class InsightReportTest extends \PHPUnit_Framework_TestCase
         $reportMetadata = array('name' => 'TestReport',  'metrics' => array('nb_visits' => 'Visits'));
 
         $report = $this->insightReport->generateInsight(
-                    $reportMetadata, 'day', '2012-12-12', '2012-12-11', 'nb_visits', $this->currentTable, $this->pastTable,
-                    $totalValue = 200, $minMoversPercent, $minNewPercent, $minDisappearedPercent,
-            $minGrowthPercentPositive, $minGrowthPercentNegative, $orderBy, $limitIncreaser, $limitDecreaser);
+            $reportMetadata,
+            'day',
+            '2012-12-12',
+            '2012-12-11',
+            'nb_visits',
+            $this->currentTable,
+            $this->pastTable,
+            $totalValue = 200,
+            $minMoversPercent,
+            $minNewPercent,
+            $minDisappearedPercent,
+            $minGrowthPercentPositive,
+            $minGrowthPercentNegative,
+            $orderBy,
+            $limitIncreaser,
+            $limitDecreaser
+        );
 
         return $report;
     }

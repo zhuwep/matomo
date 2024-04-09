@@ -31,6 +31,16 @@ The js/ folder contains:
 
 ## Deployment
 
+To minify core JavaScript you may run the following command (with Development Mode enabled):
+
+  ```bash
+  $ ./console development:build-tracker-js
+  ```
+
+(Note: this command can also be used to minify plugin tracker JavaScript.)
+
+To manually minify the file:
+
 * piwik.js is minified using YUICompressor 2.4.8.
   To install YUICompressor run:
  
@@ -52,7 +62,7 @@ The js/ folder contains:
   
   We recommend to execute this command under Linux. It has not been tested with Windows and 
   MacOS might add a trailing newline which fails tests.
-
+VisitorGeolocatorTest
 * In a production environment, the tests/javascript folder is not used and can
   be removed (if present).
 

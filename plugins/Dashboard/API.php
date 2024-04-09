@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link     http://piwik.org
+ * @link     https://matomo.org
  * @license  http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Plugins\Dashboard;
@@ -67,6 +67,7 @@ class API extends \Piwik\Plugin\API
      */
     public function createNewDashboardForUser($login, $dashboardName = '', $addDefaultWidgets = true)
     {
+        $this->checkLoginIsNotAnonymous($login);
         Piwik::checkUserHasSuperUserAccessOrIsTheUser($login);
 
         $layout = '{}';
@@ -91,10 +92,11 @@ class API extends \Piwik\Plugin\API
      * @param int $idDashboard id of the dashboard to be removed
      * @param string $login  Login of the dashboard user [defaults to current user]
      */
-    public function removeDashboard($idDashboard, $login='')
+    public function removeDashboard($idDashboard, $login = '')
     {
         $login = $login ? $login : Piwik::getCurrentUserLogin();
 
+        $this->checkLoginIsNotAnonymous($login);
         Piwik::checkUserHasSuperUserAccessOrIsTheUser($login);
 
         $this->model->deleteDashboardForUser($idDashboard, $login);
@@ -116,7 +118,7 @@ class API extends \Piwik\Plugin\API
         Piwik::checkUserHasSomeAdminAccess();
 
         // get users only returns users of sites the current user has at least admin access to
-        $users = Request::processRequest('UsersManager.getUsers');
+        $users = Request::processRequest('UsersManager.getUsers', ['filter_limit' => -1]);
         $userFound = false;
         foreach ($users as $user) {
             if ($user['login'] === $copyToUser) {
@@ -148,10 +150,11 @@ class API extends \Piwik\Plugin\API
      * @param string $login user the dashboard belongs
      *
      */
-    public function resetDashboardLayout($idDashboard, $login='')
+    public function resetDashboardLayout($idDashboard, $login = '')
     {
-        $login = $login ? $login : Piwik::getCurrentUserLogin();
+        $login = $login ?: Piwik::getCurrentUserLogin();
 
+        $this->checkLoginIsNotAnonymous($login);
         Piwik::checkUserHasSuperUserAccessOrIsTheUser($login);
 
         $layout = $this->dashboard->getDefaultLayout();
@@ -214,6 +217,15 @@ class API extends \Piwik\Plugin\API
         }
 
         return $widgets;
+    }
+
+    private function checkLoginIsNotAnonymous($login)
+    {
+        Piwik::checkUserIsNotAnonymous();
+
+        if ($login === 'anonymous') {
+            throw new \Exception('This method can\'t be performed for anonymous user');
+        }
     }
 
     private function getColumnsFromDashboard($dashboard)

@@ -6,24 +6,26 @@
 			<revenue>1500</revenue>
 			<quantity>1</quantity>
 			<orders>1</orders>
-			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_visits>1</nb_visits>
+			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_actions>1</nb_actions>
 			<avg_price>1500</avg_price>
 			<avg_quantity>1</avg_quantity>
 			<conversion_rate>100%</conversion_rate>
+			<segment>productSku==SKU2</segment>
 		</row>
 		<row>
 			<label>SKU VERY nice indeed</label>
 			<revenue>1011.22</revenue>
 			<quantity>3</quantity>
 			<orders>2</orders>
-			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_visits>3</nb_visits>
+			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_actions>8</nb_actions>
 			<avg_price>255.61</avg_price>
 			<avg_quantity>1.5</avg_quantity>
 			<conversion_rate>66.67%</conversion_rate>
+			<segment>productSku==SKU+VERY+nice+indeed</segment>
 		</row>
 		<row>
 			<label>ANOTHER SKU HERE</label>
@@ -33,15 +35,17 @@
 			<avg_price>100</avg_price>
 			<avg_quantity>6</avg_quantity>
 			<conversion_rate>0%</conversion_rate>
+			<segment>productSku==ANOTHER+SKU+HERE</segment>
 		</row>
 		<row>
 			<label>SKU IN ABANDONED CART TWO</label>
-			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_visits>2</nb_visits>
+			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_actions>2</nb_actions>
 			<avg_price>0</avg_price>
 			<avg_quantity>0</avg_quantity>
 			<conversion_rate>0%</conversion_rate>
+			<segment>productSku==SKU+IN+ABANDONED+CART+TWO</segment>
 		</row>
 	</result>
 	<result date="2011-04-06">
@@ -53,24 +57,27 @@
 			<avg_price>100</avg_price>
 			<avg_quantity>2</avg_quantity>
 			<conversion_rate>0%</conversion_rate>
+			<segment>productSku==TRIPOD+SKU</segment>
 		</row>
 		<row>
 			<label>SKU IN ABANDONED CART TWO</label>
-			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_visits>1</nb_visits>
+			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_actions>1</nb_actions>
 			<avg_price>0</avg_price>
 			<avg_quantity>0</avg_quantity>
 			<conversion_rate>0%</conversion_rate>
+			<segment>productSku==SKU+IN+ABANDONED+CART+TWO</segment>
 		</row>
 		<row>
 			<label>SKU VERY nice indeed</label>
-			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_visits>1</nb_visits>
+			<nb_uniq_visitors>1</nb_uniq_visitors>
 			<nb_actions>2</nb_actions>
 			<avg_price>666</avg_price>
 			<avg_quantity>0</avg_quantity>
 			<conversion_rate>0%</conversion_rate>
+			<segment>productSku==SKU+VERY+nice+indeed</segment>
 		</row>
 	</result>
 	<result date="2011-04-07" />

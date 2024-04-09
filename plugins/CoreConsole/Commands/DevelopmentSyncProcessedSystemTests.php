@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,15 +11,11 @@ namespace Piwik\Plugins\CoreConsole\Commands;
 
 use Piwik\Common;
 use Piwik\Container\StaticContainer;
-use Piwik\Decompress\Tar;
+use Matomo\Decompress\Tar;
 use Piwik\Development;
 use Piwik\Filesystem;
 use Piwik\Http;
 use Piwik\Plugin\ConsoleCommand;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 
 class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
 {
@@ -32,21 +28,40 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
     {
         $this->setName('development:sync-system-test-processed');
         $this->setDescription('For Piwik core devs. Copies processed system tests from travis artifacts to local processed directories');
-        $this->addArgument('buildnumber', InputArgument::REQUIRED, 'Travis build number you want to sync, eg "14820".');
-        $this->addOption('expected', 'e', InputOption::VALUE_NONE, 'If given file will be copied in expected directories instead of processed');
+        $this->addRequiredArgument('buildnumber', 'Travis build number you want to sync, eg "14820".');
+        $this->addNoValueOption('expected', 'e', 'If given file will be copied in expected directories instead of processed');
+        $this->addOptionalValueOption('repository', 'r', 'Repository name you want to sync screenshots for.', 'matomo-org/matomo');
+        $this->addOptionalValueOption('http-user', '', 'the HTTP AUTH username (for premium plugins where artifacts are protected)');
+        $this->addOptionalValueOption('http-password', '', 'the HTTP AUTH password (for premium plugins where artifacts are protected)');
+        $this->addOptionalValueOption('plugin', 'p', 'Name of the plugin the files shall be synced to');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function doExecute(): int
     {
-        $this->updateCoreFiles($input, $output);
-        $this->updatePluginsFiles($input, $output);
+        $this->updateCoreFiles();
+
+        if ($this->getInput()->getOption('repository') === 'matomo-org/matomo') {
+            $this->updatePluginsFiles();
+        }
+
+        return self::SUCCESS;
     }
 
-    protected function updateCoreFiles(InputInterface $input, OutputInterface $output)
+    protected function updateCoreFiles()
     {
+        $input = $this->getInput();
+        $output = $this->getOutput();
         $buildNumber = $input->getArgument('buildnumber');
         $expected    = $input->getOption('expected');
         $targetDir   = sprintf(PIWIK_INCLUDE_PATH . '/tests/PHPUnit/System/%s', $expected ? 'expected' : 'processed');
+        $repository = $input->getOption('repository');
+
+        if ($input->getOption('plugin')) {
+            $targetDir   = sprintf(PIWIK_INCLUDE_PATH . '/plugins/%s/tests/System/%s/', $input->getOption('plugin'), $expected ? 'expected' : 'processed');
+        } else if (preg_match('/plugin-([a-z0-9]{3,40})$/i', $repository, $match)) {
+            $targetDir   = sprintf(PIWIK_INCLUDE_PATH . '/plugins/%s/tests/System/%s/', $match[1], $expected ? 'expected' : 'processed');
+        }
+
         $tmpDir      = StaticContainer::get('path.tmp') . '/';
 
         $this->validate($buildNumber, $targetDir, $tmpDir);
@@ -56,9 +71,24 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
             $buildNumber = substr($buildNumber, 0, -2);
         }
 
+        $httpUser = $input->getOption('http-user');
+        $httpPassword = $input->getOption('http-password');
+
         $filename = sprintf('system.%s.tar.bz2', $buildNumber);
-        $urlBase  = sprintf('https://builds-artifacts.matomo.org/matomo-org/matomo/%s', $filename);
-        $tests    = Http::sendHttpRequest($urlBase, $timeout = 120);
+        $urlBase  = sprintf('https://builds-artifacts.matomo.org/%s/%s', $repository, $filename);
+        $tests    = Http::sendHttpRequest(
+            $urlBase,
+            $timeout = 120,
+            $userAgent = null,
+            $destinationPath = null,
+            $followDepth = 0,
+            $acceptLanguage = false,
+            $byteRange = false,
+            $getExtendedInfo = false,
+            $httpMethod = 'GET',
+            $httpUser,
+            $httpPassword
+        );
 
         $tarFile = $tmpDir . $filename;
         file_put_contents($tarFile, $tests);
@@ -66,7 +96,7 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
         $tar = new Tar($tarFile, 'bz2');
 
         if ($tar->extract($targetDir)) {
-            $this->writeSuccessMessage($output, array(
+            $this->writeSuccessMessage(array(
                 'All processed system test results were copied to <comment>' . $targetDir . '</comment>',
                 'Compare them with the expected test results and commit them if needed.'
             ));
@@ -79,8 +109,10 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
     }
 
 
-    protected function updatePluginsFiles(InputInterface $input, OutputInterface $output)
+    protected function updatePluginsFiles()
     {
+        $input       = $this->getInput();
+        $output      = $this->getOutput();
         $buildNumber = $input->getArgument('buildnumber');
         $expected    = $input->getOption('expected');
         $targetDir   = sprintf(PIWIK_INCLUDE_PATH . '/plugins/%%s/tests/System/%s/', $expected ? 'expected' : 'processed');
@@ -116,7 +148,7 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
 
         foreach($artifacts as $artifact) {
             $artifactName = basename($artifact);
-            list($plugin, $file) = explode('~~', $artifactName);
+            [$plugin, $file] = explode('~~', $artifactName);
             $pluginTargetDir = sprintf($targetDir, $plugin);
             Filesystem::mkdir($pluginTargetDir);
             Filesystem::copy($artifact, $pluginTargetDir . $file);
@@ -124,7 +156,7 @@ class DevelopmentSyncProcessedSystemTests extends ConsoleCommand
 
         Filesystem::unlinkRecursive($extractionTarget, true);
 
-        $this->writeSuccessMessage($output, array(
+        $this->writeSuccessMessage(array(
             'All processed plugin system test results were copied to <comment>' . $targetDir . '</comment>',
             'Compare them with the expected test results and commit them if needed.'
         ));

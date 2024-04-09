@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\System;
@@ -148,6 +148,23 @@ class ManyVisitorsOneWebsiteTest extends SystemTestCase
             'otherRequestParameters' => array('filter_offset' => '4', 'filter_limit' => 3)
         ));
 
+        // #13785
+        // check that not contains / not equals action segments filter away all visits having any matching action
+        $apiToTest[] = array('Live.getLastVisitsDetails', array(
+            'idSite'                 => $idSite,
+            'date'                   => $dateString,
+            'periods'                => 'month',
+            'testSuffix'             => '_pageurlNotContainsSegment',
+            'segment'                => 'pageUrl!@quest'
+        ));
+        $apiToTest[] = array('Live.getLastVisitsDetails', array(
+            'idSite'                 => $idSite,
+            'date'                   => $dateString,
+            'periods'                => 'month',
+            'testSuffix'             => '_siteSearchCategoryNotEqualsSegment',
+            'segment'                => 'siteSearchCategory!=CAT'
+        ));
+
         // #8324
         // testing filter_excludelowpop and filter_excludelowpop_value
         $apiToTest[] = array('UserCountry.getCountry', array(
@@ -158,14 +175,13 @@ class ManyVisitorsOneWebsiteTest extends SystemTestCase
             'otherRequestParameters' => array('filter_excludelowpop' => 'nb_visits', 'filter_excludelowpop_value' => 5)
         ));
 
-        // this also fails on all PHP versions, it seems randomly.
-//            $apiToTest[] = array('Live.getLastVisitsDetails', array(
-//                'idSite'                 => $idSite,
-//                'date'                   => $dateString,
-//                'periods'                => 'month',
-//                'testSuffix'             => '_Live.getLastVisitsDetails_sortAsc',
-//                'otherRequestParameters' => array('filter_sort_order' => 'asc', 'filter_limit' => 7)
-//            ));
+        $apiToTest[] = array('Live.getLastVisitsDetails', array(
+            'idSite'                 => $idSite,
+            'date'                   => $dateString,
+            'periods'                => 'month',
+            'testSuffix'             => '_Live.getLastVisitsDetails_sortAsc',
+            'otherRequestParameters' => array('filter_sort_order' => 'asc', 'filter_limit' => 7)
+        ));
 
         return $apiToTest;
     }

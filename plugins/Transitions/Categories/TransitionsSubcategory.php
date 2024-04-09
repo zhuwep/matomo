@@ -9,6 +9,8 @@
 namespace Piwik\Plugins\Transitions\Categories;
 
 use Piwik\Category\Subcategory;
+use Piwik\Piwik;
+use Piwik\Url;
 
 class TransitionsSubcategory extends Subcategory
 {
@@ -16,4 +18,10 @@ class TransitionsSubcategory extends Subcategory
     protected $id = 'Transitions_Transitions';
     protected $order = 46;
 
+    public function getHelp()
+    {
+        return '<p>' . Piwik::translate('Transitions_TransitionsSubcategoryHelp1') . '</p>'
+            . '<p><a href="' . Url::addCampaignParametersToMatomoLink('https://matomo.org/docs/transitions/', null, null, 'App.Transitions.getTransitions')
+            . '" rel="noreferrer noopener" target="_blank">' . Piwik::translate('Transitions_TransitionsSubcategoryHelp2') . '</a></p>';
+    }
 }

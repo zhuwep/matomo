@@ -1,24 +1,26 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\CoreVisualizations\JqplotDataGenerator;
 
+use Piwik\Archive\ArchiveState;
 use Piwik\Archive\DataTableFactory;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\DataTable\DataTableInterface;
-use Piwik\DataTable\Row;
 use Piwik\Date;
 use Piwik\Metrics;
 use Piwik\Period;
 use Piwik\Period\Factory;
 use Piwik\Plugins\API\Filter\DataComparisonFilter;
 use Piwik\Plugins\CoreVisualizations\JqplotDataGenerator;
+use Piwik\Site;
 use Piwik\Url;
 
 /**
@@ -68,17 +70,28 @@ class Evolution extends JqplotDataGenerator
         // if rows to display are not specified, default to all rows (TODO: perhaps this should be done elsewhere?)
         $rowsToDisplay = $this->properties['rows_to_display']
             ? : array_unique($dataTable->getColumn('label'))
-                ? : array(false) // make sure that a series is plotted even if there is no data
+                ? : [false] // make sure that a series is plotted even if there is no data
         ;
 
         $columnsToDisplay = array_values($this->properties['columns_to_display']);
 
-        list($seriesMetadata, $seriesUnits, $seriesLabels, $seriesToXAxis) =
+        [$seriesMetadata, $seriesUnits, $seriesLabels, $seriesToXAxis] =
             $this->getSeriesMetadata($rowsToDisplay, $columnsToDisplay, $units, $dataTables);
 
         // collect series data to show. each row-to-display/column-to-display permutation creates a series.
-        $allSeriesData = array();
-        foreach ($rowsToDisplay as $rowLabel) {
+        $allSeriesData = [];
+        foreach ($rowsToDisplay as $rowIdentifier) {
+
+            $rowLabel = $rowIdentifier;
+
+            if (!empty($this->properties['selectable_rows'])) {
+                foreach ($this->properties['selectable_rows'] as $row) {
+                    if ($rowIdentifier === $row['matcher']) {
+                        $rowLabel = $row['label'];
+                    }
+                }
+            }
+
             foreach ($columnsToDisplay as $columnName) {
                 if (!$this->isComparing) {
                     $this->setNonComparisonSeriesData($allSeriesData, $rowLabel, $columnName, $dataTable);
@@ -88,17 +101,24 @@ class Evolution extends JqplotDataGenerator
             }
         }
 
-        $visualization->dataTable = $dataTable;
         $visualization->properties = $this->properties;
 
-        $visualization->setAxisYValues($allSeriesData, $seriesMetadata);
+        $units = null;
+        if ($visualization->properties['request_parameters_to_modify']['format_metrics'] === 0) {
+            $units = $seriesUnits;
+        }
+        $visualization->setAxisYValues($allSeriesData, $seriesMetadata, $units);
         $visualization->setAxisYUnits($seriesUnits);
 
         $xLabelStrs = [];
         $xAxisTicks = [];
         foreach ($xLabels as $index => $seriesXLabels) {
-            $xLabelStrs[$index] = array_map(function (Period $p) { return $p->getLocalizedLongString(); }, $seriesXLabels);
-            $xAxisTicks[$index] = array_map(function (Period $p) { return $p->getLocalizedShortString(); }, $seriesXLabels);
+            $xLabelStrs[$index] = array_map(function (Period $p) {
+                return $p->getLocalizedLongString();
+            }, $seriesXLabels);
+            $xAxisTicks[$index] = array_map(function (Period $p) {
+                return $p->getLocalizedShortString();
+            }, $seriesXLabels);
         }
 
         $visualization->setAxisXLabelsMultiple($xLabelStrs, $seriesToXAxis, $xAxisTicks);
@@ -121,6 +141,8 @@ class Evolution extends JqplotDataGenerator
             }
             $visualization->setAxisXOnClick($axisXOnClick);
         }
+
+        $this->setDataStates($visualization, $dataTables);
     }
 
     private function getSeriesData($rowLabel, $columnName, DataTable\Map $dataTable)
@@ -208,7 +230,7 @@ class Evolution extends JqplotDataGenerator
      * @param DataTable[] $dataTables
      * @throws \Exception
      */
-    private function addSelectedSeriesXLabels(array &$xLabels, array $dataTables)
+    protected function addSelectedSeriesXLabels(array &$xLabels, array $dataTables)
     {
         $xTicksCount = count($dataTables);
         foreach ($xLabels as $labelSeries) {
@@ -243,7 +265,8 @@ class Evolution extends JqplotDataGenerator
                 $row = $childTable->getRowFromLabel($rowLabel);
             }
 
-            if (empty($row)
+            if (
+                empty($row)
                 || empty($row->getComparisons())
             ) {
                 foreach ($seriesLabels as $seriesIndex => $seriesLabelPrefix) {
@@ -293,7 +316,7 @@ class Evolution extends JqplotDataGenerator
 
                         $seriesUnits[$wholeSeriesLabel] = $units[$columnName];
 
-                        list($periodIndex, $segmentIndex) = DataComparisonFilter::getIndividualComparisonRowIndices($table, $seriesIndex);
+                        [$periodIndex, $segmentIndex] = DataComparisonFilter::getIndividualComparisonRowIndices($table, $seriesIndex);
                         $seriesToXAxis[] = $periodIndex;
                     }
                 } else {
@@ -304,5 +327,50 @@ class Evolution extends JqplotDataGenerator
         }
 
         return [$seriesMetadata, $seriesUnits, $seriesLabels, $seriesToXAxis];
+    }
+
+    /**
+     * @param array<DataTable> $dataTables
+     */
+    private function setDataStates(Chart $visualization, array $dataTables): void
+    {
+        if (0 === count($dataTables)) {
+            return;
+        }
+
+        $dataTableDates = array_keys($dataTables);
+        $mostRecentDate = end($dataTableDates);
+
+        /** @var Site $site */
+        $site = $dataTables[$mostRecentDate]->getMetadata(DataTableFactory::TABLE_METADATA_SITE_INDEX);
+
+        $dataStates = [];
+        $siteToday = Date::factoryInTimezone('today', $site->getTimezone())->getTimestamp();
+        $previousState = ArchiveState::COMPLETE;
+
+        foreach ($dataTableDates as $dataTableDate) {
+            /** @var Period $period */
+            $period = $dataTables[$dataTableDate]->getMetadata(DataTableFactory::TABLE_METADATA_PERIOD_INDEX);
+            $state = $dataTables[$dataTableDate]->getMetadata(DataTable::ARCHIVE_STATE_METADATA_NAME);
+
+            if (false === $state) {
+                // Missing archive state information should only occur if no
+                // usable archive was found in the database. Treat a missing archive
+                // (for example if there are legitimately zero visits to a site)
+                // as complete unless it follows an incomplete archive.
+                $state = ArchiveState::INCOMPLETE === $previousState
+                    ? ArchiveState::INCOMPLETE
+                    : ArchiveState::COMPLETE;
+            }
+
+            if ($siteToday <= $period->getDateEnd()->getTimestamp()) {
+                $state = ArchiveState::INCOMPLETE;
+            }
+
+            $dataStates[$dataTableDate] = $state;
+            $previousState = $state;
+        }
+
+        $visualization->setDataStates(array_values($dataStates));
     }
 }

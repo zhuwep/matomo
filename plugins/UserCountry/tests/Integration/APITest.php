@@ -1,12 +1,12 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-namespace Piwik\Plugins\UserCountry\tests;
+namespace Piwik\Plugins\UserCountry\tests\Integration;
 
 use Piwik\Access;
 use Piwik\Common;
@@ -28,8 +28,8 @@ class APITest extends IntegrationTestCase
      * @var API
      */
     private $api;
-    
-    public function setUp()
+
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -51,34 +51,31 @@ class APITest extends IntegrationTestCase
         $this->assertEquals($locationProvider, Common::getCurrentLocationProviderId());
     }
 
-    /**
-     * @expectedException \Exception
-     */
     public function test_setLocationProviderInvalid()
     {
+        $this->expectException(\Exception::class);
+
         $locationProvider = 'invalidProvider';
         $this->api->setLocationProvider($locationProvider);
     }
 
-    /**
-     * @expectedException \Exception
-     */
     public function test_setLocationProviderNoSuperUser()
     {
+        $this->expectException(\Exception::class);
+
         Access::getInstance()->setSuperUserAccess(false);
 
-        $locationProvider = LocationProvider\GeoIp\Php::ID;
+        $locationProvider = GeoIp2\Php::ID;
         $this->api->setLocationProvider($locationProvider);
     }
 
-    /**
-     * @expectedException \Exception
-     */
     public function test_setLocationProviderDisabledInConfig()
     {
+        $this->expectException(\Exception::class);
+
         Config::getInstance()->General['enable_geolocation_admin'] = 0;
 
-        $locationProvider = LocationProvider\GeoIp\Php::ID;
+        $locationProvider = GeoIp2\Php::ID;
         $this->api->setLocationProvider($locationProvider);
     }
 
@@ -90,6 +87,9 @@ class APITest extends IntegrationTestCase
         if (!empty($ipAddressHeader)) {
             $_SERVER['REMOTE_ADDR'] = $ipAddressHeader;
         }
+
+        // Default provider will guess the location based on HTTP_ACCEPT_LANGUAGE header
+        $_SERVER['HTTP_ACCEPT_LANGUAGE'] = 'en_US';
 
         $location = $this->api->getLocationFromIP($ipAddress);
         $this->assertEquals($expected, $location);

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -52,7 +52,7 @@ class DataCollection
      * There is a special element '_metadata' in data rows that holds values treated
      * as DataTable metadata.
      */
-    private $data = array();
+    private $data = [];
 
     /**
      * The whole list of metric/record names that were used in the archive query.
@@ -97,12 +97,20 @@ class DataCollection
     private $periods;
 
     /**
+     * The segment that was queried
+     *
+     * @var \Piwik\Segment
+     */
+    private $segment;
+
+    /**
      * Constructor.
      *
      * @param array $dataNames @see $this->dataNames
      * @param string $dataType @see $this->dataType
      * @param array $sitesId @see $this->sitesId
      * @param \Piwik\Period[] $periods @see $this->periods
+     * @param \Piwik\Segment $segment @see $this->segment
      * @param array $defaultRow @see $this->defaultRow
      */
     public function __construct($dataNames, $dataType, $sitesId, $periods, $segment, $defaultRow = null)
@@ -143,15 +151,21 @@ class DataCollection
      * Set data for a specific site & period. If there is no data for the given site ID & period,
      * it is set to the default row.
      *
-     * @param int $idSite
-     * @param string $period eg, '2012-01-01,2012-01-31'
-     * @param string $name eg 'nb_visits'
-     * @param string $value eg 5
+     * @param int           $idSite
+     * @param string        $period eg, '2012-01-01,2012-01-31'
+     * @param string        $name   eg 'nb_visits'
+     * @param string        $value  eg 5
+     * @param array|null    $meta   Optional metadata to add to the row
      */
-    public function set($idSite, $period, $name, $value)
+    public function set($idSite, $period, $name, $value, array $meta = null)
     {
         $row = & $this->get($idSite, $period);
         $row[$name] = $value;
+        if ($meta) {
+            foreach ($meta as $k => $v) {
+                $row[self::METADATA_CONTAINER_ROW_KEY][$k] = $v;
+            }
+        }
     }
 
     /**
@@ -223,7 +237,13 @@ class DataCollection
     public function getDataTable($resultIndices)
     {
         $dataTableFactory = new DataTableFactory(
-            $this->dataNames, $this->dataType, $this->sitesId, $this->periods, $this->segment, $this->defaultRow);
+            $this->dataNames,
+            $this->dataType,
+            $this->sitesId,
+            $this->periods,
+            $this->segment,
+            $this->defaultRow
+        );
 
         $index = $this->getIndexedArray($resultIndices);
 
@@ -240,7 +260,13 @@ class DataCollection
     public function getMergedDataTable($resultIndices)
     {
         $dataTableFactory = new DataTableFactory(
-            $this->dataNames, $this->dataType, $this->sitesId, $this->periods, $this->segment, $this->defaultRow);
+            $this->dataNames,
+            $this->dataType,
+            $this->sitesId,
+            $this->periods,
+            $this->segment,
+            $this->defaultRow
+        );
 
         $index = $this->getIndexedArray($resultIndices);
 
@@ -269,18 +295,16 @@ class DataCollection
      */
     public function getExpandedDataTable($resultIndices, $idSubTable = null, $depth = null, $addMetadataSubTableId = false)
     {
-        if ($this->dataType != 'blob') {
-            throw new Exception("DataCollection: cannot call getExpandedDataTable with "
-                . "{$this->dataType} data types. Only works with blob data.");
-        }
-
-        if (count($this->dataNames) !== 1) {
-            throw new Exception("DataCollection: cannot call getExpandedDataTable with "
-                . "more than one record.");
-        }
+        $this->checkExpandedMethodPrerequisites();
 
         $dataTableFactory = new DataTableFactory(
-            $this->dataNames, 'blob', $this->sitesId, $this->periods, $this->segment, $this->defaultRow);
+            $this->dataNames,
+            'blob',
+            $this->sitesId,
+            $this->periods,
+            $this->segment,
+            $this->defaultRow
+        );
         $dataTableFactory->expandDataTable($depth, $addMetadataSubTableId);
         $dataTableFactory->useSubtable($idSubTable);
 
@@ -300,7 +324,7 @@ class DataCollection
         if (isset($data[self::METADATA_CONTAINER_ROW_KEY])) {
             return $data[self::METADATA_CONTAINER_ROW_KEY];
         } else {
-            return array();
+            return [];
         }
     }
 
@@ -326,7 +350,7 @@ class DataCollection
      */
     private function createOrderedIndex($metadataNamesToIndexBy)
     {
-        $result = array();
+        $result = [];
 
         if (!empty($metadataNamesToIndexBy)) {
             $metadataName = array_shift($metadataNamesToIndexBy);
@@ -338,7 +362,7 @@ class DataCollection
             }
 
             if (empty($metadataNamesToIndexBy)) {
-                $result = array_fill_keys($indexKeyValues, array());
+                $result = array_fill_keys($indexKeyValues, []);
             } else {
                 foreach ($indexKeyValues as $key) {
                     $result[$key] = $this->createOrderedIndex($metadataNamesToIndexBy);
@@ -366,12 +390,23 @@ class DataCollection
             }
 
             if (!isset($currentLevel[$key])) {
-                $currentLevel[$key] = array();
+                $currentLevel[$key] = [];
             }
 
             $currentLevel = & $currentLevel[$key];
         }
 
         $currentLevel = $row;
+    }
+
+    private function checkExpandedMethodPrerequisites()
+    {
+        if ($this->dataType != 'blob') {
+            throw new Exception("DataCollection: cannot call getExpandedDataTable with {$this->dataType} data types. Only works with blob data.");
+        }
+
+        if (count($this->dataNames) !== 1) {
+            throw new Exception("DataCollection: cannot call getExpandedDataTable with more than one record.");
+        }
     }
 }

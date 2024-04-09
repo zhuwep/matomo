@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@
 namespace Piwik\Plugins\Goals\Columns\Metrics;
 
 use Piwik\Archive\DataTableFactory;
+use Piwik\Columns\Dimension;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\Metrics\Formatter;
@@ -60,5 +61,10 @@ class AveragePrice extends ProcessedMetric
     {
         $this->idSite = DataTableFactory::getSiteIdFromMetadata($table);
         return !empty($this->idSite); // skip formatting if there is no site to get currency info from
+    }
+
+    public function getSemanticType(): ?string
+    {
+        return Dimension::TYPE_MONEY;
     }
 }

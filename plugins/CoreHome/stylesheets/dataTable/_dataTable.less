@@ -18,6 +18,19 @@
     text-align: right;
     margin-right: 4px;
     font-weight: normal;
+    .font-default(13px, 18px);
+    vertical-align: text-bottom;
+  }
+
+  thead {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    z-index: 10;
+
+    &.with-z-index {
+      z-index: 150;
+    }
   }
 
   td.highlight > .ratio {
@@ -40,22 +53,22 @@ table.subDataTable td.label {
 
 table.dataTable img,
 table.subDataTable img {
-  vertical-align: middle;
+  vertical-align: text-bottom;
 }
 
 table.dataTable img {
   border: 0;
   margin-right: 1em;
-  margin-left: 0.5em;
+  margin-left: 0;
 }
 
-table.dataTable tr:not(.parentComparisonRow) img.link {
-  position: relative;
-  top: 5px;
-}
-
-table.subDataTable img.link {
-  transform: translateY(-50%);
+table.dataTable tr td .icon-outlink {
+  color: #aaa;
+  margin-right: 0.5em;
+  vertical-align: bottom;
+  .font-default(13px, 18px);
+  padding-left: 1px;
+  display: inline-block;
 }
 
 table.dataTable tr.subDataTable {
@@ -123,7 +136,7 @@ table.dataTable th.columnSorted {
 }
 
 table.dataTable td {
-  padding: 5px 0px 5px 12px;
+  padding: 5px 0 5px 12px;
   background: @theme-color-background-base;
   z-index: 99;
 }
@@ -153,10 +166,13 @@ table.subActionsDataTable td.label,
 table.actionsDataTable td.label {
   border-top: 0;
   border-left: 0;
-  position: sticky; position: -webkit-sticky;
   left: 0;
   z-index: 1;
   background-clip: padding-box;
+
+  &.first {
+    position: sticky; position: -webkit-sticky;
+  }
 }
 
 .dataTableActions table.dataTable th.label {
@@ -182,16 +198,12 @@ table.dataTable tr td.cellSubDataTable {
 }
 
 .cellSubDataTable > .dataTable {
-    padding: 6px 0 0;
+  padding: 6px 0 0;
 }
 
 /* A link in a column in the DataTable */
 table.dataTable td #urlLink {
   display: none;
-}
-
-table.dataTable img {
-  margin-left: 0;
 }
 
 .subDataTable > .dataTableWrapper {
@@ -216,10 +228,10 @@ table.dataTable img {
 }
 
 .dataTablePages {
-  color: #BFBFBF;
-  font-weight: bold;
   margin: 10px;
-  font-size: 12px;
+  color: @theme-color-text;
+  font-weight: normal;
+  .font-default(13px, 14px);
 }
 
 .dataTableSearchInput {
@@ -228,10 +240,11 @@ table.dataTable img {
   color: #adadad !important;
   min-height: 30px !important;
   padding-left: 25px !important;
-  width: 100% !important;
   transition: opacity 0.3s ease !important;
   box-shadow: 0 0 !important;
   visibility: hidden;
+  height: 1rem !important;
+  width: calc(~'100% - 25px') !important;
 }
 
 .searchAction:hover {
@@ -269,6 +282,7 @@ table.dataTable img {
 
   .dataTableSearchInput {
     visibility: visible;
+    opacity: 1;
   }
 
   .icon-close {
@@ -292,10 +306,6 @@ table.dataTable img {
       color: #333 !important;
     }
   }
-
-  .dataTableSearchInput {
-    opacity: 1;
-  }
 }
 
 .dataTableNext,
@@ -303,6 +313,8 @@ table.dataTable img {
   font-size: 12px;
   color: #184A83;
   cursor: pointer;
+  visibility: hidden;
+  text-decoration: underline;
   &:hover {
     text-decoration: underline;
   }
@@ -312,30 +324,34 @@ table.dataTable img {
 }
 
 .datatableRelatedReports {
-  color: #888;
+  color: #808080;
   font-size: 12px;
   padding-bottom: 5px;
   margin-top: 6px;
   @media print{
     display: none;
   }
-}
 
-.datatableRelatedReports span {
-  cursor: pointer;
-  font-weight: bold;
-  &:hover {
+  span {
+    color: @theme-color-link;
+    cursor: pointer;
+    font-weight: normal;
     text-decoration: underline;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
 .dataTableFeatures {
   text-align: center;
-}
 
-.dataTableNext,
-.dataTablePrevious {
-  visibility: hidden;
+  &.hasEvolution {
+    .dataTableFooterIcons {
+      margin-top: 17px;
+    }
+  }
 }
 
 .dataTablePaginationControl {
@@ -352,14 +368,6 @@ table.dataTable img {
   padding-bottom: 5px;
   display: block;
   text-align: center;
-}
-
-.dataTableFeatures {
-  &.hasEvolution {
-    .dataTableFooterIcons {
-      margin-top: 17px;
-    }
-  }
 }
 
 .widget .dataTableFeatures {
@@ -391,12 +399,25 @@ table.dataTable img {
   margin: 1px 0 1px 10px;
 }
 
+.tableIcon {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  &.activeIcon {
+    background-color: @theme-color-background-tinyContrast;
+  }
+}
+
 .tableIconsGroup > span > span {
-    position:relative;
-    float:left;
+  position:relative;
+  float:left;
 }
 
 .dataTableFooterActiveItem {
+  display: none;
   position: absolute;
   top: -6px;
   left: 0;
@@ -506,23 +527,8 @@ tr.level12 td.label {
   padding-left: 9em !important;
 }
 
-/* less right margins for the link image in the Pa*/
-.dataTableActions table.dataTable img.link {
-  margin-right: 0.5em;
-  margin-left: 1px;
-  margin-bottom: 4px;
-  vertical-align: text-bottom;
-}
-
 table.dataTable td.label img {
-  margin-top: -3px;
   max-height: 16px;
-}
-
-tr td.label img.plusMinus {
-  margin-left: -3px;
-  margin-right: 6px;
-  margin-top: 0;
 }
 
 .pk-emptyDataTable {
@@ -562,7 +568,7 @@ table.dataTable span.cell-tooltip {
 }
 
 td.cellSubDataTable .loadingPiwik {
-    padding:0;
+  padding:0;
 }
 
 .dataTable .searchReset {
@@ -617,18 +623,32 @@ td.cellSubDataTable .loadingPiwik {
     }
 
     .icon-export {
-      margin-top: 6px;
+      margin-top: 8px;
       display: block;
     }
 
     .icon-more-verti {
       font-size: 18px;
     }
+
+    .periodName {
+      padding-left:8px;
+      padding-right:8px;
+      font-size:16px;
+      text-transform:capitalize;
+    }
+  }
+
+  .activatePeriodsSelection {
+    width:auto;
+    text-align:left;
+    padding-left:8px;
   }
 }
-
-div.dataTableScroller {
-  overflow-x: scroll;
+.widgetContent {
+  div.dataTableScroller {
+    overflow-x: scroll;
+  }
 }
 
 .theWidgetContent .card .card-content, table.dataTable {
@@ -636,6 +656,11 @@ div.dataTableScroller {
     margin-left: -20px;
     width: ~"calc(100% + 40px)";
   }
+}
+
+#dashboard .dataTableFooterNavigation > .row {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 @media only screen and (min-width: 993px) {
@@ -663,6 +688,6 @@ div.dataTableScroller {
   table.dataTable td.label,
   table.subActionsDataTable td.label,
   table.actionsDataTable td.label {
-    position: static;
+    position: static !important;
   }
 }

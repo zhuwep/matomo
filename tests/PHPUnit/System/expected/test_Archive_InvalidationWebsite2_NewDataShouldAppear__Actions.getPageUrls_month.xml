@@ -4,17 +4,18 @@
 		<row>
 			<label>category</label>
 			<nb_visits>6</nb_visits>
-			<nb_hits>9</nb_hits>
+			<nb_hits>6</nb_hits>
 			<sum_time_spent>0</sum_time_spent>
 			<sum_bandwidth>0</sum_bandwidth>
 			<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
 			<min_bandwidth />
 			<max_bandwidth />
 			<entry_nb_visits>2</entry_nb_visits>
-			<entry_nb_actions>18</entry_nb_actions>
+			<entry_nb_actions>12</entry_nb_actions>
 			<entry_sum_visit_length>2</entry_sum_visit_length>
 			<entry_bounce_count>0</entry_bounce_count>
 			<avg_bandwidth>0</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>0%</bounce_rate>
 			<exit_rate>0%</exit_rate>
@@ -23,14 +24,14 @@
 				<row>
 					<label>/Page1</label>
 					<nb_visits>2</nb_visits>
-					<nb_hits>3</nb_hits>
+					<nb_hits>2</nb_hits>
 					<sum_time_spent>0</sum_time_spent>
 					<sum_bandwidth>0</sum_bandwidth>
 					<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
 					<min_bandwidth />
 					<max_bandwidth />
 					<entry_nb_visits>2</entry_nb_visits>
-					<entry_nb_actions>18</entry_nb_actions>
+					<entry_nb_actions>12</entry_nb_actions>
 					<entry_sum_visit_length>2</entry_sum_visit_length>
 					<entry_bounce_count>0</entry_bounce_count>
 					<sum_daily_nb_uniq_visitors>2</sum_daily_nb_uniq_visitors>
@@ -44,7 +45,7 @@
 				<row>
 					<label>/Page2</label>
 					<nb_visits>2</nb_visits>
-					<nb_hits>3</nb_hits>
+					<nb_hits>2</nb_hits>
 					<sum_time_spent>0</sum_time_spent>
 					<sum_bandwidth>0</sum_bandwidth>
 					<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
@@ -60,7 +61,7 @@
 				<row>
 					<label>/NewPage</label>
 					<nb_visits>1</nb_visits>
-					<nb_hits>2</nb_hits>
+					<nb_hits>1</nb_hits>
 					<sum_time_spent>0</sum_time_spent>
 					<sum_bandwidth>0</sum_bandwidth>
 					<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
@@ -94,7 +95,7 @@
 		<row>
 			<label>/Contact</label>
 			<nb_visits>2</nb_visits>
-			<nb_hits>3</nb_hits>
+			<nb_hits>2</nb_hits>
 			<sum_time_spent>0</sum_time_spent>
 			<sum_bandwidth>0</sum_bandwidth>
 			<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
@@ -102,6 +103,7 @@
 			<max_bandwidth />
 			<sum_daily_nb_uniq_visitors>2</sum_daily_nb_uniq_visitors>
 			<avg_bandwidth>0</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>0%</bounce_rate>
 			<exit_rate>0%</exit_rate>
@@ -111,7 +113,7 @@
 		<row>
 			<label>/Home</label>
 			<nb_visits>2</nb_visits>
-			<nb_hits>3</nb_hits>
+			<nb_hits>2</nb_hits>
 			<sum_time_spent>0</sum_time_spent>
 			<sum_bandwidth>0</sum_bandwidth>
 			<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
@@ -119,6 +121,7 @@
 			<max_bandwidth />
 			<sum_daily_nb_uniq_visitors>2</sum_daily_nb_uniq_visitors>
 			<avg_bandwidth>0</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>0%</bounce_rate>
 			<exit_rate>0%</exit_rate>
@@ -128,7 +131,7 @@
 		<row>
 			<label>Contact</label>
 			<nb_visits>2</nb_visits>
-			<nb_hits>3</nb_hits>
+			<nb_hits>2</nb_hits>
 			<sum_time_spent>0</sum_time_spent>
 			<sum_bandwidth>0</sum_bandwidth>
 			<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>
@@ -136,6 +139,7 @@
 			<max_bandwidth />
 			<exit_nb_visits>2</exit_nb_visits>
 			<avg_bandwidth>0</avg_bandwidth>
+			<avg_page_load_time>0</avg_page_load_time>
 			<avg_time_on_page>0</avg_time_on_page>
 			<bounce_rate>0%</bounce_rate>
 			<exit_rate>100%</exit_rate>
@@ -144,7 +148,7 @@
 				<row>
 					<label>/ThankYou</label>
 					<nb_visits>2</nb_visits>
-					<nb_hits>3</nb_hits>
+					<nb_hits>2</nb_hits>
 					<sum_time_spent>0</sum_time_spent>
 					<sum_bandwidth>0</sum_bandwidth>
 					<nb_hits_with_bandwidth>0</nb_hits_with_bandwidth>

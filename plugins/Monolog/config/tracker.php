@@ -1,8 +1,8 @@
 <?php
 
-use Interop\Container\ContainerInterface;
+use Piwik\Container\Container;
 
-function isTrackerDebugEnabled(ContainerInterface $c)
+function isTrackerDebugEnabled(Container $c)
 {
     $trackerDebug = $c->get("ini.Tracker.debug");
     return ($trackerDebug == 1 || !empty($GLOBALS['PIWIK_TRACKER_DEBUG']));
@@ -10,8 +10,20 @@ function isTrackerDebugEnabled(ContainerInterface $c)
 
 return array(
 
-    'log.handler.classes' => DI\decorate(function ($previous, ContainerInterface $c) {
-        if (isset($previous['screen'])
+    'ini.log.log_writers' => Piwik\DI::decorate(function ($previous, Container $c) {
+        if (
+            isTrackerDebugEnabled($c)
+            && \Piwik\Common::isPhpCliMode()
+        ) {
+            $previous[] = 'screen';
+            $previous = array_unique($previous);
+        }
+        return $previous;
+    }),
+
+    'log.handler.classes' => Piwik\DI::decorate(function ($previous, Container $c) {
+        if (
+            isset($previous['screen'])
             && isTrackerDebugEnabled($c)
         ) {
             $previous['screen'] = 'Piwik\Plugins\Monolog\Handler\EchoHandler';
@@ -22,9 +34,9 @@ return array(
         return $previous;
     }),
 
-    'log.level' => DI\decorate(function ($previous, ContainerInterface $c) {
+    'log.level' => Piwik\DI::decorate(function ($previous, Container $c) {
         if (isTrackerDebugEnabled($c)) {
-            return \Monolog\Logger::DEBUG;
+            return \Piwik\Log\Logger::DEBUG;
         }
 
         return $previous;

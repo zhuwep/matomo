@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -32,7 +32,7 @@ class Get extends Report
 
         $this->categoryId = 'API';
         $this->name = Piwik::translate('General_MainMetrics');
-        $this->documentation = '';
+        $this->documentation = Piwik::translate('API_MainMetricsReportDocumentation');
 
         $this->processedMetrics = array();
         foreach ($this->reportsToMerge as $report) {
@@ -91,14 +91,16 @@ class Get extends Report
             /** @var Report $report */
             $report = new $reportClass();
 
-            if ($report->getModule() == 'API'
+            if (
+                $report->getModule() == 'API'
                 || $report->getAction() != 'get'
             ) {
                 continue;
             }
 
             $metrics = $report->getMetrics();
-            if (!empty($report->parameters)
+            if (
+                !empty($report->parameters)
                 || empty($metrics)
             ) {
                 continue;

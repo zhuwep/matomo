@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,12 +16,8 @@ use Piwik\Period\Range;
 use Piwik\Period\Week;
 use Piwik\Period\Year;
 use Piwik\Plugins\UsersManager\API as APIUsersManager;
+use Piwik\Plugins\UsersManager\Model;
 use Piwik\Translation\Translator;
-
-/**
- * @see core/Translate.php
- */
-require_once PIWIK_INCLUDE_PATH . '/core/Translate.php';
 
 /**
  * Main piwik helper class.
@@ -79,7 +75,7 @@ class Piwik
 
         $message = str_replace("\n", "<br/>", $message);
 
-        $output = "<html><body>".
+        $output = "<html><body>" .
             "<style>a{color:red;}</style>\n" .
             "<div style='color:red;font-size:120%; width:100%;margin: 30px;'>" .
             " <div style='width: 50px; float: left;'><img src='plugins/Morpheus/images/error_medium.png' /></div>" .
@@ -87,7 +83,7 @@ class Piwik
             $message .
             "  </div>" .
             " </div>" .
-            "</div>".
+            "</div>" .
             "</body></html>";
         print($output);
         exit;
@@ -135,6 +131,18 @@ class Piwik
         if ($divisor == 0) {
             return 0;
         }
+        if ($dividend == 0 || $dividend === '-') {
+            $dividend = 0;
+        }
+        if (!is_numeric($dividend) || !is_numeric($divisor)) {
+            throw new \Exception(sprintf(
+                'Trying to round unsupported operands for dividend %s (%s) and divisor %s (%s)',
+                $dividend,
+                gettype($dividend),
+                $divisor,
+                gettype($divisor)
+            ));
+        }
         return round($dividend / $divisor, $precision);
     }
 
@@ -173,7 +181,43 @@ class Piwik
     public static function getCurrentUserEmail()
     {
         $user = APIUsersManager::getInstance()->getUser(Piwik::getCurrentUserLogin());
-        return $user['email'];
+        return $user['email'] ?? '';
+    }
+
+
+    public static function getCurrentUserCreationDate()
+    {
+        $user = APIUsersManager::getInstance()->getUser(Piwik::getCurrentUserLogin());
+        return $user['date_registered'] ?? '';
+    }
+
+    /**
+     * Returns the current user's Last Seen.
+     *
+     * @return string
+     * @api
+     */
+    public static function getCurrentUserLastSeen()
+    {
+        $user = APIUsersManager::getInstance()->getUser(Piwik::getCurrentUserLogin());
+        return $user['last_seen'] ?? '';
+    }
+
+    /**
+     * Returns the email addresses configured as contact. If none is configured the mail addresses of all super users will be returned instead.
+     *
+     * @return array
+     */
+    public static function getContactEmailAddresses(): array
+    {
+        $contactAddresses = trim(Config::getInstance()->General['contact_email_address']);
+
+        if (empty($contactAddresses)) {
+            return self::getAllSuperUserAccessEmailAddresses();
+        }
+
+        $contactAddresses = explode(',', $contactAddresses);
+        return array_map('trim', $contactAddresses);
     }
 
     /**
@@ -244,6 +288,32 @@ class Piwik
     }
 
     /**
+     * Returns if the given user needs to confirm his password in UI and for certain API methods
+     *
+     * @param string $login
+     * @return bool
+     */
+    public static function doesUserRequirePasswordConfirmation(string $login)
+    {
+        $requiresPasswordConfirmation = true;
+
+        /**
+         * Triggered to check if a password confirmation for a user is required.
+         *
+         * This event can be used in custom login plugins to skip the password confirmation checks for certain users,
+         * where e.g. no password would be available.
+         *
+         * Attention: Use this event wisely. Disabling password confirmation decreases the security.
+         *
+         * @param bool $requiresPasswordConfirmation Indicates if the password should be checked or not
+         * @param string $login Login of a user the password should be confirmed for
+         */
+        Piwik::postEvent('Login.userRequiresPasswordConfirmation', [&$requiresPasswordConfirmation, $login]);
+
+        return $requiresPasswordConfirmation;
+    }
+
+    /**
      * Check that the current user is either the specified user or the superuser.
      *
      * @param string $theUser A username.
@@ -259,6 +329,51 @@ class Piwik
             }
         } catch (NoAccessException $e) {
             throw new NoAccessException(Piwik::translate('General_ExceptionCheckUserHasSuperUserAccessOrIsTheUser', array($theUser)));
+        }
+    }
+
+    /**
+     * Request a token auth to authenticate in a request.
+     *
+     * Note: During one request the token is only being requested once and used throughout the request. So you want to make
+     * sure the token is valid for enough time for the whole request to finish.
+     *
+     * @param string $reason some short string/text explaining the reason for the token generation, eg "CliMultiAsyncHttpArchiving"
+     * @param int $validForHours For how many hours the token should be valid. Should not be valid for more than 14 days.
+     * @return mixed
+     */
+    public static function requestTemporarySystemAuthToken($reason, $validForHours)
+    {
+        static $token = array();
+
+        if (isset($token[$reason])) {
+            // note: For now we do not increase the expire time when it is already requested
+            return $token[$reason];
+        }
+
+        $twoWeeksInHours = 14 * 24;
+        if ($validForHours > $twoWeeksInHours) {
+            throw new Exception('The token cannot be valid for so many hours: ' . $validForHours);
+        }
+
+        $model = new Model();
+        $users = $model->getUsersHavingSuperUserAccess();
+        if (!empty($users)) {
+            $user = reset($users);
+            $expireDate = Date::now()->addHour($validForHours)->getDatetime();
+
+            $token[$reason] = $model->generateRandomTokenAuth();
+
+            $model->addTokenAuth(
+                $user['login'],
+                $token[$reason],
+                'System generated ' . $reason,
+                Date::now()->getDatetime(),
+                $expireDate,
+                true
+            );
+
+            return $token[$reason];
         }
     }
 
@@ -333,20 +448,6 @@ class Piwik
     public static function checkUserIsNotAnonymous()
     {
         Access::getInstance()->checkUserIsNotAnonymous();
-    }
-
-    /**
-     * Helper method user to set the current as superuser.
-     * This should be used with great care as this gives the user all permissions.
-     *
-     * This method is deprecated, use {@link Access::doAsSuperUser()} instead.
-     *
-     * @param bool $bool true to set current user as Super User
-     * @deprecated
-     */
-    public static function setUserHasSuperUserAccess($bool = true)
-    {
-        Access::getInstance()->setSuperUserAccess($bool);
     }
 
     /**
@@ -627,9 +728,9 @@ class Piwik
     public static function redirectToModule($newModule, $newAction = '', $parameters = array())
     {
         $newUrl = 'index.php' . Url::getCurrentQueryStringWithParametersModified(
-                array('module' => $newModule, 'action' => $newAction)
+            array('module' => $newModule, 'action' => $newAction)
                 + $parameters
-            );
+        );
         Url::redirectToUrl($newUrl);
     }
 
@@ -660,7 +761,8 @@ class Piwik
      */
     public static function checkValidLoginString($userLogin)
     {
-        if (!SettingsPiwik::isUserCredentialsSanityCheckEnabled()
+        if (
+            !SettingsPiwik::isUserCredentialsSanityCheckEnabled()
             && !empty($userLogin)
         ) {
             return;
@@ -668,7 +770,8 @@ class Piwik
         $loginMinimumLength = 2;
         $loginMaximumLength = 100;
         $l = strlen($userLogin);
-        if (!($l >= $loginMinimumLength
+        if (
+            !($l >= $loginMinimumLength
             && $l <= $loginMaximumLength
             && (preg_match('/^[A-Za-zÄäÖöÜüß0-9_.@+-]*$/D', $userLogin) > 0))
         ) {
@@ -708,7 +811,8 @@ class Piwik
     public static function isAssociativeArray($array)
     {
         reset($array);
-        if (!is_numeric(key($array))
+        if (
+            !is_numeric(key($array))
             || key($array) != 0
         ) {
             // first key must be 0
@@ -821,17 +925,72 @@ class Piwik
     }
 
     /**
-     * Executes a callback with superuser privileges, making sure those privileges are rescinded
-     * before this method exits. Privileges will be rescinded even if an exception is thrown.
+     * Returns the period provided in the current request.
+     * If no $default is provided, this method will throw an Exception if `period` can't be found in the request
      *
-     * @param callback $function The callback to execute. Should accept no arguments.
-     * @return mixed The result of `$function`.
-     * @throws Exception rethrows any exceptions thrown by `$function`.
+     * @param string|null $default  default value to use
+     * @throws Exception
+     * @return string
      * @api
-     * @deprecated since Matomo 3.8.0 use `Piwik\Access::doAsSuperUser` instead
      */
-    public static function doAsSuperUser($function)
+    public static function getPeriod($default = null)
     {
-        return Access::doAsSuperUser($function);
+        return Common::getRequestVar('period', $default, 'string');
+    }
+
+    /**
+     * Returns the date provided in the current request.
+     * If no $default is provided, this method will throw an Exception if `date` can't be found in the request
+     *
+     * @param string|null $default  default value to use
+     * @throws Exception
+     * @return string
+     * @api
+     */
+    public static function getDate($default = null)
+    {
+        return Common::getRequestVar('date', $default, 'string');
+    }
+
+    /**
+     * Returns the earliest date to rearchive provided in the config.
+     * @return Date|null
+     */
+    public static function getEarliestDateToRearchive()
+    {
+        $lastNMonthsToInvalidate = Config::getInstance()->General['rearchive_reports_in_past_last_n_months'];
+        if (empty($lastNMonthsToInvalidate)) {
+            return null;
+        }
+
+        if (!is_numeric($lastNMonthsToInvalidate)) {
+            $lastNMonthsToInvalidate = (int)str_replace('last', '', $lastNMonthsToInvalidate);
+            if (empty($lastNMonthsToInvalidate)) {
+                return null;
+            }
+        }
+
+        if ($lastNMonthsToInvalidate <= 0) {
+            return null;
+        }
+
+        return Date::yesterday()->subMonth($lastNMonthsToInvalidate)->setDay(1);
+    }
+
+    /**
+     * Given the fully qualified name of a class located within a Matomo plugin,
+     * returns the name of the plugin.
+     *
+     * Uses the fact that Matomo plugins have namespaces like Piwik\Plugins\MyPlugin.
+     *
+     * @param string $className the name of a class located within a Matomo plugin
+     * @return string the plugin name
+     */
+    public static function getPluginNameOfMatomoClass(string $className): string
+    {
+        $parts = explode('\\', $className);
+        $parts = array_filter($parts);
+        $plugin = $parts[2] ?? '';
+        return $plugin;
     }
 }

@@ -1,15 +1,14 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-namespace Piwik\Plugins\Insights\tests;
+namespace Piwik\Plugins\Insights\tests\Unit;
 
 use Piwik\DataTable;
-use Piwik\DataTable\Row;
 
 /**
  * Abstract class because it avoids it being picked up as a test case
@@ -19,7 +18,7 @@ use Piwik\DataTable\Row;
  * @group Unit
  * @group Core
  */
-abstract class BaseUnitTest extends \PHPUnit_Framework_TestCase
+abstract class BaseUnitTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var DataTable
@@ -46,5 +45,4 @@ abstract class BaseUnitTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(count($rowsWithValues), $this->table->getRowsCount());
     }
-
 }

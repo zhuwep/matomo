@@ -1,18 +1,19 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\Overlay;
 
 use Exception;
+use Piwik\API\Request;
 use Piwik\Config;
 use Piwik\DataTable;
-use Piwik\Plugins\SitesManager\API as APISitesManager;
-use Piwik\Plugins\SitesManager\SitesManager;
 use Piwik\Plugins\Transitions\API as APITransitions;
 use Piwik\Tracker\PageUrl;
 
@@ -40,19 +41,13 @@ class API extends \Piwik\Plugin\API
     /**
      * Get excluded query parameters for a site.
      * This information is used for client side url normalization.
+     *
+     * @deprecated use SitesManager.getExcludedQueryParameters instead
+     * @todo Remove in Matomo 6
      */
     public function getExcludedQueryParameters($idSite)
     {
-        $sitesManager = APISitesManager::getInstance();
-        $site = $sitesManager->getSiteFromId($idSite);
-
-        try {
-            return SitesManager::getTrackerExcludedQueryParameters($site);
-        } catch (Exception $e) {
-            // an exception is thrown when the user has no view access.
-            // do not throw the exception to the outside.
-            return array();
-        }
+        return Request::processRequest('SitesManager.getExcludedQueryParameters');
     }
 
     /**
@@ -67,13 +62,20 @@ class API extends \Piwik\Plugin\API
         $url = PageUrl::excludeQueryParametersFromUrl($url, $idSite);
         // we don't unsanitize $url here. it will be done in the Transitions plugin.
 
-        $resultDataTable = new DataTable;
+        $resultDataTable = new DataTable();
 
         try {
             $limitBeforeGrouping = Config::getInstance()->General['overlay_following_pages_limit'];
             $transitionsReport = APITransitions::getInstance()->getTransitionsForAction(
-                $url, $type = 'url', $idSite, $period, $date, $segment, $limitBeforeGrouping,
-                $part = 'followingActions');
+                $url,
+                $type = 'url',
+                $idSite,
+                $period,
+                $date,
+                $segment,
+                $limitBeforeGrouping,
+                $part = 'followingActions'
+            );
         } catch (Exception $e) {
             return $resultDataTable;
         }

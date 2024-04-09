@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -33,7 +33,7 @@ class FactoryTest extends IntegrationTestCase
      */
     private $factory;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->factory = new Factory();
@@ -153,5 +153,4 @@ class FactoryTest extends IntegrationTestCase
 
         $this->assertSame($backend, $storage->getBackend());
     }
-
 }

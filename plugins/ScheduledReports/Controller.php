@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,17 +8,15 @@
  */
 namespace Piwik\Plugins\ScheduledReports;
 
-use Faker\Provider\Image;
 use Piwik\Access;
 use Piwik\API\Request;
 use Piwik\Common;
-use Piwik\Config;
-use Piwik\Date;
 use Piwik\Nonce;
+use Piwik\Period\PeriodValidator;
 use Piwik\Piwik;
 use Piwik\Plugins\ImageGraph\ImageGraph;
 use Piwik\Plugins\LanguagesManager\LanguagesManager;
-use Piwik\Plugins\SegmentEditor\API as APISegmentEditor;
+use Piwik\Plugins\SegmentEditor\SegmentEditor;
 use Piwik\Plugins\SitesManager\API as APISitesManager;
 use Piwik\View;
 
@@ -40,7 +38,7 @@ class Controller extends \Piwik\Plugin\Controller
         $reportTypes = API::getReportTypes();
         $reportTypeOptions = array();
         foreach ($reportTypes as $reportType => $icon) {
-            $reportTypeOptions[$reportType] = Common::mb_strtoupper($reportType);
+            $reportTypeOptions[$reportType] = mb_strtoupper($reportType);
         }
         $view->reportTypes = $reportTypes;
         $view->reportTypeOptions = $reportTypeOptions;
@@ -50,7 +48,11 @@ class Controller extends \Piwik\Plugin\Controller
         $view->displayFormats = ScheduledReports::getDisplayFormats();
 
         $view->paramPeriods = [];
-        foreach (Piwik::$idPeriods as $label => $id) {
+
+        $periodValidator = new PeriodValidator();
+        $allowedPeriods = $periodValidator->getPeriodsAllowedForAPI();
+
+        foreach ($allowedPeriods as $label) {
             if ($label === 'range') {
                 continue;
             }
@@ -67,7 +69,7 @@ class Controller extends \Piwik\Plugin\Controller
             $reportFormatsByReportType[$reportType] = API::getReportFormats($reportType);
             $reportFormatsByReportTypeOptions[$reportType] = $reportFormatsByReportType[$reportType];
             foreach ($reportFormatsByReportTypeOptions[$reportType] as $type => $icon) {
-                $reportFormatsByReportTypeOptions[$reportType][$type] = Common::mb_strtoupper($type);
+                $reportFormatsByReportTypeOptions[$reportType][$type] = mb_strtoupper($type);
             }
             $allowMultipleReportsByReportType[$reportType] = API::allowMultipleReports($reportType);
 
@@ -114,8 +116,9 @@ class Controller extends \Piwik\Plugin\Controller
 
             $savedSegmentsById = array(
                 '' => Piwik::translate('SegmentEditor_DefaultAllVisits')
-             );
-            foreach (APISegmentEditor::getInstance()->getAll($this->idSite) as $savedSegment) {
+            );
+            $allSegments = SegmentEditor::getAllSegmentsForSite($this->idSite);
+            foreach ($allSegments as $savedSegment) {
                 $savedSegmentsById[$savedSegment['idsegment']] = $savedSegment['name'];
             }
             $view->savedSegmentsById = $savedSegmentsById;
@@ -141,17 +144,17 @@ class Controller extends \Piwik\Plugin\Controller
         $subscriptionModel = new SubscriptionModel();
         $subscription      = $subscriptionModel->getSubscription($token);
 
-        $report = Access::doAsSuperUser(function() use ($subscription) {
-            $reports = Request::processRequest('ScheduledReports.getReports', array(
-                'idReport'    => $subscription['idreport'],
-            ));
-            return reset($reports);
-        });
-
         if (empty($subscription)) {
             $view->error = Piwik::translate('ScheduledReports_NoSubscriptionFound');
             return $view->render();
         }
+
+        $report = Access::doAsSuperUser(function () use ($subscription) {
+            $reports = Request::processRequest('ScheduledReports.getReports', [
+                'idReport'    => $subscription['idreport'],
+            ]);
+            return reset($reports);
+        });
 
         $confirm = Common::getRequestVar('confirm', '', 'string');
 

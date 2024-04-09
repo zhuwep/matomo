@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,10 +8,8 @@
  */
 namespace Piwik\Settings\Plugin;
 
-use Piwik\Db;
 use Piwik\Piwik;
 use Piwik\Settings\Settings;
-use Piwik\Settings\Storage;
 
 /**
  * Base class of all plugin settings providers. Plugins that define their own configuration settings
@@ -49,7 +47,7 @@ abstract class UserSettings extends Settings
      * @param mixed  $defaultValue The default value for this setting. Note the value will not be converted to the
      *                             specified type.
      * @param string $type         The PHP internal type the value of this setting should have.
-     *                             Use one of FieldConfig::TYPE_* constancts
+     *                             Use one of FieldConfig::TYPE_* constants
      * @param \Closure $fieldConfigCallback   A callback method to configure the field that shall be displayed in the
      *                             UI to define the value for this setting
      * @return UserSetting   Returns an instance of the created measurable setting.

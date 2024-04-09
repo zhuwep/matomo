@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,23 +12,26 @@ use Exception;
 use Piwik\API\DataTablePostProcessor;
 use Piwik\API\Request;
 use Piwik\Common;
+use Piwik\DataTable\DataTableInterface;
 use Piwik\Date;
 use Piwik\Metrics;
 use Piwik\NumberFormatter;
 use Piwik\Period\Factory as PeriodFactory;
 use Piwik\Piwik;
 use Piwik\Plugins\API\Filter\DataComparisonFilter;
+use Piwik\Plugins\CoreVisualizations\Visualizations\Graph\Config as GraphConfig;
+use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Config as JqplotGraphConfig;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution as EvolutionViz;
 use Piwik\Url;
 use Piwik\ViewDataTable\Factory;
+use Piwik\ViewDataTable\Manager as ViewDataTableManager;
 
 /**
  * ROW EVOLUTION
- * The class handles the popover that shows the evolution of a singe row in a data table
+ * The class handles the popover that shows the evolution of a single row in a data table
  */
 class RowEvolution
 {
-
     /** The current site id */
     protected $idSite;
 
@@ -95,7 +98,9 @@ class RowEvolution
         }
         $this->label = Common::unsanitizeInputValue($this->label[0]);
 
-        if ($this->label === '') throw new Exception("Parameter label not set.");
+        if ($this->label === '') {
+            throw new Exception("Parameter label not set.");
+        }
 
         $this->period = Common::getRequestVar('period', '', 'string');
         PeriodFactory::checkPeriodIsEnabled($this->period);
@@ -109,8 +114,14 @@ class RowEvolution
 
         if ($this->period != 'range') {
             // handle day, week, month and year: display last X periods
+            //handle cache if exist
+            $cache = ViewDataTableManager::getViewDataTableParameters(
+                Piwik::getCurrentUserLogin(),
+                'CoreHome.getRowEvolutionGraph'
+            );
+            $lastDay = (isset($cache['evolution_' . $this->period . '_last_n']) ? $cache['evolution_' . $this->period . '_last_n'] : null);
             $end = $date->toString();
-            list($this->date, $lastN) = EvolutionViz::getDateRangeAndLastN($this->period, $end);
+            [$this->date, $lastN] = EvolutionViz::getDateRangeAndLastN($this->period, $end, $lastDay);
         }
         $this->segment = \Piwik\API\Request::getRawSegmentFromRequest();
 
@@ -120,7 +131,7 @@ class RowEvolution
     /**
      * Render the popover
      * @param \Piwik\Plugins\CoreHome\Controller $controller
-     * @param View (the popover_rowevolution template)
+     * @param \Piwik\View (the popover_rowevolution template)
      */
     public function renderPopover($controller, $view)
     {
@@ -137,7 +148,8 @@ class RowEvolution
         $popoverTitle = '';
         if ($this->rowLabel) {
             $icon = $this->rowIcon ? '<img height="16px" src="' . $this->rowIcon . '" alt="">' : '';
-            $metricsText = sprintf(Piwik::translate('RowEvolution_MetricsFor'), $this->dimension . ': ' . $icon . ' ' . $this->rowLabel);
+            $rowLabel = str_replace('/', '<wbr>/', str_replace('&', '<wbr>&', $this->rowLabel));
+            $metricsText = sprintf(Piwik::translate('RowEvolution_MetricsFor'), $this->dimension . ': ' . $icon . ' ' . $rowLabel);
             $popoverTitle = $icon . ' ' . $this->rowLabel;
         }
 
@@ -149,7 +161,7 @@ class RowEvolution
 
     protected function loadEvolutionReport($column = false)
     {
-        list($apiModule, $apiAction) = explode('.', $this->apiMethod);
+        [$apiModule, $apiAction] = explode('.', $this->apiMethod);
 
         // getQueryStringFromParameters expects sanitised query parameter values
         $parameters = array(
@@ -193,7 +205,7 @@ class RowEvolution
                 if ($period == 'range') {
                     $comparePeriods[$index] = 'day';
                 } else {
-                    list($newDate, $lastN) = EvolutionViz::getDateRangeAndLastN($period, $date);
+                    [$newDate, $lastN] = EvolutionViz::getDateRangeAndLastN($period, $date);
                     $compareDates[$index] = $newDate;
                 }
             }
@@ -210,7 +222,8 @@ class RowEvolution
         // at this point the report data will reference the comparison series labels for the changed compare periods/dates. We don't
         // want to show this to users because they will not recognize the changed periods, so we have to replace them.
         if ($isComparing) {
-            $modifiedSeriesLabels = reset($report['reportData']->getDataTables())->getMetadata('comparisonSeries');
+            $dataTables = $report['reportData']->getDataTables();
+            $modifiedSeriesLabels = reset($dataTables)->getMetadata('comparisonSeries');
             $seriesMap = array_combine($modifiedSeriesLabels, $unmodifiedSeriesLabels);
 
             foreach ($report['metadata']['metrics'] as $key => $metricInfo) {
@@ -242,8 +255,12 @@ class RowEvolution
     public function getRowEvolutionGraph($graphType = false, $metrics = false)
     {
         // set up the view data table
-        $view = Factory::build($graphType ? : $this->graphType, $this->apiMethod,
-            $controllerAction = 'CoreHome.getRowEvolutionGraph', $forceDefault = true);
+        $view = Factory::build(
+            $graphType ? : $this->graphType,
+            $this->apiMethod,
+            $controllerAction = 'CoreHome.getRowEvolutionGraph',
+            $forceDefault = true
+        );
         $view->setDataTable($this->dataTable);
 
         if (!empty($this->graphMetrics)) { // In row Evolution popover, this is empty
@@ -255,15 +272,20 @@ class RowEvolution
         $view->config->show_search = false;
         $view->config->show_all_views_icons = false;
         $view->config->show_related_reports  = false;
-        $view->config->show_series_picker    = false;
         $view->config->show_footer_message   = false;
 
         foreach ($this->availableMetrics as $metric => $metadata) {
             $view->config->translations[$metric] = $metadata['name'];
         }
 
-        $view->config->external_series_toggle = 'RowEvolutionSeriesToggle';
-        $view->config->external_series_toggle_show_all = $this->initiallyShowAllMetrics;
+        if ($view->config instanceof GraphConfig) {
+            $view->config->show_series_picker = false;
+        }
+
+        if ($view->config instanceof JqplotGraphConfig) {
+            $view->config->external_series_toggle          = 'RowEvolutionSeriesToggle';
+            $view->config->external_series_toggle_show_all = $this->initiallyShowAllMetrics;
+        }
 
         return $view;
     }
@@ -280,12 +302,12 @@ class RowEvolution
             $unit = Metrics::getUnit($metric, $this->idSite);
             $change = isset($metricData['change']) ? $metricData['change'] : false;
 
-            list($first, $last) = $this->getFirstAndLastDataPointsForMetric($metric);
+            [$first, $last] = $this->getFirstAndLastDataPointsForMetric($metric);
             $fractionDigits = max($this->getFractionDigits($first), $this->getFractionDigits($last));
 
             $details = Piwik::translate('RowEvolution_MetricBetweenText', array(
-                NumberFormatter::getInstance()->format($first, $fractionDigits, $fractionDigits) . $unit,
-                NumberFormatter::getInstance()->format($last, $fractionDigits, $fractionDigits) . $unit,
+                NumberFormatter::getInstance()->format($first, $fractionDigits) . $unit,
+                NumberFormatter::getInstance()->format($last, $fractionDigits) . $unit,
             ));
 
             if ($change !== false) {
@@ -329,7 +351,8 @@ class RowEvolution
             }
 
             // TODO: this check should be determined by metric metadata, not hardcoded here
-            if ($metric == 'nb_users'
+            if (
+                $metric == 'nb_users'
                 && $first == 0
                 && $last == 0
             ) {
@@ -399,16 +422,18 @@ class RowEvolution
     {
         // By default, use the specified label
         $rowLabel = Common::sanitizeInputValue($report['label']);
-        $rowLabel = str_replace('/', '<wbr>/', str_replace('&', '<wbr>&', $rowLabel ));
 
-        // If the dataTable specifies a label_html, use this instead
         /** @var $dataTableMap \Piwik\DataTable\Map */
         $dataTableMap = $report['reportData'];
-        $labelPretty = $dataTableMap->getColumn('label_html');
-        $labelPretty = array_filter($labelPretty, 'strlen');
-        $labelPretty = current($labelPretty);
-        if (!empty($labelPretty)) {
-            return $labelPretty;
+
+        // If the dataTable specifies a label_html, use this instead
+        if ($dataTableMap instanceof DataTableInterface) {
+            $labelPretty = $dataTableMap->getColumn('label_html');
+            $labelPretty = array_filter($labelPretty, 'strlen');
+            $labelPretty = current($labelPretty);
+            if (!empty($labelPretty)) {
+                return $labelPretty;
+            }
         }
         return $rowLabel;
     }

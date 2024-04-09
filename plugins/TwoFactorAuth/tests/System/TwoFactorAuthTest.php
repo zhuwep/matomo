@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,9 +16,6 @@ use Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao;
 use Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator;
 use Piwik\Plugins\TwoFactorAuth\SystemSettings;
 use Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication;
-use Piwik\Plugins\UsersManager\API;
-use Piwik\Tests\Framework\Fixture;
-use Piwik\Tests\Framework\Mock\FakeAccess;
 
 /**
  * @group TwoFactorAuth
@@ -47,7 +44,7 @@ class TwoFactorAuthTest extends SystemTestCase
      */
     private $twoFa;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -62,8 +59,8 @@ class TwoFactorAuthTest extends SystemTestCase
     public function test_onRequestDispatchEnd_notRequired()
     {
         $this->settings->twoFactorAuthRequired->setValue(true);
-        $html = '<html>'.Piwik::getCurrentUserTokenAuth().'</html>';
-        $expected = '<html>'.Piwik::getCurrentUserTokenAuth().'</html>';
+        $html = '<html>' . Piwik::getCurrentUserTokenAuth() . '</html>';
+        $expected = '<html>' . Piwik::getCurrentUserTokenAuth() . '</html>';
         Piwik::postEvent('Request.dispatch.end', array(&$html, 'module', 'action', array()));
         $this->assertSame($expected, $html);
     }
@@ -77,7 +74,6 @@ class TwoFactorAuthTest extends SystemTestCase
     {
         return dirname(__FILE__);
     }
-
 }
 
 TwoFactorAuthTest::$fixture = new SimpleFixtureTrackFewVisits();

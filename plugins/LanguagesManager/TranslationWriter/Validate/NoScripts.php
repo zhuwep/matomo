@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -25,10 +26,10 @@ class NoScripts extends ValidateAbstract
 
         // check if any translation contains restricted script tags
         $serializedStrings = serialize($translations);
-        $invalids = array("<script", 'document.', 'javascript:', 'src=', 'background=', 'onload=');
+        $invalids = ['/<script/i', '/javascript:[^"]/i', '/src=/i', '/background=/i', '/onload=/i'];
 
         foreach ($invalids as $invalid) {
-            if (stripos($serializedStrings, $invalid) !== false) {
+            if (preg_match($invalid, $serializedStrings) > 0) {
                 $this->message = 'script tags restricted for language files';
                 return false;
             }

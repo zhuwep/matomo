@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,8 +12,8 @@ namespace Piwik\Tracker;
  * Base class for LogTables. You need to create a log table eg if you want to be able to create a segment for a custom
  * log table.
  */
-abstract class LogTable {
-
+abstract class LogTable
+{
     /**
      * Get the unprefixed database table name. For example 'log_visit' or 'log_action'.
      * @return string
@@ -44,7 +44,7 @@ abstract class LogTable {
      * Get the name of the column that can be used to join an action with another table. This is the name of the column
      * that represents the "idaction".
      *
-     * This could be more generic eg by specifiying "$this->joinableOn = array('action' => 'idaction') and this
+     * This could be more generic eg by specifying "$this->joinableOn = array('action' => 'idaction') and this
      * would allow to also add more complex structures in the future but not needed for now I'd say. Let's go with
      * simpler, more clean and expressive solution for now until needed.
      *
@@ -90,7 +90,7 @@ abstract class LogTable {
     {
         return '';
     }
-    
+
     /**
      * Returns the name of a log table that allows to join on a visit. Eg if there is a table "action", and it is not
      * joinable with "visit" table, it can return "log_link_visit_action" to be able to join the action table on visit

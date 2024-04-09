@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,9 +10,7 @@
 namespace Piwik;
 
 use Exception;
-use Piwik\Container\StaticContainer;
 use Piwik\Exception\UnexpectedWebsiteFoundException;
-use Piwik\Intl\Data\Provider\CurrencyDataProvider;
 use Piwik\Plugins\SitesManager\API;
 
 /**
@@ -174,7 +172,6 @@ class Site
      *                             array('idsite' => '2', 'name' => 'Site 2', ...),
      *                         )
      * @return array The modified array.
-     * @deprecated
      * @internal
      */
     public static function setSitesFromArray($sites)
@@ -425,6 +422,10 @@ class Site
      */
     public static function getIdSitesFromIdSitesString($ids, $_restrictSitesToLogin = false)
     {
+        if (empty($ids)) {
+            return [];
+        }
+
         if ($ids === 'all') {
             return API::getInstance()->getSitesIdWithAtLeastViewAccess($_restrictSitesToLogin);
         }
@@ -437,7 +438,7 @@ class Site
         }
         $validIds = array();
         foreach ($ids as $id) {
-            $id = trim($id);
+            $id = is_string($id) ? trim($id) : $id;
             if (!empty($id) && is_numeric($id) && $id > 0) {
                 $validIds[] = $id;
             }
@@ -628,24 +629,6 @@ class Site
         }
 
         return $symbol;
-    }
-
-
-    /**
-     * Returns the list of all known currency symbols.
-     *
-     * @return array An array mapping currency codes to their respective currency symbols
-     *               and a description, eg, `array('USD' => array('$', 'US dollar'))`.
-     *
-     * @deprecated Use Piwik\Intl\Data\Provider\CurrencyDataProvider instead.
-     * @see \Piwik\Intl\Data\Provider\CurrencyDataProvider::getCurrencyList()
-     * @api
-     */
-    public static function getCurrencyList()
-    {
-        /** @var CurrencyDataProvider $dataProvider */
-        $dataProvider = StaticContainer::get('Piwik\Intl\Data\Provider\CurrencyDataProvider');
-        return $dataProvider->getCurrencyList();
     }
 
     /**

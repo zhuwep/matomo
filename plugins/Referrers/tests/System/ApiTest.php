@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -37,24 +38,24 @@ class ApiTest extends SystemTestCase
 
     public function getApiForTesting()
     {
-        $api = array(
+        $api = [
             'API.getProcessedReport'
-        );
+        ];
 
-        $apiToTest   = array();
+        $apiToTest   = [];
 
         // we make sure it returns a subtableIds even if a DataTable\Map is requested
-        $apiToTest[] = array($api,
-            array(
+        $apiToTest[] = [$api,
+            [
                 'idSite'     => 1,
                 'apiModule'  => 'Referrers',
                 'apiAction'  => 'getReferrerType',
                 'date'       => '2010-01-01,2010-03-10',
-                'periods'    => array('day'),
+                'periods'    => ['day'],
                 'testSuffix' => 'Referrers_getReferrerType',
-                'otherRequestParameters' => array('expanded' => 0)
-            )
-        );
+                'otherRequestParameters' => ['expanded' => 0]
+            ]
+        ];
 
         $apiToTest[] = [
             'Referrers.getReferrerType',
@@ -62,18 +63,66 @@ class ApiTest extends SystemTestCase
                 'idSite' => 1,
                 'date' => '2010-01-01',
                 'periods' => 'year',
-                'testSuffix' => 'phpSerialized',
+                'testSuffix' => 'phpSerialized' . (version_compare(PHP_VERSION, '8', '>=') ? 8 : (version_compare(PHP_VERSION, '7.4', '>=') ? '74' : '')),
                 'format' => 'original',
             ],
         ];
 
         $apiToTest[] = [
-            array('Referrers.getAll', 'Referrers.getReferrerType'),
+            ['Referrers.getAll', 'Referrers.getReferrerType'],
             [
                 'idSite' => 'all',
                 'date' => '2010-01-01',
                 'periods' => 'year',
                 'testSuffix' => 'allSites',
+            ],
+        ];
+
+        $apiToTest[] = [
+            'Referrers.get',
+            [
+                'idSite' => 1,
+                'date' => '2010-01-01',
+                'periods' => 'year',
+                'testSuffix' => 'formattedMetrics',
+                'otherRequestParameters' => ['format_metrics' => '1'],
+            ],
+        ];
+
+        $apiToTest[] = [
+            'Referrers.get',
+            [
+                'idSite' => 1,
+                'date' => '2010-01-01',
+                'periods' => 'year',
+                'testSuffix' => 'unformattedMetrics',
+                'otherRequestParameters' => ['format_metrics' => '0'],
+            ],
+        ];
+
+        $apiToTest[] = [
+            ['Referrers.getKeywordsFromSearchEngineId'],
+            [
+                'idSite' => '1',
+                'date' => '2010-01-01',
+                'periods' => 'year',
+                'otherRequestParameters' => [
+                    'idSubtable' => '1',
+                ],
+                'testSuffix' => 'subtableid_valid',
+            ],
+        ];
+
+        $apiToTest[] = [
+            ['Referrers.getKeywordsFromSearchEngineId'],
+            [
+                'idSite' => '1',
+                'date' => '2010-01-01',
+                'periods' => 'year',
+                'otherRequestParameters' => [
+                    'idSubtable' => '99',
+                ],
+                'testSuffix' => 'subtableid_invalid',
             ],
         ];
 
@@ -99,7 +148,7 @@ class ApiTest extends SystemTestCase
         $t->doTrackPageView('Page 1');
 
         /** @var DataTable $visits */
-        $visits = Request::processRequest('VisitsSummary.get', array('idSite' => 1, 'period' => 'day', 'date' => $dateTime));
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
 
         $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
@@ -124,13 +173,13 @@ class ApiTest extends SystemTestCase
         $t->doTrackPageView('Page 1');
 
         /** @var DataTable $visits */
-        $visits = Request::processRequest('VisitsSummary.get', array('idSite' => 1, 'period' => 'day', 'date' => $dateTime));
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
 
         $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
     }
 
-    public function test_forceNewVisit_shouldNotForceANewVisitWhenNoKeywordIsSetAndCampaignNameIsUpperCase()
+    public function test_forceNewVisit_shouldForceANewVisitWhenNoKeywordIsSetAndCampaignNameIsUpperCase()
     {
         $dateTime = '2015-01-04';
         $idSite = self::$fixture->idSite;
@@ -149,9 +198,9 @@ class ApiTest extends SystemTestCase
         $t->doTrackPageView('Page 1');
 
         /** @var DataTable $visits */
-        $visits = Request::processRequest('VisitsSummary.get', array('idSite' => 1, 'period' => 'day', 'date' => $dateTime));
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
 
-        $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
+        $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_visits'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
     }
 
@@ -164,23 +213,27 @@ class ApiTest extends SystemTestCase
             . 'thiscrazylongstringohijustdid';
 
         $t = Fixture::getTracker($idSite, $dateTime . ' 00:01:02', $defaultInit = true);
-        // track a campaign that was opened directly (w/ saved referrer cookie info)
+         // track a campaign that was opened directly (w/ saved referrer cookie info)
         $t->setUrlReferrer('http://www.google.com');
         $t->setUrl('http://piwik.net/?pk_campaign=' . $longReferrer);
         $t->doTrackPageView('My Title');
 
         // navigate to same page but from different URL w/ same campaign
-        $t->setUrlReferrer('http://links.piwik.net/?pk_campaign=' . $longReferrer);
+        $t->setUrlReferrer('http://piwik.net/?pk_campaign=' . $longReferrer);
         $t->setCustomTrackingParameter('_rcn', $longReferrer); // this parameter would be set by piwik.js from cookie / attributionInfo
         $t->setCustomTrackingParameter('_rck', ''); // no keyword was used in previous tracking request
         $t->setUrl('http://piwik.net/page1');
         $t->doTrackPageView('Page 1');
 
         /** @var DataTable $visits */
-        $visits = Request::processRequest('VisitsSummary.get', array('idSite' => 1, 'period' => 'day', 'date' => $dateTime));
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
 
         $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
+
+        /** @var DataTable $referrers */
+        $referrers = Request::processRequest('Referrers.getCampaigns', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
+        $this->assertEquals(substr($longReferrer, 0, 255), $referrers->getFirstRow()->getColumn('label'));
     }
 
     public function test_forceNewVisit_shouldNotForceNewVisitWhenReferrerNameIsLongerThanDbColumnLength()
@@ -203,7 +256,7 @@ class ApiTest extends SystemTestCase
         $t->doTrackPageView('Page 1');
 
         /** @var DataTable $visits */
-        $visits = Request::processRequest('VisitsSummary.get', array('idSite' => 1, 'period' => 'day', 'date' => $dateTime));
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
 
         $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
@@ -216,24 +269,24 @@ class ApiTest extends SystemTestCase
 
         $t = Fixture::getTracker($idSite, $dateTime . ' 00:01:02', $defaultInit = true);
         // track an HTTPS request
-        $t->setUrlReferrer('https://t.umblr.com/');
+        $t->setUrlReferrer('https://somewebsite.com/');
         $t->setUrl('http://piwik.net/');
         $t->doTrackPageView('My Title');
 
         // track an HTTP request
         $t->setForceNewVisit(true);
-        $t->setUrlReferrer('http://t.umblr.com/');
+        $t->setUrlReferrer('http://somewebsite.com/');
         $t->setUrl('http://piwik.net/');
         $t->doTrackPageView('My Title');
 
         /** @var DataTable $visits */
         $visits = Request::processRequest(
-            'Referrers.getWebsites', 
-            array('idSite' => $idSite, 'period' => 'day', 'date' => $dateTime, 'flat' => 1)
+            'Referrers.getWebsites',
+            ['idSite' => $idSite, 'period' => 'day', 'date' => $dateTime, 'flat' => 1]
         );
 
         $firstRow = $visits->getFirstRow();
-        $this->assertEquals('t.umblr.com/index', $firstRow->getColumn('label'));
+        $this->assertEquals('somewebsite.com/index', $firstRow->getColumn('label'));
         $this->assertEquals(2, $firstRow->getColumn('nb_visits'));
     }
 
@@ -244,32 +297,75 @@ class ApiTest extends SystemTestCase
 
         $t = Fixture::getTracker($idSite, $dateTime . ' 00:01:02', $defaultInit = true);
         // track an HTTPS request
-        $t->setUrlReferrer('https://t.umblr.com/');
+        $t->setUrlReferrer('https://somewebsite.com/');
         $t->setUrl('http://piwik.net/');
         $t->doTrackPageView('My Title');
 
         // track an HTTP request
         $t->setForceNewVisit(true);
-        $t->setUrlReferrer('http://t.umblr.com/');
+        $t->setUrlReferrer('http://somewebsite.com/');
         $t->setUrl('http://piwik.net/');
         $t->doTrackPageView('My Title');
 
         /** @var DataTable $visits */
         $visits = Request::processRequest(
-            'Referrers.getWebsites', 
-            array('idSite' => $idSite, 'period' => 'day', 'date' => $dateTime)
+            'Referrers.getWebsites',
+            ['idSite' => $idSite, 'period' => 'day', 'date' => $dateTime]
         );
 
         $idSubtable = $visits->getFirstRow()->getIdSubDataTable();
 
         $visits = Request::processRequest(
             'Referrers.getUrlsFromWebsiteId',
-            array('idSite' => $idSite, 'period' => 'day', 'date' => $dateTime, 'idSubtable' => $idSubtable)
+            ['idSite' => $idSite, 'period' => 'day', 'date' => $dateTime, 'idSubtable' => $idSubtable]
         );
 
         $firstRow = $visits->getFirstRow();
         $this->assertEquals('index', $firstRow->getColumn('label'));
         $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_visits'));
+    }
+
+    public function test_searchEngineWithHiddenKeywordIsTrackedCorrectly()
+    {
+        $dateTime = '2015-01-09';
+        $idSite = self::$fixture->idSite;
+
+        $t = Fixture::getTracker($idSite, $dateTime . ' 00:01:02', $defaultInit = true);
+
+        $t->setUrlReferrer('https://www.looksmart.com/');
+        $t->setUrl('http://piwik.net/page1');
+        $t->doTrackPageView('Page 1');
+
+        /** @var DataTable $visits */
+        $visits = Request::processRequest('Referrers.getSearchEngines', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
+
+        $this->assertEquals('Looksmart', $visits->getFirstRow()->getColumn('label'));
+        $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
+    }
+
+    public function test_forceNewVisit_shouldNotForceANewVisitWhenCampaignIsTheSameAndSecondReferrerIsExcluded()
+    {
+        $dateTime = '2015-01-10';
+        $idSite = self::$fixture->idSite;
+
+        $t = Fixture::getTracker($idSite, $dateTime . ' 00:01:02', $defaultInit = true);
+        // track a campaign that was opened directly (no referrer)
+        $t->setUrlReferrer('http://www.google.com');
+        $t->setUrl('http://piwik.net/?pk_campaign=adwbuccc');
+        $t->doTrackPageView('My Title');
+
+        // navigate to same page but from different excluded referrer URL w/ same campaign
+        $t->setUrlReferrer(self::$fixture::EXCLUDED_REFERRER_URL . '/?pk_campaign=adwbuccc');
+        $t->setCustomTrackingParameter('_rcn', 'adwbuccc'); // this parameter would be set by piwik.js from cookie / attributionInfo
+        $t->setCustomTrackingParameter('_rck', ''); // no keyword was used in previous tracking request
+        $t->setUrl('http://piwik.net/page1');
+        $t->doTrackPageView('Page 1');
+
+        /** @var DataTable $visits */
+        $visits = Request::processRequest('VisitsSummary.get', ['idSite' => 1, 'period' => 'day', 'date' => $dateTime]);
+
+        $this->assertEquals(1, $visits->getFirstRow()->getColumn('nb_visits'));
+        $this->assertEquals(2, $visits->getFirstRow()->getColumn('nb_actions'));
     }
 
     public static function getOutputPrefix()
@@ -285,7 +381,7 @@ class ApiTest extends SystemTestCase
     public static function provideContainerConfigBeforeClass()
     {
         return [
-            Config::class => \DI\decorate(function (Config $config) {
+            Config::class => \Piwik\DI::decorate(function (Config $config) {
                 $config->Tracker['create_new_visit_when_website_referrer_changes'] = 1;
                 return $config;
             }),

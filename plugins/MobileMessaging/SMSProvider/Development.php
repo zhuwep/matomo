@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -20,7 +20,6 @@ use Piwik\Session;
  */
 class Development extends SMSProvider
 {
-
     public function getId()
     {
         return 'Development';
@@ -54,7 +53,7 @@ class Development extends SMSProvider
         $notification = new Notification($message);
         $notification->raw = true;
         $notification->context = Notification::CONTEXT_INFO;
-        Notification\Manager::notify('StubbedSMSProvider'.preg_replace('/[^a-z0-9]/', '', $phoneNumber), $notification);
+        Notification\Manager::notify('StubbedSMSProvider' . preg_replace('/[^a-z0-9]/', '', $phoneNumber), $notification);
     }
 
     public function getCreditLeft($credentials)

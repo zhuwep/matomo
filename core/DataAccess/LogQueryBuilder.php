@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -49,9 +49,16 @@ class LogQueryBuilder
         return $this->forcedInnerGroupBy;
     }
 
-    public function getSelectQueryString(SegmentExpression $segmentExpression, $select, $from, $where, $bind, $groupBy,
-                                         $orderBy, $limitAndOffset)
-    {
+    public function getSelectQueryString(
+        SegmentExpression $segmentExpression,
+        $select,
+        $from,
+        $where,
+        $bind,
+        $groupBy,
+        $orderBy,
+        $limitAndOffset
+    ) {
         if (!is_array($from)) {
             $from = array($from);
         }
@@ -133,7 +140,7 @@ class LogQueryBuilder
         }
 
         $matchTables = '(' . implode('|', $matchTables) . ')';
-        preg_match_all("/". $matchTables ."\.[a-z0-9_\*]+/", $select, $matches);
+        preg_match_all("/" . $matchTables . "\.[a-z0-9_\*]+/", $select, $matches);
         $neededFields = array_unique($matches[0]);
 
         if (count($neededFields) == 0) {
@@ -165,7 +172,7 @@ class LogQueryBuilder
             }
         }
 
-        preg_match_all("/". $matchTables . "/", $from, $matchesFrom);
+        preg_match_all("/" . $matchTables . "/", $from, $matchesFrom);
 
         $innerSelect = implode(", \n", $neededFields);
         $innerFrom = $from;
@@ -204,15 +211,15 @@ class LogQueryBuilder
 
         $innerQuery = $this->buildSelectQuery($innerSelect, $innerFrom, $innerWhere, $innerGroupBy, $innerOrderBy, $innerLimitAndOffset);
 
-        $select = preg_replace('/'.$matchTables.'\./', 'log_inner.', $select);
+        $select = preg_replace('/' . $matchTables . '\./', 'log_inner.', $select);
 
         $from = "
         (
             $innerQuery
         ) AS log_inner";
         $where = false;
-        $orderBy = preg_replace('/'.$matchTables.'\./', 'log_inner.', $orderBy);
-        $groupBy = preg_replace('/'.$matchTables.'\./', 'log_inner.', $groupBy);
+        $orderBy = preg_replace('/' . $matchTables . '\./', 'log_inner.', $orderBy);
+        $groupBy = preg_replace('/' . $matchTables . '\./', 'log_inner.', $groupBy);
 
         $outerLimitAndOffset = null;
         $query = $this->buildSelectQuery($select, $from, $where, $groupBy, $orderBy, $outerLimitAndOffset);

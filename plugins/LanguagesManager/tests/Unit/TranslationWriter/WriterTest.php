@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,7 +20,7 @@ use Piwik\Plugins\LanguagesManager\TranslationWriter\Writer;
 /**
  * @group LanguagesManager
  */
-class WriterTest extends \PHPUnit_Framework_TestCase
+class WriterTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @group Core
@@ -35,20 +36,20 @@ class WriterTest extends \PHPUnit_Framework_TestCase
 
     public function getValidConstructorData()
     {
-        return array(
-            array('en', ''),
-            array('de', ''),
-            array('en', 'ExamplePlugin'),
-        );
+        return [
+            ['en', ''],
+            ['de', ''],
+            ['en', 'ExamplePlugin'],
+        ];
     }
 
     /**
      * @group Core
-     *
-     * @expectedException \Exception
      */
     public function testConstructorInvalid()
     {
+        $this->expectException(\Exception::class);
+
         new Writer('en', 'InValIdPlUGin');
     }
 
@@ -58,7 +59,7 @@ class WriterTest extends \PHPUnit_Framework_TestCase
     public function testHasTranslations()
     {
         $writer = new Writer('de');
-        $writer->setTranslations(array('General' => array('test' => 'test')));
+        $writer->setTranslations(['General' => ['test' => 'test']]);
         $this->assertTrue($writer->hasTranslations());
     }
 
@@ -77,7 +78,7 @@ class WriterTest extends \PHPUnit_Framework_TestCase
     public function testSetTranslationsEmpty()
     {
         $writer = new Writer('de');
-        $writer->setTranslations(array());
+        $writer->setTranslations([]);
         $this->assertTrue($writer->isValid());
         $this->assertFalse($writer->hasTranslations());
     }
@@ -99,38 +100,41 @@ class WriterTest extends \PHPUnit_Framework_TestCase
 
     public function getInvalidTranslations()
     {
-        $translations = json_decode(file_get_contents(PIWIK_INCLUDE_PATH.'/lang/de.json'), true);
-        return array(
-            array(array('General' => array('Locale' => '')) + $translations, CoreTranslations::ERRORSTATE_LOCALEREQUIRED),
-            array(array('General' => array('Locale' => 'de_DE.UTF-8')) + $translations, CoreTranslations::ERRORSTATE_TRANSLATORINFOREQUIRED),
-            array(array('General' => array('Locale' => 'invalid',
-                                           'TranslatorName' => 'name')) + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALID),
-            array(array('General' => array('Locale' => 'xx_DE.UTF-8',
-                                           'TranslatorName' => 'name')) + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALIDLANGUAGE),
-            array(array('General' => array('Locale' => 'de_XX.UTF-8',
-                                           'TranslatorName' => 'name')) + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALIDCOUNTRY),
-            array(array('General' => array('Locale' => '<script>')) + $translations, 'script tags restricted for language files'),
-        );
+        $translations = json_decode(file_get_contents(PIWIK_INCLUDE_PATH . '/lang/de.json'), true);
+        return [
+            [['General' => ['Locale' => '']] + $translations, CoreTranslations::ERRORSTATE_LOCALEREQUIRED],
+            [['General' => ['Locale' => 'de_DE.UTF-8']] + $translations, CoreTranslations::ERRORSTATE_TRANSLATORINFOREQUIRED],
+            [['General' => [
+                     'Locale'         => 'invalid',
+                     'TranslatorName' => 'name'
+                 ]
+                  ] + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALID],
+            [['General' => ['Locale' => 'xx_DE.UTF-8',
+                                           'TranslatorName' => 'name']] + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALIDLANGUAGE],
+            [['General' => ['Locale' => 'de_XX.UTF-8',
+                                           'TranslatorName' => 'name']] + $translations, CoreTranslations::ERRORSTATE_LOCALEINVALIDCOUNTRY],
+            [['General' => ['Locale' => '<script>']] + $translations, 'script tags restricted for language files'],
+        ];
     }
 
     /**
      * @group Core
-     *
-     * @expectedException \Exception
      */
     public function testSaveException()
     {
+        $this->expectException(\Exception::class);
+
         $writer = new Writer('it');
         $writer->save();
     }
 
     /**
      * @group Core
-     *
-     * @expectedException \Exception
      */
     public function testSaveTemporaryException()
     {
+        $this->expectException(\Exception::class);
+
         $writer = new Writer('it');
         $writer->saveTemporary();
     }
@@ -140,16 +144,16 @@ class WriterTest extends \PHPUnit_Framework_TestCase
      */
     public function testSaveTranslation()
     {
-        $translations = json_decode(file_get_contents(PIWIK_INCLUDE_PATH.'/lang/en.json'), true);
+        $translations = json_decode(file_get_contents(PIWIK_INCLUDE_PATH . '/lang/en.json'), true);
 
-        $translationsToWrite = array();
+        $translationsToWrite = [];
         $translationsToWrite['General'] = $translations['General'];
         $translationsToWrite['Mobile'] = $translations['Mobile'];
 
         $translationsToWrite['General']['Yes'] = 'string with %1$s';
-        $translationsToWrite['Plugin'] = array(
+        $translationsToWrite['Plugin'] = [
             'Body' => "Message\nBody"
-        );
+        ];
 
         $translationWriter = new Writer('fr');
 
@@ -161,7 +165,7 @@ class WriterTest extends \PHPUnit_Framework_TestCase
 
         $rc = $translationWriter->saveTemporary();
 
-        @unlink(PIWIK_INCLUDE_PATH.'/tmp/fr.json');
+        @unlink(PIWIK_INCLUDE_PATH . '/tmp/fr.json');
 
         $this->assertGreaterThan(25000, $rc);
 
@@ -181,12 +185,12 @@ class WriterTest extends \PHPUnit_Framework_TestCase
 
     public function getTranslationPathTestData()
     {
-        return array(
-            array('de', null, PIWIK_INCLUDE_PATH . '/lang/de.json'),
-            array('te', null, PIWIK_INCLUDE_PATH . '/lang/te.json'),
-            array('de', 'CoreHome', PIWIK_INCLUDE_PATH . '/plugins/CoreHome/lang/de.json'),
-            array('pt-br', 'Actions', PIWIK_INCLUDE_PATH . '/plugins/Actions/lang/pt-br.json'),
-        );
+        return [
+            ['de', null, PIWIK_INCLUDE_PATH . '/lang/de.json'],
+            ['te', null, PIWIK_INCLUDE_PATH . '/lang/te.json'],
+            ['de', 'CoreHome', PIWIK_INCLUDE_PATH . '/plugins/CoreHome/lang/de.json'],
+            ['pt-br', 'Actions', PIWIK_INCLUDE_PATH . '/plugins/Actions/lang/pt-br.json'],
+        ];
     }
 
     /**
@@ -204,12 +208,12 @@ class WriterTest extends \PHPUnit_Framework_TestCase
     {
         $tmpPath = StaticContainer::get('path.tmp');
 
-        return array(
-            array('de', null, $tmpPath . '/de.json'),
-            array('te', null, $tmpPath . '/te.json'),
-            array('de', 'CoreHome', $tmpPath . '/plugins/CoreHome/lang/de.json'),
-            array('pt-br', 'Actions', $tmpPath . '/plugins/Actions/lang/pt-br.json'),
-        );
+        return [
+            ['de', null, $tmpPath . '/de.json'],
+            ['te', null, $tmpPath . '/te.json'],
+            ['de', 'CoreHome', $tmpPath . '/plugins/CoreHome/lang/de.json'],
+            ['pt-br', 'Actions', $tmpPath . '/plugins/Actions/lang/pt-br.json'],
+        ];
     }
 
     /**
@@ -226,42 +230,43 @@ class WriterTest extends \PHPUnit_Framework_TestCase
 
     public function getValidLanguages()
     {
-        return array(
-            array('de'),
-            array('te'),
-            array('pt-br'),
-            array('tzm'),
-            array('abc'),
-            array('de-de'),
-            array('DE'),
-            array('DE-DE'),
-            array('DE-de'),
-        );
+        return [
+            ['de'],
+            ['te'],
+            ['pt-br'],
+            ['tzm'],
+            ['abc'],
+            ['de-de'],
+            ['DE'],
+            ['DE-DE'],
+            ['DE-de'],
+        ];
     }
     /**
      * @group Core
      *
-     * @expectedException \Exception
      * @dataProvider getInvalidLanguages
      */
     public function testSetLanguageInvalid($language)
     {
+        $this->expectException(\Exception::class);
+
         $writer = new Writer('en', null);
         $writer->setLanguage($language);
     }
 
     public function getInvalidLanguages()
     {
-        return array(
-            array(''),
-            array('abcd'),
-            array('pt-brfr'),
-            array('00'),
-            array('a-b'),
-            array('x3'),
-            array('X4-fd'),
-            array('12-34'),
-            array('$§'),
-        );
+        return [
+            [''],
+            ['abcd'],
+            ['pt-brfr'],
+            ['00'],
+            ['a-b'],
+            ['x3'],
+            ['X4-fd'],
+            ['12-34'],
+            ['$§'],
+        ];
     }
 }

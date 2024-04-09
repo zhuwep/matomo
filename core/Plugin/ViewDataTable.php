@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,8 +15,6 @@ use Piwik\DataTable;
 use Piwik\Period;
 use Piwik\Piwik;
 use Piwik\Plugins\API\Filter\DataComparisonFilter;
-use Piwik\Plugins\CoreVisualizations\Visualizations\Sparkline;
-use Piwik\View;
 use Piwik\View\ViewInterface;
 use Piwik\ViewDataTable\Config as VizConfig;
 use Piwik\ViewDataTable\Manager as ViewDataTableManager;
@@ -38,7 +36,7 @@ use Piwik\ViewDataTable\RequestConfig as VizRequest;
  * ViewDataTable instances are not created via the new operator, instead the {@link Piwik\ViewDataTable\Factory}
  * class is used.
  *
- * The specific subclass to create is determined, first, by the **viewDataTable** query paramater.
+ * The specific subclass to create is determined, first, by the **viewDataTable** query parameter.
  * If this parameter is not set, then the default visualization type for the report being
  * displayed is used.
  *
@@ -218,11 +216,13 @@ abstract class ViewDataTable implements ViewInterface
                     if (!$relatedReport) {
                         continue;
                     }
-                    
+
                     $relatedReportName = $relatedReport->getName();
 
-                    $this->config->addRelatedReport($relatedReport->getModule() . '.' . $relatedReport->getAction(),
-                                                    $relatedReportName);
+                    $this->config->addRelatedReport(
+                        $relatedReport->getModule() . '.' . $relatedReport->getAction(),
+                        $relatedReportName
+                    );
                 }
             }
 
@@ -234,6 +234,11 @@ abstract class ViewDataTable implements ViewInterface
             $processedMetrics = $report->getProcessedMetrics();
             if (!empty($processedMetrics)) {
                 $this->config->addTranslations($processedMetrics);
+            }
+
+            $dimension = $report->getDimension();
+            if (!empty($dimension)) {
+                $this->config->addTranslations(['label' => $dimension->getName()]);
             }
 
             $this->config->title = $report->getName();
@@ -275,7 +280,8 @@ abstract class ViewDataTable implements ViewInterface
         // the exclude low population threshold value is sometimes obtained by requesting data.
         // to avoid issuing unnecessary requests when display properties are determined by metadata,
         // we allow it to be a closure.
-        if (isset($this->requestConfig->filter_excludelowpop_value)
+        if (
+            isset($this->requestConfig->filter_excludelowpop_value)
             && $this->requestConfig->filter_excludelowpop_value instanceof \Closure
         ) {
             $function = $this->requestConfig->filter_excludelowpop_value;
@@ -463,7 +469,7 @@ abstract class ViewDataTable implements ViewInterface
     }
 
     /**
-     * Returns the list of view properties that can be overriden by query parameters.
+     * Returns the list of view properties that can be overridden by query parameters.
      *
      * @return array
      */
@@ -517,7 +523,8 @@ abstract class ViewDataTable implements ViewInterface
         $period = Common::getRequestVar('period', null, 'string', $requestArray);
         $idSite = Common::getRequestVar('idSite', null, 'string', $requestArray);
 
-        if (Period::isMultiplePeriod($date, $period)
+        if (
+            Period::isMultiplePeriod($date, $period)
             || strpos($idSite, ',') !== false
             || $idSite == 'all'
         ) {
@@ -609,7 +616,8 @@ abstract class ViewDataTable implements ViewInterface
      */
     public function isComparing()
     {
-        if (!$this->supportsComparison()
+        if (
+            !$this->supportsComparison()
             || $this->config->disable_comparison
         ) {
             return false;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -41,8 +41,7 @@ class GetNumberOfVisitsByVisitCount extends Base
 
         $view->config->addTranslations(array(
             'label'                => Piwik::translate('VisitorInterest_VisitNum'),
-            'nb_visits_percentage' => Metrics::getPercentVisitColumn())
-        );
+            'nb_visits_percentage' => Metrics::getPercentVisitColumn()));
 
         $view->config->columns_to_display = array('label', 'nb_visits', 'nb_visits_percentage');
         $view->config->show_exclude_low_population = false;
@@ -55,5 +54,4 @@ class GetNumberOfVisitsByVisitCount extends Base
         $view->config->show_table_all_columns  = false;
         $view->config->show_all_views_icons    = false;
     }
-
 }

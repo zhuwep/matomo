@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Common;
 
 class Xml extends ApiRenderer
 {
-
     public function renderSuccess($message)
     {
         return "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" .
@@ -39,5 +38,4 @@ class Xml extends ApiRenderer
     {
         Common::sendHeader('Content-Type: text/xml; charset=utf-8');
     }
-
 }

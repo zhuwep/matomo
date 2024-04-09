@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,9 +17,11 @@ class Menu extends \Piwik\Plugin\Menu
     public function configureAdminMenu(MenuAdmin $menu)
     {
         if (Piwik::hasUserSuperUserAccess() && Manager::getInstance()->isPluginActivated('Diagnostics')) {
-            $menu->addDiagnosticItem('Installation_SystemCheck',
-                                   $this->urlForAction('systemCheckPage'),
-                                   $order = 1);
+            $menu->addDiagnosticItem(
+                'Installation_SystemCheck',
+                $this->urlForAction('systemCheckPage'),
+                $order = 1
+            );
         }
     }
 }

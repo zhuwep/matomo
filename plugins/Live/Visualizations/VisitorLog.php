@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,10 +16,9 @@ use Piwik\Piwik;
 use Piwik\Plugin;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugin\Visualization;
+use Piwik\Plugins\Live\Live;
 use Piwik\Plugins\PrivacyManager\PrivacyManager;
-use Piwik\Plugins\TagManager\Model\Container\StaticContainerIdGenerator;
 use Piwik\Tracker\Action;
-use Piwik\View;
 
 /**
  * A special DataTable visualization for the Live.getLastVisitsDetails API method.
@@ -47,7 +46,8 @@ class VisitorLog extends Visualization
             'filter_sort_order',
         ));
 
-        if (!is_numeric($this->requestConfig->filter_limit)
+        if (
+            !is_numeric($this->requestConfig->filter_limit)
             || $this->requestConfig->filter_limit == -1 // 'all' is not supported for this visualization
         ) {
             $defaultLimit = Config::getInstance()->General['datatable_default_limit'];
@@ -58,7 +58,7 @@ class VisitorLog extends Visualization
             $this->requestConfig->filter_limit = 10;
         }
 
-        $this->requestConfig->request_parameters_to_modify['filter_limit'] = $this->requestConfig->filter_limit+1; // request one more record, to check if a next page is available
+        $this->requestConfig->request_parameters_to_modify['filter_limit'] = $this->requestConfig->filter_limit + 1; // request one more record, to check if a next page is available
         $this->requestConfig->disable_generic_filters = true;
         $this->requestConfig->filter_sort_column      = false;
 
@@ -121,6 +121,10 @@ class VisitorLog extends Visualization
         $this->config->custom_parameters['hideProfileLink'] = (int)(1 == Common::getRequestVar('hideProfileLink', 0, 'int'));
         $this->config->custom_parameters['pageUrlNotDefined'] = Piwik::translate('General_NotDefined', Piwik::translate('Actions_ColumnPageURL'));
 
+        if (!Live::isVisitorProfileEnabled()) {
+            $this->config->custom_parameters['hideProfileLink'] = 1;
+        }
+
         if (!$this->isInPopover()) {
             $this->config->footer_icons = array(
                 array(
@@ -165,7 +169,8 @@ class VisitorLog extends Visualization
             $actionGroups = [];
             foreach ($row->getColumn('actionDetails') as $key => $action) {
                 // if action is not a pageview action
-                if (empty($action['idpageview'])
+                if (
+                    empty($action['idpageview'])
                     && self::isPageviewAction($action)
                 ) {
                     $actionGroups[] = [
@@ -195,10 +200,27 @@ class VisitorLog extends Visualization
                         $actionGroups[$idPageView]['refreshActions'][] = $actionGroups[$idPageView]['pageviewAction'];
                         $actionGroups[$idPageView]['pageviewAction'] = $action;
                     } else {
-                        $actionGroups[$idPageView]['refreshActions'][] = $actionGroups[$idPageView]['pageviewAction'];
+                        $actionGroups[$idPageView]['refreshActions'][] = $action;
                     }
                 } else {
                     $actionGroups[$idPageView]['actionsOnPage'][] = $action;
+                }
+            }
+
+            foreach ($actionGroups as $idPageView => $actionGroup) {
+                if (!empty($actionGroup['actionsOnPage'])) {
+                    usort($actionGroup['actionsOnPage'], function ($a, $b) {
+                        $fields = array('timestamp', 'title', 'url', 'type', 'pageIdAction', 'goalId', 'timeSpent');
+                        foreach ($fields as $field) {
+                            $sort = self::sortByActionsOnPageColumn($a, $b, $field);
+                            if ($sort !== 0) {
+                                return $sort;
+                            }
+                        }
+
+                        return 0;
+                    });
+                    $actionGroups[$idPageView]['actionsOnPage'] = $actionGroup['actionsOnPage'];
                 }
             }
 
@@ -207,6 +229,34 @@ class VisitorLog extends Visualization
 
             $row->setColumn('actionGroups', $actionGroups);
         }
+    }
+
+    public static function sortByActionsOnPageColumn($a, $b, $field)
+    {
+        if (!isset($a[$field]) && !isset($b[$field])) {
+            return 0;
+        }
+        if (!isset($a[$field])) {
+            return -1;
+        }
+        if (!isset($b[$field])) {
+            return 1;
+        }
+        if ($field === 'serverTimePretty') {
+            $a[$field] = strtotime($a[$field]);
+            $b[$field] = strtotime($b[$field]);
+        }
+        if ($field === 'type') {
+            $a[$field] = (string) $a[$field];
+            $b[$field] = (string) $b[$field];
+        }
+        if ($a[$field] === $b[$field]) {
+            return 0;
+        }
+        if ($a[$field] < $b[$field]) {
+            return -1;
+        }
+        return 1;
     }
 
     private static function mergeRefreshes(array $actionGroups)
@@ -219,14 +269,18 @@ class VisitorLog extends Visualization
             }
 
             $action = $group['pageviewAction'];
+            $actionUrl = !empty($action['url']) ? $action['url'] : '';
+            $actionTitle = !empty($action['pageTitle']) ? $action['pageTitle'] : '';
             $lastActionGroup = $actionGroups[$previousId];
+            $lastGroupUrl = !empty($lastActionGroup['pageviewAction']['url']) ? $lastActionGroup['pageviewAction']['url'] : '';
+            $lastGroupTitle = !empty($lastActionGroup['pageviewAction']['pageTitle']) ? $lastActionGroup['pageviewAction']['pageTitle'] : '';
 
             $isLastGroupEmpty = empty($actionGroups[$previousId]['actionsOnPage']);
-            $isPageviewActionSame = $lastActionGroup['pageviewAction']['url'] == $action['url']
-                && $lastActionGroup['pageviewAction']['pageTitle'] == $action['pageTitle'];
+            $isPageviewActionSame = $lastGroupUrl == $actionUrl && $lastGroupTitle == $actionTitle;
 
             // if the current action has the same url/action name as the last, merge w/ the last action group
-            if ($isLastGroupEmpty
+            if (
+                $isLastGroupEmpty
                 && $isPageviewActionSame
             ) {
                 $actionGroups[$previousId]['refreshActions'][] = $action;

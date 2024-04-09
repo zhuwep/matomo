@@ -1,15 +1,14 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 namespace Piwik\Tests\Fixtures;
 
 use Piwik\Date;
 use Piwik\Tests\Framework\Fixture;
-use PiwikTracker;
 
 /**
  * Adds one site and tracks a couple visits with many pageviews. The
@@ -22,13 +21,13 @@ class SomeVisitsManyPageviewsWithTransitions extends Fixture
 
     private $prefixCounter = 0;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsitesAndGoals();
         $this->trackVisits();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -36,8 +35,13 @@ class SomeVisitsManyPageviewsWithTransitions extends Fixture
     private function setUpWebsitesAndGoals()
     {
         if (!self::siteCreated($idSite = 1)) {
-            self::createWebsite($this->dateTime, $ecommerce = 0, $siteName = 'Piwik test', $siteUrl = false,
-                                $siteSearch = 1);
+            self::createWebsite(
+                $this->dateTime,
+                $ecommerce = 0,
+                $siteName = 'Piwik test',
+                $siteUrl = false,
+                $siteSearch = 1
+            );
         }
     }
 
@@ -118,16 +122,34 @@ class SomeVisitsManyPageviewsWithTransitions extends Fixture
         $this->trackPageView($tracker, 0.2, 'page/one.html', $laterDate);
         $this->trackPageView($tracker, 0.25, '', $laterDate, $pageViewType = 'download');
         $this->trackPageView($tracker, 0.3, 'page/one.html', $laterDate);
-        $this->trackPageView($tracker, 0.35, 'page/search.html#q=anotherkwd', $laterDate,
-                             $pageViewType = 'site-search', $searchKeyword = 'anotherkwd',
-                             $searchCategory = 'mysearchcat');
+        $this->trackPageView(
+            $tracker,
+            0.35,
+            'page/search.html#q=anotherkwd',
+            $laterDate,
+            $pageViewType = 'site-search',
+            $searchKeyword = 'anotherkwd',
+            $searchCategory = 'mysearchcat'
+        );
+
+
+        $tracker->setIp('156.5.3.8');
+        $tracker->setNewVisitorId();
+        $tracker->setUrlReferrer('http://www.google.com.vn/url?sa=t&rct=j&q='); // search w/ unknown keyword
+        $this->trackPageView($tracker, 0, 'page/one.html');
 
         self::checkBulkTrackingResponse($tracker->doBulkTrack());
     }
 
-    private function trackPageView($visit, $timeOffset, $path, $dateTime = null, $pageViewType = 'normal',
-                                     $searchKeyword = null, $searchCategory = null)
-    {
+    private function trackPageView(
+        $visit,
+        $timeOffset,
+        $path,
+        $dateTime = null,
+        $pageViewType = 'normal',
+        $searchKeyword = null,
+        $searchCategory = null
+    ) {
         if ($dateTime === null) {
             $dateTime = $this->dateTime;
         }
@@ -137,7 +159,7 @@ class SomeVisitsManyPageviewsWithTransitions extends Fixture
         $prefix = $prefixes[$this->prefixCounter % 4];
         $this->prefixCounter = $this->prefixCounter + 1;
 
-        /** @var $visit PiwikTracker */
+        /** @var $visit MatomoTracker */
         $visit->setUrl($prefix . 'example.org/' . $path);
         $visit->setForceVisitDateTime(Date::factory($dateTime)->addHour($timeOffset)->getDatetime());
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -358,5 +358,4 @@ class MonthTest extends BasePeriodTest
         $shouldBe = '2024-10';
         $this->assertEquals($shouldBe, $month->getPrettyString());
     }
-
 }

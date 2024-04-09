@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,16 +8,19 @@
 
 namespace Piwik\Plugins\Diagnostics\Diagnostic;
 
+use Piwik\Common;
+
 /**
  * The result of a diagnostic.
  *
  * @api
  */
-class DiagnosticResult
+class DiagnosticResult implements \JsonSerializable
 {
     const STATUS_ERROR = 'error';
     const STATUS_WARNING = 'warning';
     const STATUS_OK = 'ok';
+    const STATUS_INFORMATIONAL = 'informational';
 
     /**
      * @var string
@@ -50,6 +53,27 @@ class DiagnosticResult
         $result = new self($label);
         $result->addItem(new DiagnosticResultItem($status, $comment));
         return $result;
+    }
+
+    /**
+     * @param string $label
+     * @param string $comment
+     * @param bool $escapeComment
+     * @return DiagnosticResult
+     */
+    public static function informationalResult($label, $comment = '', $escapeComment = true)
+    {
+        if ($comment === true) {
+            $comment = '1';
+        } elseif ($comment === false) {
+            $comment = '0';
+        }
+
+        if ($escapeComment) {
+            $comment = Common::sanitizeInputValue($comment);
+        }
+
+        return self::singleResult($label, self::STATUS_INFORMATIONAL, $comment);
     }
 
     /**
@@ -117,5 +141,14 @@ class DiagnosticResult
         }
 
         return $status;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return [
+            'label' => $this->label,
+            'longErrorMessage' => $this->longErrorMessage,
+            'items' => $this->items,
+        ];
     }
 }

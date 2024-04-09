@@ -2,9 +2,12 @@
 <result>
 	<row>
 		<login>login1</login>
-		<alias>login1</alias>
 		<email>login1@example.com</email>
 		<superuser_access>1</superuser_access>
+		
+		<invited_by />
+		
+		
 		
 		<uses_2fa>0</uses_2fa>
 	</row>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -38,7 +38,8 @@ class Schema extends Singleton
     private static function getSchemaClassName($schemaName)
     {
         // Upgrade from pre 2.0.4
-        if (strtolower($schemaName) == 'myisam'
+        if (
+            strtolower($schemaName) == 'myisam'
             || empty($schemaName)) {
             $schemaName = self::DEFAULT_SCHEMA;
         }

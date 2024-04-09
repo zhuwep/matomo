@@ -1,27 +1,28 @@
 {
     "UserCountryMap": {
-        "PluginDescription": "Dieses Plugin stellt die Widgets \"Besucherkarte\" sowie \"Besucherkarte in Echtzeit\" bereit. Hinweis: Hierfür muss das Plugin \"UserCountry\" aktiviert sein.",
         "AndNOthers": "und %s andere",
         "Cities": "Städte",
         "Countries": "Länder",
         "DaysAgo": "vor %s Tagen",
         "GoalConversions": "%s Ziel-Konversionen",
         "HoursAgo": "vor %s Stunden",
-        "map": "Karte",
         "MinutesAgo": "vor %s Minuten",
-        "None": "Keine",
         "NoVisit": "Keine Besuche",
+        "NoVisitsInfo": "Es werden keine Besuche angezeigt, da für keinen der Besuche in diesem Zeitraum korrekte Geolokalisierungsdaten (Breitengrad und Längengrad) vorliegen.",
+        "NoVisitsInfo2": "Lösen Sie dieses Problem, indem Sie einen GeoIP-Geolokalisierungsanbieter mit einer GeoIP-Städtedatenbank verwenden. (Auch wenn es unwahrscheinlich ist) könnten IP-Adressen immer noch nicht geolokalisiert werden können.",
+        "None": "Keine",
+        "PluginDescription": "Stellt die Widgets \"Besucherkarte\" sowie \"Besucherkarte in Echtzeit\" bereit. Erfordert das Plugin \"UserCountry\".",
         "RealTimeMap": "Besucherkarte in Echtzeit",
+        "RealTimeMapHelp": "Zeigt den Ort von Webseitenbesuchern in den letzten 30 Minuten an, und lässt die neuen aufleuchten. Große orange Kreise repräsentieren kürzliche Besuche, und kleinere graue die älteren. Alle fünf Sekunden wird aktualisiert.",
         "Regions": "Regionen",
         "Searches": "%s Suchen",
         "SecondsAgo": "vor %s Sekunden",
         "ShowingVisits": "Lokalisierte Besuche der letzten",
-        "Unlocated": "<b>%s<\/b> %p der Besuche von %c konnten nicht lokalisiert werden.",
+        "Unlocated": "<b>%1$s</b> %2$s der Besuche von %3$s konnten nicht lokalisiert werden.",
         "VisitorMap": "Besucherkarte",
+        "WithUnknownCity": "%s aus unbekannten Städten",
+        "WithUnknownRegion": "%s aus unbekannten Regionen",
         "WorldWide": "Weltweit",
-        "WithUnknownRegion": "%s mit unbekannter Region",
-        "WithUnknownCity": "%s mit unbekannter Stadt",
-        "NoVisitsInfo": "Es werden aktuell keine Besuche angezeigt, weil für diesen Zeitraum kein Besuch mit korrekten Geolocation Informationen (Längengrad & Breitengrad) existiert.",
-        "NoVisitsInfo2": "Um das Problem zu lösen, stellen Sie sicher, dass Sie einen GeoIP Geolocation Provider mit einer GeoIP Stadt Datenbank verwenden. Wenn dies Ihr Problem nicht löst, dann ist es möglich (wenn auch unwahrscheinlich) dass Ihre Besuche IP Adressen haben, die nicht geolokalisiert werden können."
+        "map": "Karte"
     }
 }

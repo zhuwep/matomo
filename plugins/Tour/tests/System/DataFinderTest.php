@@ -32,7 +32,7 @@ class DataFinderTest extends SystemTestCase
      */
     private $dataFinder;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->dataFinder = new DataFinder();
@@ -91,7 +91,6 @@ class DataFinderTest extends SystemTestCase
     {
         return dirname(__FILE__);
     }
-
 }
 
 DataFinderTest::$fixture = new SimpleFixtureTrackFewVisits();

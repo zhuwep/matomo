@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -20,7 +20,8 @@ class Filechecks
      */
     public static function canAutoUpdate()
     {
-        if (!is_writable(PIWIK_INCLUDE_PATH . '/') ||
+        if (
+            !is_writable(PIWIK_INCLUDE_PATH . '/') ||
             !is_writable(PIWIK_DOCUMENT_ROOT . '/index.php') ||
             !is_writable(PIWIK_INCLUDE_PATH . '/core') ||
             !is_writable(PIWIK_DOCUMENT_ROOT . '/config/global.ini.php')
@@ -74,7 +75,7 @@ class Filechecks
         // Also give the chown since the chmod is only 755
         if (!SettingsServer::isWindows()) {
             $realpath = Filesystem::realpath(PIWIK_INCLUDE_PATH . '/');
-            $directoryList = "<code>chown -R ". self::getUserAndGroup() ." " . $realpath . "</code><br />" . $directoryList;
+            $directoryList = "<code>chown -R " . self::getUserAndGroup() . " " . $realpath . "</code><br />" . $directoryList;
         }
 
         if (function_exists('shell_exec')) {
@@ -107,9 +108,13 @@ class Filechecks
     {
         $realpath = Filesystem::realpath(PIWIK_INCLUDE_PATH . '/');
         $message = '';
-        $message .= "<br /><code>" . self::getCommandToChangeOwnerOfPiwikFiles() . "</code><br />";
+        if (!SettingsServer::isWindows()) {
+            $message .= "<br /><code>" . self::getCommandToChangeOwnerOfPiwikFiles() . "</code><br />";
+        }
         $message .= self::getMakeWritableCommand($realpath);
-        $message .= '<code>chmod 755 '.$realpath.'/console</code><br />';
+        if (!SettingsServer::isWindows()) {
+            $message .= '<code>chmod 755 ' . $realpath . '/console</code><br />';
+        }
         $message .= 'After you execute these commands (or change permissions via your FTP software), refresh the page and you should be able to use the "Automatic Update" feature.';
         return $message;
     }
@@ -131,7 +136,7 @@ class Filechecks
             $message .= "For example, on a GNU/Linux server if your Apache httpd user is "
                         . Common::sanitizeInputValue(self::getUser())
                         . ", you can try to execute:<br />\n"
-                        . "<code>chown -R ". Common::sanitizeInputValue(self::getUserAndGroup()) ." " . Common::sanitizeInputValue($path) . "</code><br />";
+                        . "<code>chown -R " . Common::sanitizeInputValue(self::getUserAndGroup()) . " " . Common::sanitizeInputValue($path) . "</code><br />";
         }
 
         $message .= self::getMakeWritableCommand($path);
@@ -146,11 +151,23 @@ class Filechecks
             return $user . ':' . $user;
         }
 
-        $group = trim(shell_exec('groups '. $user .' | cut -f3 -d" "'));
+        $group = trim(shell_exec('groups ' . $user . ' | cut -f3 -d" "'));
+
+        if (empty($group) && function_exists('posix_getegid') && function_exists('posix_getgrgid')) {
+            $currentGroupId = posix_getegid();
+
+            $group = posix_getpwuid($currentGroupId);
+            if (!empty($group['name'])) {
+                $group = $group['name'];
+            } else {
+                $group = $currentGroupId;
+            }
+        }
 
         if (empty($group)) {
             $group = 'www-data';
         }
+
         return $user . ':' . $group;
     }
 
@@ -161,11 +178,23 @@ class Filechecks
         }
 
         $currentUser = get_current_user();
-        if(!empty($currentUser)) {
-            return $currentUser;
+
+        if (empty($currentUser) && function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+            $currentUserId = posix_geteuid();
+
+            $user = posix_getpwuid($currentUserId);
+            if (!empty($user['name'])) {
+                $currentUser = $user['name'];
+            } else {
+                $currentUser = $currentUserId;
+            }
         }
 
-        return 'www-data';
+        if (empty($currentUser)) {
+            $currentUser = 'www-data';
+        }
+
+        return $currentUser;
     }
 
     /**
@@ -196,26 +225,33 @@ class Filechecks
     {
         $index = Filesystem::realpath(PIWIK_INCLUDE_PATH . '/index.php');
         $stat = stat($index);
-        if(!$stat) {
+        if (!$stat) {
             return '';
         }
 
         if (function_exists('posix_getgrgid')) {
             $group = posix_getgrgid($stat[5]);
-            $group = $group['name'];
+
+            if (!empty($group['name'])) {
+                $group = $group['name'];
+            } else {
+                $group = $stat[5];
+            }
         } else {
             return '';
         }
 
         if (function_exists('posix_getpwuid')) {
             $user = posix_getpwuid($stat[4]);
-            $user = $user['name'];
+            if (!empty($user['name'])) {
+                $user = $user['name'];
+            } else {
+                $user = $stat[4];
+            }
         } else {
             return '';
         }
 
         return "$user:$group";
     }
-
-
 }

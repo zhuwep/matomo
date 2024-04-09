@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,10 @@ use Piwik\Metrics;
 
 class Glossary
 {
-    protected $metadata = array();
+    /**
+     * @var API
+     */
+    private $api;
 
     public function __construct(API $api)
     {
@@ -61,7 +64,8 @@ class Glossary
 
                 $metricKey = $metricId;
 
-                if(empty($report['metrics'][$metricId])
+                if(
+                    empty($report['metrics'][$metricId])
                     && empty($report['processedMetrics'][$metricId])) {
                     continue;
                 }
@@ -70,7 +74,8 @@ class Glossary
 
 
                 // Already one metric with same name, but different documentation...
-                if (isset($metrics[$metricKey])
+                if (
+                    isset($metrics[$metricKey])
                     && $metrics[$metricKey]['documentation'] !== $metricDocumentation) {
 
                     // Don't show nb_hits in glossary since it duplicates others, eg. nb_downloads,
@@ -82,22 +87,23 @@ class Glossary
                     $metricKey = $metricName;
 
                     if (isset($metrics[$metricKey]) && $metrics[$metricKey]['documentation'] !== $metricDocumentation) {
-                        throw new \Exception(sprintf("Metric %s has two different documentations: \n(1) %s \n(2) %s",
-                                $metricKey,
-                                $metrics[$metricKey]['documentation'],
-                                $metricDocumentation)
-                        );
+                        throw new \Exception(sprintf(
+                            "Metric %s has two different documentations: \n(1) %s \n(2) %s",
+                            $metricKey,
+                            $metrics[$metricKey]['documentation'],
+                            $metricDocumentation
+                        ));
                     }
                 } else {
 
-                    if (!isset($report['metrics'][$metricId])
+                    if (
+                        !isset($report['metrics'][$metricId])
                         && !isset($report['processedMetrics'][$metricId])
                     ) {
                         // $metricId metric name not found in  $report['dimension'] report
                         // it will be set in another one
                         continue;
                     }
-
                 }
 
                 $metrics[$metricKey] = array(
@@ -119,9 +125,11 @@ class Glossary
                 );
             }
         }
-        
+
         usort($metrics, function ($a, $b) {
-            return strcmp($a['name'], $b['name']);
+            $key = ($a['name'] === $b['name'] ? 'id' : 'name');
+
+            return strcmp($a[$key], $b[$key]);
         });
         return $metrics;
     }

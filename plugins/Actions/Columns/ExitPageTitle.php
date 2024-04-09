@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,6 +13,7 @@ use Piwik\Columns\Join\ActionNameJoin;
 use Piwik\Plugin\Dimension\VisitDimension;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\Request;
+use Piwik\Tracker\TableLogAction;
 use Piwik\Tracker\Visitor;
 
 class ExitPageTitle extends VisitDimension
@@ -23,8 +24,9 @@ class ExitPageTitle extends VisitDimension
     protected $nameSingular = 'Actions_ColumnExitPageTitle';
     protected $namePlural = 'Actions_WidgetExitPageTitles';
     protected $category = 'General_Actions';
-    protected $sqlFilter = '\\Piwik\\Tracker\\TableLogAction::getIdActionFromSegment';
+    protected $suggestedValuesApi = 'Actions.getExitPageTitles';
     protected $type = self::TYPE_TEXT;
+    protected $sqlFilter = [TableLogAction::class, 'getOptimizedIdActionSqlMatch'];
 
     public function getDbColumnJoin()
     {

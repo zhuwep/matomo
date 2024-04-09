@@ -21,13 +21,13 @@ class SimpleFixtureTrackFewVisits extends Fixture
     public $dateTime = '2013-01-23 01:23:45';
     public $idSite = 1;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->setUpWebsite();
         $this->trackFirstVisit();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         // empty
     }
@@ -56,5 +56,4 @@ class SimpleFixtureTrackFewVisits extends Fixture
         $t->addEcommerceItem($sku = 'SKU_ID', $name = 'Test item!', $category = 'Test & Category', $price = 777, $quantity = 33);
         self::checkResponse($t->doTrackEcommerceOrder('TestingOrder', $grandTotal = 33 * 77));
     }
-
 }

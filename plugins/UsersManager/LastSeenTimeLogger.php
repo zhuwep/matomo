@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -38,7 +38,8 @@ class LastSeenTimeLogger
         $currentUserLogin = Piwik::getCurrentUserLogin();
 
         // only log time for non-anonymous visits to the reporting UI
-        if ($module == 'API'
+        if (
+            $module == 'API'
             || $module == 'Proxy'
             || Piwik::isUserIsAnonymous()
         ) {

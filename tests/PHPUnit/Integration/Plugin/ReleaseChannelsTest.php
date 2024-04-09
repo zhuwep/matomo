@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,12 +8,8 @@
 
 namespace Piwik\Tests\Integration\Plugin;
 
-use Piwik\Config;
 use Piwik\Container\StaticContainer;
-use Piwik\Db;
 use Piwik\Plugin;
-use Piwik\Settings\Storage;
-use Piwik\Cache as PiwikCache;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\UpdateCheck\ReleaseChannel;
@@ -30,7 +26,7 @@ class ReleaseChannelsTest extends IntegrationTestCase
      */
     private $channels;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -79,7 +75,7 @@ class ReleaseChannelsTest extends IntegrationTestCase
         return array(
             array($exists = true, $id = 'latest_stable'),
             array($exists = true, $id = 'latest_beta'),
-            array($exists = true, $id = 'latest_2x_stable'),
+            array($exists = true, $id = 'latest_5x_stable'),
             array($exists = true, $id = 'laTest_stable'), // we do not check for exact match
             array($exists = false, $id = ''),
             array($exists = false, $id = 'latest'),
@@ -92,12 +88,11 @@ class ReleaseChannelsTest extends IntegrationTestCase
     {
         return array(
             array('latest_stable', 'latest_stable'),
-            array('latest_2x_stable', 'latest_2x_stable'),
+            array('latest_4x_stable', 'latest_5x_stable'),
             array('latest_beta', 'latest_beta'),
             array('latest_beta', 'latEst_betA'),
             array('latest_stable', ''), // if nothing configured should return default (the one with lowest order)
             array('latest_stable', 'latest'), // if invalid id configured should return default (the one with lowest order)
         );
     }
-
 }

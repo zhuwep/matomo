@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,13 +10,13 @@ namespace Piwik\Tests\Unit\Metrics;
 use Piwik\Container\StaticContainer;
 use Piwik\Metrics\Formatter;
 use Piwik\NumberFormatter;
-use Piwik\Translate;
+use Piwik\Tests\Framework\Fixture;
 use Piwik\Plugins\SitesManager\API as SitesManagerAPI;
 
 /**
  * @group Core
  */
-class FormatterTest extends \PHPUnit_Framework_TestCase
+class FormatterTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Formatter
@@ -25,7 +25,7 @@ class FormatterTest extends \PHPUnit_Framework_TestCase
 
     private $sitesInfo;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->sitesInfo = array(
             1 => array(
@@ -52,13 +52,13 @@ class FormatterTest extends \PHPUnit_Framework_TestCase
 
         $this->formatter = new Formatter();
 
-        Translate::loadAllTranslations();
+        Fixture::loadAllTranslations();
         $this->setSiteManagerApiMock();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
-        Translate::reset();
+        Fixture::resetTranslations();
         NumberFormatter::getInstance()->clearCache();
         $this->unsetSiteManagerApiMock();
     }
@@ -167,8 +167,8 @@ class FormatterTest extends \PHPUnit_Framework_TestCase
     {
         return array(
             array(1, 1, 'en', '€1'),
-            array(1.045, 2, 'en', 'DKK1.05'),
-            array(1000.4445, 3, 'en', 'PLN1,000.44'),
+            array(1.045, 2, 'en', 'kr1.05'),
+            array(1000.4445, 3, 'en', 'zł1,000.44'),
             array(1234.56, 4, 'en', 'NZ$1,234.56'),
             array(234.76, 5, 'en', '¥234.76'),
             array(234.76, 5, 'de', '234,76 ¥'),
@@ -225,7 +225,7 @@ class FormatterTest extends \PHPUnit_Framework_TestCase
     {
         $sitesInfo = $this->sitesInfo;
 
-        $mock = $this->getMock('stdClass', array('getSiteFromId'));
+        $mock = $this->getMockBuilder('stdClass')->addMethods(['getSiteFromId'])->getMock();
         $mock->expects($this->any())->method('getSiteFromId')->willReturnCallback(function ($idSite) use ($sitesInfo) {
             return $sitesInfo[$idSite];
         });

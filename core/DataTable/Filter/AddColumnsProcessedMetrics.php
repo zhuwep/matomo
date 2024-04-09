@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -68,7 +68,7 @@ class AddColumnsProcessedMetrics extends BaseFilter
             $this->deleteRowsWithNoVisit($table);
         }
 
-        $extraProcessedMetrics = $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME);
+        $extraProcessedMetrics = $table->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME) ?: [];
 
         $extraProcessedMetrics[] = new ConversionRate();
         $extraProcessedMetrics[] = new ActionsPerVisit();
@@ -81,11 +81,12 @@ class AddColumnsProcessedMetrics extends BaseFilter
     private function deleteRowsWithNoVisit(DataTable $table)
     {
         foreach ($table->getRows() as $key => $row) {
-            $nbVisits  = Metric::getMetric($row, 'nb_visits');
-            $nbActions = Metric::getMetric($row, 'nb_actions');
+            $nbVisits  = (int)Metric::getMetric($row, 'nb_visits');
+            $nbActions = (int)Metric::getMetric($row, 'nb_actions');
 
-            if ($nbVisits == 0
-                && $nbActions == 0
+            if (
+                $nbVisits === 0
+                && $nbActions === 0
             ) {
                 // case of keyword/website/campaign with a conversion for this day, but no visit, we don't show it
                 $table->deleteRow($key);

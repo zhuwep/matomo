@@ -1,3 +1,3 @@
 <?php
 
-echo '99.99.99';
+echo htmlentities($_GET['v']) . '.99.99';

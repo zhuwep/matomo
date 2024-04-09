@@ -129,6 +129,10 @@
         margin: 0;
         border-radius: 0;
     }
+
+    .datatableHeaderMessage, .datatableFooterMessage {
+        padding-left: 12px;
+    }
 }
 
 .widget.hiddenContent .widgetTop.widgetTopHover {
@@ -145,16 +149,9 @@
   background-color: @theme-color-widget-background;
 }
 
-.widget {
-  .datatableHeaderMessage, .datatableFooterMessage {
-    padding-left: 12px;
-  }
-}
-
 .bar-graph-colors[data-name=grid-background] {
     color: @theme-color-widget-background !important;
 }
-
 
 .widgetoverlay {
   .widget, .ui-dialog-content {
@@ -162,7 +159,8 @@
   }
 }
 
-
 .ui-dialog .widget .widgetTop .buttons {
-    right: 25px;
+    right: 30px;
+    top: 2px;
+    display: block;
 }

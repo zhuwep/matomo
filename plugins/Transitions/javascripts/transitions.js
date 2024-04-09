@@ -1,7 +1,7 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -79,7 +79,14 @@ DataTable_RowActions_Transitions.prototype.doOpenPopover = function (link) {
 
     var i = 0;
     while (i < parts.length) {
-        var paramName = decodeURIComponent(parts[i]);
+        var paramName = '';
+
+        try {
+            paramName = decodeURIComponent(parts[i]);
+        } catch (e) {
+            // invalid parameter
+        }
+
         if (ALLOWED_OVERRIDE_PARAMS.indexOf(paramName) === -1) {
             i += 1;
             continue;
@@ -123,6 +130,45 @@ DataTable_RowActions_Registry.register({
     },
 
     isAvailableOnReport: function (dataTableParams) {
+
+        if (piwik.transitionsMaxPeriodAllowed && dataTableParams['period']) {
+
+            if (dataTableParams['period'] === 'range') {
+
+                var piwikPeriods = window.CoreHome.Periods;
+                if (piwikPeriods) {
+                    var range = piwikPeriods.parse(dataTableParams['period'], dataTableParams['date']);
+                    if (range) {
+                        var rangeDays = range.getDayCount();
+                        if ((piwik.transitionsMaxPeriodAllowed === 'day' && rangeDays > 1) ||
+                            (piwik.transitionsMaxPeriodAllowed === 'week' && rangeDays > 7) ||
+                            (piwik.transitionsMaxPeriodAllowed === 'month' && rangeDays > 31) ||
+                            (piwik.transitionsMaxPeriodAllowed === 'year' && rangeDays > 365))
+                        {
+                          return false;
+                        }
+                    }
+                }
+            } else {
+                if (piwik.transitionsMaxPeriodAllowed === 'day' && dataTableParams['period'] !== 'day') {
+                    return false;
+                }
+                if (piwik.transitionsMaxPeriodAllowed === 'week' && dataTableParams['period'] !== 'day'
+                    && dataTableParams['period'] !== 'week') {
+                    return false;
+                }
+                if (piwik.transitionsMaxPeriodAllowed === 'month' && dataTableParams['period'] !== 'day'
+                    && dataTableParams['period'] !== 'week' && dataTableParams['period'] !== 'month') {
+                    return false;
+                }
+                if (piwik.transitionsMaxPeriodAllowed === 'year' && dataTableParams['period'] !== 'day'
+                    && dataTableParams['period'] !== 'week' && dataTableParams['period'] !== 'month'
+                    && dataTableParams['period'] !== 'year'
+                ) {
+                    return false;
+                }
+            }
+        }
         var i = 0;
         for (i; i < DataTable_RowActions_Transitions.registeredReports.length; i++) {
             var report = DataTable_RowActions_Transitions.registeredReports[i];
@@ -203,14 +249,14 @@ Piwik_Transitions.prototype.showPopover = function (showEmbeddedInReport) {
         $('#transitions_inline_loading').show();
     } else {
         this.popover = Piwik_Popover.showLoading('Transitions', self.actionName, 550);
-        Piwik_Popover.addHelpButton('https://matomo.org/docs/transitions');
+        Piwik_Popover.addHelpButton(_pk_externalRawLink('https://matomo.org/docs/transitions'));
     }
 
     var bothLoaded = function () {
         if (!showEmbeddedInReport) {
             Piwik_Popover.setContent(Piwik_Transitions.popoverHtml);
         } else {
-            $('#transitions_inline_loading').hide();
+          $('#transitions_inline_loading').hide();
             $('#transitions_report .popoverContainer').html(Piwik_Transitions.popoverHtml);
             $('#transitions_report .popoverContainer').show();
         }
@@ -222,7 +268,10 @@ Piwik_Transitions.prototype.showPopover = function (showEmbeddedInReport) {
             self.canvas.narrowMode();
         }
 
+        // truncate already placed elements, so height can be calculated correctly.
+        self.canvas.truncateVisibleBoxTexts();
         self.render();
+        // truncate elements added during render()
         self.canvas.truncateVisibleBoxTexts();
     };
 
@@ -289,8 +338,8 @@ Piwik_Transitions.prototype.preparePopover = function () {
     var element = textContainer.add(self.popover.find('p.Transitions_Pageviews'));
 
     element.tooltip({
-        track:        true,
-        content:      function () {
+        track: true,
+        content: function () {
             var totalNbPageviews = self.model.getTotalNbPageviews();
             if (totalNbPageviews > 0) {
 
@@ -347,6 +396,8 @@ Piwik_Transitions.prototype.render = function () {
     this.renderRightSide();
 
     this.renderLoops();
+
+    window.CoreHome.Matomo.postEvent('Transitions.dataChanged', {'actionType': this.actionType, 'actionName': this.actionName});
 };
 
 /** Render left side: referrer groups & direct entries */
@@ -415,7 +466,7 @@ Piwik_Transitions.prototype.renderCenterBox = function () {
             el.addClass('Transitions_Value0');
         } else {
             self.addTooltipShowingPercentageOfAllPageviews(el, modelProperty);
-            var groupName = cssClass.charAt(0).toLowerCase() + cssClass.substr(1);
+            var groupName = cssClass.charAt(0).toLowerCase() + cssClass.slice(1);
             el.hover(function () {
                 self.highlightGroup(groupName, highlightCurveOnSide);
             }, function () {
@@ -446,7 +497,7 @@ Piwik_Transitions.prototype.renderCenterBox = function () {
     box.find('.Transitions_CenterBoxMetrics').show();
 };
 
-Piwik_Transitions.prototype.addTooltipShowingPercentageOfAllPageviews = function(element, metric) {
+Piwik_Transitions.prototype.addTooltipShowingPercentageOfAllPageviews = function (element, metric) {
     var tip = Piwik_Transitions_Translations.XOfAllPageviews;
     var percentage = this.model.getPercentage(metric, true);
     tip = sprintf(tip, '<strong>' + percentage + '</strong>');
@@ -473,6 +524,7 @@ Piwik_Transitions.prototype.renderLoops = function () {
     this.addTooltipShowingPercentageOfAllPageviews(loops, 'loops');
 
     this.canvas.renderLoops(this.model.getPercentage('loops'));
+    loops.css({marginTop: $('#Transitions_CenterBox').outerHeight() + 45});
 };
 
 Piwik_Transitions.prototype.renderEntries = function (onlyBg) {
@@ -592,18 +644,18 @@ Piwik_Transitions.prototype.renderOpenGroup = function (groupName, side, onlyBg)
             if (this.showEmbeddedInReport) {
                 onClick = (function (url) {
                     return function () {
-                        var $rootScope = piwikHelper.getAngularDependency('$rootScope');
-                        if ($rootScope) {
-                            $rootScope.$emit('Transitions.switchTransitionsUrl', {
-                                url:url
-                            });
-                        }
+                        window.CoreHome.Matomo.postEvent('Transitions.switchTransitionsUrl', {
+                            url: url,
+                        });
                     };
                 })(label);
             } else {
                 onClick = (function (url) {
                     return function () {
-                        self.reloadPopover(url.replace(/^(?!http)/, 'http://'));
+                        if (self.actionType == 'url') {
+                            url = url.replace(/^(?!http)/, 'http://');
+                        }
+                        self.reloadPopover(url);
                     };
                 })(label);
             }
@@ -745,7 +797,7 @@ Piwik_Transitions.prototype.highlightGroup = function (groupName, side) {
     this.highlightedGroup = groupName;
     this.highlightedGroupSide = side;
 
-    var cssClass = 'Transitions_' + groupName.charAt(0).toUpperCase() + groupName.substr(1);
+    var cssClass = 'Transitions_' + groupName.charAt(0).toUpperCase() + groupName.slice(1);
     this.highlightedGroupCenterEl = this.canvas.container.find('.' + cssClass);
     this.highlightedGroupCenterEl.addClass('Transitions_Highlighted');
 
@@ -996,8 +1048,6 @@ Piwik_Transitions_Canvas.prototype.truncateVisibleBoxTexts = function () {
             text = leftPart + '...' + rightPart;
             span.html(piwikHelper.addBreakpointsToUrl(text));
         }
-
-        span.removeClass('Transitions_Truncate');
     });
 };
 
@@ -1214,7 +1264,7 @@ Piwik_Transitions_Canvas.prototype.renderLoops = function (share) {
 
     // curve from the upper left connection to the center box to the lower left connection to the text box
     var point1 = {x: this.leftCurveEndX, y: this.leftCurvePositionY};
-    var point2 = {x: this.leftCurveEndX, y: 470};
+    var point2 = {x: this.leftCurveEndX, y: $('#Transitions_CenterBox').outerHeight() + 70};
 
     var cpLeftX = (this.leftCurveBeginX + this.leftCurveEndX) / 2 + 30;
     var cp1 = {x: cpLeftX, y: point1.y};
@@ -1573,13 +1623,13 @@ Piwik_Transitions_Ajax.prototype.callApi = function (method, params, callback) {
                         Piwik_Popover.showError(errorTitle, errorMessage, errorBack);
                     }
 
-                    $('#transitions_inline_loading').hide();
+                  $('#transitions_inline_loading').hide();
                 };
 
                 if (typeof Piwik_Transitions_Translations == 'undefined') {
                     self.callApi('Transitions.getTranslations', {}, function (response) {
-                        if (typeof response[0] == 'object') {
-                            Piwik_Transitions_Translations = response[0];
+                        if (typeof response == 'object') {
+                            Piwik_Transitions_Translations = response;
                         } else {
                             Piwik_Transitions_Translations = {};
                         }
@@ -1646,10 +1696,6 @@ Piwik_Transitions_Util = {
                 spanClass = 'Transitions_Metric';
             }
             span.addClass(spanClass);
-        }
-        if ($.browser.msie && parseFloat($.browser.version) < 8) {
-            // ie7 fix
-            value += '&nbsp;';
         }
         span.html(value);
     }

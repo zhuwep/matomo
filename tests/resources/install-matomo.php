@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,8 +13,8 @@ use Piwik\Auth\Password;
 use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\Date;
+use Piwik\Piwik;
 use Piwik\Plugins\UsersManager\UsersManager;
-use Piwik\Plugins\UsersManager\API as UsersManagerAPI;
 use Piwik\Plugins\SitesManager\API as SitesManagerAPI;
 use Piwik\Site;
 use Piwik\Tracker\Cache;
@@ -85,25 +85,21 @@ function createSuperUser() {
     $passwordHelper = new Password();
 
     $login    = 'superUserLogin';
-    $password = $passwordHelper->hash(UsersManager::getPasswordHash('superUserPass'));
-    $token    = UsersManagerAPI::getInstance()->createTokenAuth($login);
+    $password = $passwordHelper->hash(UsersManager::getPasswordHash('pas3!"§$%&/()=?\'ㄨ<|-_#*+~>word'));
 
     $model = new \Piwik\Plugins\UsersManager\Model();
     $user  = $model->getUser($login);
 
-    if (!empty($user)) {
-        $token = $user['token_auth'];
-    }
     if (empty($user)) {
-        $model->addUser($login, $password, 'hello@example.org', $login, $token, Date::now()->getDatetime());
+        $model->addUser($login, $password, 'hello@example.org', Date::now()->getDatetime());
     } else {
-        $model->updateUser($login, $password, 'hello@example.org', $login, $token);
+        $model->updateUser($login, $password, 'hello@example.org');
     }
 
     $setSuperUser = empty($user) || !empty($user['superuser_access']);
     $model->setSuperUserAccess($login, $setSuperUser);
 
-    return $model->getUserByTokenAuth($token);
+    return $model->getUser($login);
 }
 
 function createWebsite($dateTime)
@@ -136,19 +132,13 @@ function createWebsite($dateTime)
     // Clear the memory Website cache
     Site::clearCache();
     Cache::deleteCacheWebsiteAttributes($idSite);
+    Cache::updateGeneralCache();
 
     return $idSite;
 }
 
-function getTokenAuth()
-{
-    $model = new \Piwik\Plugins\UsersManager\Model();
-    $user  = $model->getUser('superUserLogin');
-
-    return $user['token_auth'];
-}
-
 $_SERVER['HTTP_HOST'] = $host;
+$_SERVER['SERVER_NAME'] = $host;
 $dbConfig['dbname'] = 'latest_stable';
 
 file_put_contents(PIWIK_INCLUDE_PATH . "/config/config.ini.php", '');
@@ -224,8 +214,9 @@ $settings = StaticContainer::get(CoreUpdater\SystemSettings::class);
 $settings->releaseChannel->setValue('git_commit');
 $settings->releaseChannel->save();
 
+\Piwik\UpdateCheck::check(true); // ensure new version is detected correctly
+
 print "set release channel\n";
 
 // print token auth (on last line so it can be easily parsed)
-$tokenAuth = getTokenAuth();
-print "$tokenAuth";
+print Piwik::requestTemporarySystemAuthToken('InstallerUITests', 24);

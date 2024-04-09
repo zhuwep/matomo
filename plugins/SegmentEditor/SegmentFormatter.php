@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,9 +9,6 @@
 namespace Piwik\Plugins\SegmentEditor;
 
 use Exception;
-use Piwik\Common;
-use Piwik\Config;
-use Piwik\Db;
 use Piwik\Piwik;
 use Piwik\Segment;
 use Piwik\Segment\SegmentExpression;
@@ -21,7 +18,7 @@ use Piwik\Segment\SegmentExpression;
 class SegmentFormatter
 {
     /**
-     * @var SegmentList
+     * @var Segment\SegmentsList
      */
     private $segmentList;
 
@@ -49,7 +46,7 @@ class SegmentFormatter
         SegmentExpression::BOOL_OPERATOR_END => '',
     );
 
-    public function __construct(SegmentList $segmentList)
+    public function __construct(Segment\SegmentsList $segmentList)
     {
         $this->segmentList = $segmentList;
     }
@@ -69,21 +66,29 @@ class SegmentFormatter
         }
 
         $readable = '';
-        foreach ($expressions as $expression) {
-            $operator = $expression[SegmentExpression::INDEX_BOOL_OPERATOR];
-            $operand  = $expression[SegmentExpression::INDEX_OPERAND];
-            $name     = $operand[SegmentExpression::INDEX_OPERAND_NAME];
 
-            $segment = $this->segmentList->findSegment($name, $idSite);
+        foreach ($expressions as $andIndex => $orExpressions) {
+            foreach ($orExpressions as $orIndex => $operand) {
+                $name = $operand[SegmentExpression::INDEX_OPERAND_NAME];
 
-            if (empty($segment)) {
-                throw new Exception(sprintf("The segment '%s' does not exist.", $name));
+                $segment = $this->segmentList->getSegment($name);
+
+                if (empty($segment)) {
+                    throw new Exception(sprintf("The segment '%s' does not exist.", $name));
+                }
+
+                $readable .= Piwik::translate($segment->getName()) . ' ';
+                $readable .= $this->getTranslationForComparison($operand, $segment->getType()) . ' ';
+                $readable .= $this->getFormattedValue($operand);
+
+                if ($orIndex !== count($orExpressions) - 1) {
+                    $readable .= $this->getTranslationForBoolOperator(SegmentExpression::BOOL_OPERATOR_OR) . ' ';
+                }
             }
 
-            $readable .= $segment['name'] . ' ';
-            $readable .= $this->getTranslationForComparison($operand, $segment['type']) . ' ';
-            $readable .= $this->getFormattedValue($operand);
-            $readable .= $this->getTranslationForBoolOperator($operator) . ' ';
+            if ($andIndex !== count($expressions) - 1) {
+                $readable .= $this->getTranslationForBoolOperator(SegmentExpression::BOOL_OPERATOR_AND) . ' ';
+            }
         }
 
         $readable = trim($readable);
@@ -112,14 +117,15 @@ class SegmentFormatter
             $translation = Piwik::translate($this->matchesMetric[$operator]);
         }
 
-        return Common::mb_strtolower($translation);
+        return mb_strtolower($translation);
     }
 
     private function getFormattedValue($operand)
     {
         $operator = $operand[SegmentExpression::INDEX_OPERAND_OPERATOR];
 
-        if ($operator === SegmentExpression::MATCH_IS_NULL_OR_EMPTY
+        if (
+            $operator === SegmentExpression::MATCH_IS_NULL_OR_EMPTY
             || $operator === SegmentExpression::MATCH_IS_NOT_NULL_NOR_EMPTY) {
             return '';
         }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
  */
 namespace Piwik\Plugins\Referrers\Reports;
 
-use Piwik\Common;
 use Piwik\Piwik;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugins\CoreVisualizations\Visualizations\HtmlTable;
@@ -47,7 +46,6 @@ class GetSocials extends Base
         $view->config->show_pivot_by_subtable = false;
         $view->config->show_exclude_low_population = false;
         $view->config->show_goals = true;
-        $view->config->addTranslation('label', $this->dimension->getName());
 
         $view->requestConfig->filter_limit = 10;
 
@@ -55,5 +53,4 @@ class GetSocials extends Base
             $view->config->disable_subtable_when_show_goals = true;
         }
     }
-
 }

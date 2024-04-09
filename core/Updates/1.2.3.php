@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -40,7 +40,7 @@ class Updates_1_2_3 extends Updates
 
             // Various performance improvements schema updates
             $this->migration->db->sql(
-               'ALTER TABLE `' . Common::prefixTable('log_visit') . '`
+                'ALTER TABLE `' . Common::prefixTable('log_visit') . '`
                 DROP INDEX index_idsite_datetime_config,
                 DROP INDEX index_idsite_idvisit,
                 ADD INDEX index_idsite_config_datetime (idsite, config_id, visit_last_action_time),

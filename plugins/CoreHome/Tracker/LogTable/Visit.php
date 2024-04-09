@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -26,7 +26,7 @@ class Visit extends LogTable
     {
         return 'idvisit';
     }
-    
+
     public function getDateTimeColumn()
     {
         return 'visit_last_action_time';

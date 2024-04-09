@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,7 +15,7 @@ use Piwik\DataTable\Row;
 /**
  * @group DataTableTest
  */
-class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
+class LimitTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * Returns table used for the tests
@@ -24,7 +24,7 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
      */
     protected function getDataTableCount10()
     {
-        $table = new DataTable;
+        $table = new DataTable();
         $idcol = Row::COLUMNS;
         $rows = array(
             array($idcol => array('label' => 'google', 'idRow' => 0)),
@@ -186,7 +186,7 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
      */
     public function testFilterOffsetLimit()
     {
-        $table = new DataTable;
+        $table = new DataTable();
 
         $idcol = Row::COLUMNS;
 
@@ -218,7 +218,7 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
      */
     public function testFilterOffsetLimitOffbound()
     {
-        $table = new DataTable;
+        $table = new DataTable();
 
         $idcol = Row::COLUMNS;
 
@@ -250,7 +250,7 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
      */
     public function testFilterOffsetLimit2()
     {
-        $table = new DataTable;
+        $table = new DataTable();
 
         $idcol = Row::COLUMNS;
 
@@ -281,7 +281,7 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
      */
     public function testFilterOffsetLimit3()
     {
-        $table = new DataTable;
+        $table = new DataTable();
 
         $idcol = Row::COLUMNS;
 
@@ -297,12 +297,11 @@ class DataTable_Filter_LimitTest extends \PHPUnit_Framework_TestCase
 
         $table->addRowsFromArray($rows);
 
-        $expectedtable = new DataTable;
+        $expectedtable = new DataTable();
 
         $filter = new Limit($table, 8, 15);
         $filter->filter($table);
 
         $this->assertEquals(array_values($expectedtable->getRows()), array_values($table->getRows()));
     }
-
 }

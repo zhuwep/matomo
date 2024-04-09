@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -24,9 +24,9 @@ function languageTranslate($label)
         return Piwik::translate('General_Unknown');
     }
 
-    $language = Piwik::translate('Intl_Language_'.$label);
+    $language = Piwik::translate('Intl_Language_' . $label);
 
-    if ($language != 'Intl_Language_'.$label) {
+    if ($language != 'Intl_Language_' . $label) {
         return $language;
     }
 
@@ -48,14 +48,14 @@ function languageTranslate($label)
  */
 function languageTranslateWithCode($label)
 {
-    $ex = explode('-', $label);
+    $ex = explode('-', $label ?? '');
     $lang = languageTranslate($ex[0]);
 
     if (count($ex) == 2 && $ex[0] != $ex[1]) {
         $countryKey = 'UserCountry_country_' . $ex[1];
-        $country = Piwik::translate('Intl_Country_'.strtoupper($ex[1]));
+        $country = Piwik::translate('Intl_Country_' . strtoupper($ex[1]));
 
-        if ($country == 'Intl_Country_'.strtoupper($ex[1])) {
+        if ($country == 'Intl_Country_' . strtoupper($ex[1])) {
             $country = Piwik::translate($countryKey);
         }
 
@@ -64,11 +64,9 @@ function languageTranslateWithCode($label)
         }
 
         return sprintf("%s - %s (%s)", $lang, $country, $label);
-
     } else {
         return sprintf("%s (%s)", $lang, $ex[0]);
     }
-
 }
 
 /**

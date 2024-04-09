@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -26,11 +26,12 @@ class Installation extends \Piwik\Plugin
     protected $installationControllerName = '\\Piwik\\Plugins\\Installation\\Controller';
 
     /**
-     * @see Piwik\Plugin::registerEvents
+     * @see \Piwik\Plugin::registerEvents
      */
     public function registerEvents()
     {
         $hooks = array(
+            'Translate.getClientSideTranslationKeys' => 'getClientSideTranslationKeys',
             'Config.NoConfigurationFile'      => 'dispatch',
             'Config.badConfigurationFile'     => 'dispatch',
             'Db.cannotConnectToDb'            => 'displayDbConnectionMessage',
@@ -38,6 +39,26 @@ class Installation extends \Piwik\Plugin
             'AssetManager.getStylesheetFiles' => 'getStylesheetFiles',
         );
         return $hooks;
+    }
+
+    public function getClientSideTranslationKeys(&$translations)
+    {
+        $translations[] = 'Installation_Legend';
+        $translations[] = 'General_Ok';
+        $translations[] = 'Installation_SystemCheckWarning';
+        $translations[] = 'Installation_SystemCheckError';
+        $translations[] = 'General_RefreshPage';
+        $translations[] = 'Installation_CopyBelowInfoForSupport';
+        $translations[] = 'Installation_CopySystemCheck';
+        $translations[] = 'Installation_DownloadSystemCheck';
+        $translations[] = 'Installation_Optional';
+        $translations[] = 'Installation_InformationalResults';
+        $translations[] = 'Installation_SystemCheck';
+        $translations[] = 'Installation_Requirements';
+        $translations[] = 'Installation_SystemCheckSummaryThereWereErrors';
+        $translations[] = 'Installation_SeeBelowForMoreInfo';
+        $translations[] = 'Installation_SystemCheckSummaryThereWereWarnings';
+        $translations[] = 'Installation_SystemCheckSummaryNoProblems';
     }
 
     public function displayDbConnectionMessage($exception = null)
@@ -64,7 +85,7 @@ class Installation extends \Piwik\Plugin
     {
         $general = Config::getInstance()->General;
 
-        if (!SettingsPiwik::isPiwikInstalled() && !$general['enable_installer']) {
+        if (!SettingsPiwik::isMatomoInstalled() && !$general['enable_installer']) {
             throw new NotYetInstalledException('Matomo is not set up yet');
         }
 
@@ -133,10 +154,10 @@ class Installation extends \Piwik\Plugin
     private function isAllowedAction($action)
     {
         $controller = $this->getInstallationController();
-        $isActionWhiteListed = in_array($action, array('saveLanguage', 'getInstallationCss', 'getInstallationJs', 'reuseTables'));
+        $isActionAllowed = in_array($action, array('saveLanguage', 'getInstallationCss', 'getInstallationJs', 'reuseTables'));
 
         return in_array($action, array_keys($controller->getInstallationSteps()))
-                || $isActionWhiteListed;
+                || $isActionAllowed;
     }
 
     /**

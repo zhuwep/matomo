@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -15,10 +15,12 @@ use Piwik\Validators\IpRanges;
  * @group IpRanges
  * @group IpRangesTest
  */
-class IpRangesTest extends \PHPUnit_Framework_TestCase
+class IpRangesTest extends \PHPUnit\Framework\TestCase
 {
     public function test_validate_success()
     {
+        self::expectNotToPerformAssertions();
+
         $this->validate(array(
             '12.12.12.12/32',
             '14.14.14.14',
@@ -30,12 +32,10 @@ class IpRangesTest extends \PHPUnit_Framework_TestCase
         $this->validate(null);
     }
 
-    /**
-     * @expectedException \Piwik\Validators\Exception
-     * @expectedExceptionMessage SitesManager_ExceptionInvalidIPFormat
-     */
     public function test_validate_failNotValidIpRange()
     {
+        $this->expectException(\Piwik\Validators\Exception::class);
+        $this->expectExceptionMessage('SitesManager_ExceptionInvalidIPFormat');
         $this->validate(array('127.0.0.1', 'foo'));
     }
 

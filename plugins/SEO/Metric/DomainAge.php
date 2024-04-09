@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,7 +10,7 @@ namespace Piwik\Plugins\SEO\Metric;
 
 use Piwik\Http;
 use Piwik\Metrics\Formatter;
-use Psr\Log\LoggerInterface;
+use Piwik\Log\LoggerInterface;
 
 /**
  * Fetches the domain age using archive.org, who.is and whois.com.
@@ -35,7 +35,7 @@ class DomainAge implements MetricsProvider
 
     public function getMetrics($domain)
     {
-        $domain  = str_replace('www.', '', $domain);
+        $domain  = str_replace('www.', '', $domain ?? '');
 
         $ages = array();
 
@@ -127,7 +127,7 @@ class DomainAge implements MetricsProvider
         try {
             return $this->getHttpResponse($url);
         } catch (\Exception $e) {
-            $this->logger->warning('Error while getting SEO stats (domain age): {message}', array('message' => $e->getMessage()));
+            $this->logger->info('Error while getting SEO stats (domain age): {message}', array('message' => $e->getMessage()));
             return '';
         }
     }

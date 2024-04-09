@@ -1,30 +1,36 @@
-<div class="widgetBody system-check">
+<div class="widgetBody system-check" vue-directive="CoreHome.Tooltips" vue-directive-value="{&quot;show&quot;: {&quot;delay&quot;: 200, &quot;duration&quot;: 100}}">
     {% if not numErrors and not numWarnings %}
         <p class="system-success"><span class="icon-ok"></span> {{ 'Installation_SystemCheckNoErrorsOrWarnings'|translate }}</p>
     {% endif %}
 
     {% if numErrors %}
-        <p class="system-errors"><span class="icon-error"></span> {{ 'General_Errors'|translate }}</p>
         <ul>
-            {% for error in errors %}
-                <li title="{{ error.getLongErrorMessage|e('html_attr') }}">{{ error.getLabel }}</li>
+            {% for thisResult in errors %}
+                {% set checkItemMessages = '' %}
+                {% if thisResult.getLongErrorMessage is empty and thisResult.getItems()|length > 1 %}
+                    {% for checkItem in thisResult.getItems() %}
+                        {% if checkItem.getStatus is same as('warning') %}
+                            {% set checkItemMessages = checkItemMessages ~ checkItem.getComment() ~ "\n" %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <li title="{{ checkItemMessages|default(thisResult.getLongErrorMessage)|default(thisResult.getItems()[0].getComment())|preg_replace('/<br.*?>/', "\n")|striptags }}" class="system-check-widget-error"><span class="icon-error"></span> {{ thisResult.getLabel }}</li>
             {% endfor %}
         </ul>
     {% endif %}
 
     {% if numWarnings %}
-
-        <p class="system-warnings">
-
-            {% if numErrors %}
-                <br />
-            {% endif %}
-
-            <span class="icon-warning"></span> {{ 'General_Warnings'|translate }}
-        </p>
         <ul>
-            {% for warning in warnings %}
-                <li title="{{ warning.getLongErrorMessage|e('html_attr') }}">{{ warning.getLabel }}</li>
+            {% for thisResult in warnings %}
+                {% set checkItemMessages = '' %}
+                {% if thisResult.getLongErrorMessage is empty and thisResult.getItems()|length > 1 %}
+                    {% for checkItem in thisResult.getItems() %}
+                        {% if checkItem.getStatus is same as('warning') %}
+                            {% set checkItemMessages = checkItemMessages ~ checkItem.getComment() ~ "\n" %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <li title="{{ checkItemMessages|default(thisResult.getLongErrorMessage)|default(thisResult.getItems()[0].getComment())|preg_replace('/<br.*?>/', "\n")|striptags }}" class="system-check-widget-warning"><span class="icon-warning"></span> {{ thisResult.getLabel }}</li>
             {% endfor %}
         </ul>
     {% endif %}
@@ -33,7 +39,7 @@
         <p>
             <br />
             <a href="{{ linkTo({'module': 'Installation', 'action': 'systemCheckPage'}) }}"
-            >{{ 'Installation_SystemCheckViewFullSystemCheck'|translate }}</a>
+               >{{ 'Installation_SystemCheckViewFullSystemCheck'|translate }}</a>
         </p>
     {% endif %}
 </div>

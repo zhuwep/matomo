@@ -1,12 +1,12 @@
 <?php
 
 return array(
-    'Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator' => DI\object('Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretStaticGenerator'),
-    'Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeRandomGenerator' => DI\object('Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeStaticGenerator'),
-    'Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication' => DI\decorate(function ($previous) {
+    'Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretRandomGenerator' => Piwik\DI::autowire('Piwik\Plugins\TwoFactorAuth\Dao\TwoFaSecretStaticGenerator'),
+    'Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeRandomGenerator' => Piwik\DI::autowire('Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeStaticGenerator'),
+    'Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication' => Piwik\DI::decorate(function ($previous) {
         /** @var Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication $previous */
 
-        if (!\Piwik\SettingsPiwik::isPiwikInstalled()) {
+        if (!\Piwik\SettingsPiwik::isMatomoInstalled()) {
             return $previous;
         }
 
@@ -27,10 +27,10 @@ return array(
 
         return $previous;
     }),
-    'Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao' => DI\decorate(function ($previous) {
+    'Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao' => Piwik\DI::decorate(function ($previous) {
         /** @var Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao $previous */
 
-        if (!\Piwik\SettingsPiwik::isPiwikInstalled()) {
+        if (!\Piwik\SettingsPiwik::isMatomoInstalled()) {
             return $previous;
         }
 
@@ -40,14 +40,15 @@ return array(
             foreach (array('with2FA', 'with2FADisable') as $user) {
                 $previous->useRecoveryCode($user, '123456'); // we are using it first to make sure there is no duplicate
                 $previous->insertRecoveryCode($user, '123456');
+                \Piwik\Option::deleteLike(\Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication::OPTION_PREFIX_TWO_FA_CODE_USED . '%');
             }
         }
 
         return $previous;
     }),
-    'Piwik\Plugins\TwoFactorAuth\SystemSettings' => DI\decorate(function ($previous) {
+    'Piwik\Plugins\TwoFactorAuth\SystemSettings' => Piwik\DI::decorate(function ($previous) {
         /** @var Piwik\Plugins\TwoFactorAuth\SystemSettings $previous */
-        if (!\Piwik\SettingsPiwik::isPiwikInstalled()) {
+        if (!\Piwik\SettingsPiwik::isMatomoInstalled()) {
             return $previous;
         }
 

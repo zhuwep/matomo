@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,7 @@
  */
 namespace Piwik\Plugins\DevicesDetection\Columns;
 
-use DeviceDetector\Parser\Device\DeviceParserAbstract;
+use DeviceDetector\Parser\Device\AbstractDeviceParser;
 use Piwik\Metrics\Formatter;
 use Piwik\Piwik;
 use Piwik\Tracker\Request;
@@ -32,8 +32,8 @@ class DeviceBrand extends Base
 
     public function __construct()
     {
-        $brands = DeviceParserAbstract::$deviceBrands;
-        natcasesort ($brands);
+        $brands = AbstractDeviceParser::$deviceBrands;
+        natcasesort($brands);
         $brandList = implode(", ", $brands);
         $this->acceptValues = $brandList;
 
@@ -57,8 +57,7 @@ class DeviceBrand extends Base
      */
     public function onNewVisit(Request $request, Visitor $visitor, $action)
     {
-        $userAgent = $request->getUserAgent();
-        $parser    = $this->getUAParser($userAgent);
+        $parser    = $this->getUAParser($request->getUserAgent(), $request->getClientHints());
 
         return $parser->getBrand();
     }

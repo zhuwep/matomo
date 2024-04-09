@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -46,7 +46,7 @@ abstract class Factory
      *
      * @return bool
      */
-    public abstract function shouldHandle($strPeriod, $strDate);
+    abstract public function shouldHandle($strPeriod, $strDate);
 
     /**
      * Creates a period using the value of the 'date' query parameter.
@@ -56,7 +56,7 @@ abstract class Factory
      * @param string $timezone
      * @return Period
      */
-    public abstract function make($strPeriod, $date, $timezone);
+    abstract public function make($strPeriod, $date, $timezone);
 
     /**
      * Creates a new Period instance with a period ID and {@link Date} instance.
@@ -74,7 +74,9 @@ abstract class Factory
         self::checkPeriodIsEnabled($period);
 
         if (is_string($date)) {
-            if (Period::isMultiplePeriod($date, $period)
+            [$period, $date] = self::convertRangeToDateIfNeeded($period, $date);
+            if (
+                Period::isMultiplePeriod($date, $period)
                 || $period == 'range'
             ) {
 
@@ -108,7 +110,7 @@ abstract class Factory
             }
         }
 
-        throw new \Exception("Don't know how to create a '$period' period!");
+        throw new \Exception("Don't know how to create a '$period' period! (date = $date)");
     }
 
     public static function checkPeriodIsEnabled($period)
@@ -130,6 +132,19 @@ abstract class Factory
         throw new Exception($message);
     }
 
+    private static function convertRangeToDateIfNeeded($period, $date)
+    {
+        if (is_string($period) && is_string($date) && $period === 'range') {
+            $dates = explode(',', $date);
+            if (count($dates) === 2 && $dates[0] === $dates[1]) {
+                $period = 'day';
+                $date = $dates[0];
+            }
+        }
+
+        return array($period, $date);
+    }
+
     /**
      * Creates a Period instance using a period, date and timezone.
      *
@@ -146,15 +161,15 @@ abstract class Factory
             $timezone = 'UTC';
         }
 
+        [$period, $date] = self::convertRangeToDateIfNeeded($period, $date);
+
         if ($period == 'range') {
             self::checkPeriodIsEnabled('range');
             $oPeriod = new Range('range', $date, $timezone, Date::factory('today', $timezone));
         } else {
             if (!($date instanceof Date)) {
-                if ($date == 'now' || $date == 'today') {
-                    $date = date('Y-m-d', Date::factory('now', $timezone)->getTimestamp());
-                } elseif ($date == 'yesterday' || $date == 'yesterdaySameTime') {
-                    $date = date('Y-m-d', Date::factory('now', $timezone)->subDay(1)->getTimestamp());
+                if (preg_match('/^(now|today|yesterday|yesterdaySameTime|last[ -]?(?:week|month|year))$/i', $date)) {
+                    $date = Date::factoryInTimezone($date, $timezone);
                 }
                 $date = Date::factory($date);
             }
@@ -180,5 +195,30 @@ abstract class Factory
     {
         $periodValidator = new PeriodValidator();
         return $periodValidator->getPeriodsAllowedForAPI();
+    }
+
+    public static function isAnyLowerPeriodDisabledForAPI($periodLabel)
+    {
+        $parentPeriod = null;
+        switch ($periodLabel) {
+            case 'week':
+                $parentPeriod = 'day';
+                break;
+            case 'month':
+                $parentPeriod = 'week';
+                break;
+            case 'year':
+                $parentPeriod = 'month';
+                break;
+            default:
+                break;
+        }
+
+        if ($parentPeriod === null) {
+            return false;
+        }
+
+        return !self::isPeriodEnabledForAPI($parentPeriod)
+            || self::isAnyLowerPeriodDisabledForAPI($parentPeriod);
     }
 }

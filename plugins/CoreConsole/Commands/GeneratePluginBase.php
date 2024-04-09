@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,11 +16,16 @@ use Piwik\Plugin\ConsoleCommand;
 use Piwik\Plugin\Dependency;
 use Piwik\Plugin\Manager;
 use Piwik\Version;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Piwik\SettingsPiwik;
+use Piwik\Exception\NotGitInstalledException;
 
 abstract class GeneratePluginBase extends ConsoleCommand
 {
+    protected function doInitialize(): void
+    {
+        $this->throwErrorIfNotGitInstalled();
+    }
+
     public function isEnabled()
     {
         return Development::isEnabled();
@@ -104,8 +109,9 @@ abstract class GeneratePluginBase extends ConsoleCommand
         return $pluginName . '_' . $key;
     }
 
-    protected function checkAndUpdateRequiredPiwikVersion($pluginName, OutputInterface $output)
+    protected function checkAndUpdateRequiredPiwikVersion($pluginName)
     {
+        $output             = $this->getOutput();
         $pluginJsonPath     = $this->getPluginPath($pluginName) . '/plugin.json';
         $relativePluginJson = Manager::getPluginDirectory($pluginName) . '/plugin.json';
 
@@ -131,14 +137,18 @@ abstract class GeneratePluginBase extends ConsoleCommand
             // see https://github.com/composer/composer/issues/4080 we need to specify -stable otherwise it would match
             // $piwikVersion-dev meaning it would also match all pre-released. However, we only want to match a stable
             // release
-            $piwikVersion.= '-stable';
+            $piwikVersion .= '-stable';
         }
 
         $newRequiredVersion = sprintf('>=%s,<%d.0.0-b1', $piwikVersion, $nextMajorVersion);
 
-
         if (!empty($pluginJson['require']['piwik'])) {
-            $requiredVersion = trim($pluginJson['require']['piwik']);
+            $pluginJson['require']['matomo'] = $pluginJson['require']['piwik'];
+            unset($pluginJson['require']['piwik']);
+        }
+
+        if (!empty($pluginJson['require']['matomo'])) {
+            $requiredVersion = trim($pluginJson['require']['matomo']);
 
             if ($requiredVersion === $newRequiredVersion) {
                 // there is nothing to updated
@@ -170,7 +180,8 @@ abstract class GeneratePluginBase extends ConsoleCommand
                 return;
             }
 
-            if ($numRequiredPiwikVersions === 2 &&
+            if (
+                $numRequiredPiwikVersions === 2 &&
                 !Common::stringEndsWith($requiredVersion, $secondPartPiwikVersionRequire)) {
                 // user is using custom piwik version require, we do not overwrite anything
                 return;
@@ -194,7 +205,7 @@ abstract class GeneratePluginBase extends ConsoleCommand
             $output->writeln(sprintf('<comment>We have updated your "%s" to require the Piwik version "%s".</comment>', $relativePluginJson, $newRequiredVersion));
         }
 
-        $pluginJson['require']['piwik'] = $newRequiredVersion;
+        $pluginJson['require']['matomo'] = $newRequiredVersion;
         file_put_contents($pluginJsonPath, $this->toJson($pluginJson));
     }
 
@@ -293,8 +304,8 @@ abstract class GeneratePluginBase extends ConsoleCommand
         $replace['PLUGINNAME'] = $pluginName;
 
         $files = array_merge(
-                Filesystem::globr($templateFolder, '*'),
-                // Also copy files starting with . such as .gitignore
+            Filesystem::globr($templateFolder, '*'),
+            // Also copy files starting with . such as .gitignore
                 Filesystem::globr($templateFolder, '.*')
         );
 
@@ -316,7 +327,6 @@ abstract class GeneratePluginBase extends ConsoleCommand
 
                 $this->createFileWithinPluginIfNotExists($pluginName, $fileNamePlugin, $template);
             }
-
         }
     }
 
@@ -345,19 +355,18 @@ abstract class GeneratePluginBase extends ConsoleCommand
                     $pluginNames[] = basename($pluginDir);
                 }
             }
-
         }
         return $pluginNames;
     }
 
     /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
      * @return string
      * @throws \RuntimeException
      */
-    protected function askPluginNameAndValidate(InputInterface $input, OutputInterface $output, $pluginNames, $invalidArgumentException)
+    protected function askPluginNameAndValidate($pluginNames, $invalidArgumentException)
     {
+        $input = $this->getInput();
+
         $validate = function ($pluginName) use ($pluginNames, $invalidArgumentException) {
             if (!in_array($pluginName, $pluginNames)) {
                 throw new \InvalidArgumentException($invalidArgumentException);
@@ -369,8 +378,7 @@ abstract class GeneratePluginBase extends ConsoleCommand
         $pluginName = $input->getOption('pluginname');
 
         if (empty($pluginName)) {
-            $dialog = $this->getHelperSet()->get('dialog');
-            $pluginName = $dialog->askAndValidate($output, 'Enter the name of your plugin: ', $validate, false, null, $pluginNames);
+            $pluginName = $this->askAndValidate('Enter the name of your plugin: ', $validate, false, $pluginNames);
         } else {
             $validate($pluginName);
         }
@@ -393,4 +401,11 @@ abstract class GeneratePluginBase extends ConsoleCommand
         return $contentToReplace;
     }
 
+    protected function throwErrorIfNotGitInstalled()
+    {
+        if (!SettingsPiwik::isGitDeployment()) {
+            $url = 'https://developer.matomo.org/guides/getting-started-part-1';
+            throw new NotGitInstalledException("This development feature requires Matomo to be checked out from git. For more information please visit {$url}.");
+        }
+    }
 }

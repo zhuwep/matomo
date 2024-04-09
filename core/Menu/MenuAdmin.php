@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Menu;
 
 use Piwik\Development;
-use Piwik\Piwik;
 
 /**
  * Contains menu entries for the Admin menu.
@@ -79,6 +78,20 @@ class MenuAdmin extends MenuAbstract
     }
 
     /**
+     * See {@link add()}. Adds a new menu item to the plugins section of the admin menu.
+     * @param string $menuName
+     * @param array $url
+     * @param int $order
+     * @param bool|string $tooltip
+     * @api
+     * @since 5.0.0
+     */
+    public function addPluginItem(string $menuName, array $url, int $order = 50, $tooltip = false)
+    {
+        $this->addItem('General_Plugins', $menuName, $url, $order, $tooltip);
+    }
+
+    /**
      * See {@link add()}. Adds a new menu item to the measurable section of the admin menu.
      * @param string $menuName
      * @param array $url
@@ -109,7 +122,7 @@ class MenuAdmin extends MenuAbstract
     /**
      * Triggers the Menu.MenuAdmin.addItems hook and returns the admin menu.
      *
-     * @return Array
+     * @return array
      */
     public function getMenu()
     {

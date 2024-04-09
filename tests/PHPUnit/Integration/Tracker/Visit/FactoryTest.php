@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,6 @@
 
 namespace Piwik\Tests\Integration\Tracker\Visit;
 
-use Piwik\EventDispatcher;
 use Piwik\Piwik;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Tracker;
@@ -54,12 +53,11 @@ class FactoryTest extends IntegrationTestCase
         $this->assertSame($visitToUse, $visit);
     }
 
-    /**
-     * @expectedException \Exception
-     * @expectedExceptionMessage The Visit object set in the plugin
-     */
     public function test_make_shouldTriggerExceptionInCaseWrongInstanceCreatedInHandler()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('The Visit object set in the plugin');
+
         Piwik::addAction('Tracker.makeNewVisitObject', function (&$visit) {
             $visit = new Tracker();
         });

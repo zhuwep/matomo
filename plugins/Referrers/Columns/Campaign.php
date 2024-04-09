@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\Plugins\Referrers\Columns;
 
 use Piwik\Common;
-use Piwik\Piwik;
 use Piwik\Tracker\Action;
 use Piwik\Tracker\Request;
 use Piwik\Tracker\TrackerConfig;
@@ -23,13 +22,7 @@ class Campaign extends Base
      *
      * @var bool
      */
-    protected $createNewVisitWhenCampaignChanges;
     protected $nameSingular = 'Referrers_ColumnCampaign';
-
-    public function __construct()
-    {
-        $this->createNewVisitWhenCampaignChanges = TrackerConfig::getConfigValue('create_new_visit_when_campaign_changes') == 1;
-    }
 
     /**
      * If we should create a new visit when the campaign changes, check if the campaign info changed and if so
@@ -42,7 +35,7 @@ class Campaign extends Base
      */
     public function shouldForceNewVisit(Request $request, Visitor $visitor, Action $action = null)
     {
-        if (!$this->createNewVisitWhenCampaignChanges) {
+        if (TrackerConfig::getConfigValue('create_new_visit_when_campaign_changes', $request->getIdSiteIfExists()) != 1) {
             return false;
         }
 
@@ -51,7 +44,8 @@ class Campaign extends Base
         // we force a new visit if the referrer is a campaign and it's different than the currently recorded referrer.
         // if the current referrer is 'direct entry', however, we assume the referrer information was sent in a later request, and
         // we just update the existing referrer information instead of creating a visit.
-        if ($information['referer_type'] == Common::REFERRER_TYPE_CAMPAIGN
+        if (
+            $information['referer_type'] == Common::REFERRER_TYPE_CAMPAIGN
             && $this->isReferrerInformationNew($visitor, $information)
             && !$this->isCurrentReferrerDirectEntry($visitor)
         ) {

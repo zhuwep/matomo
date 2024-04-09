@@ -2,24 +2,22 @@
 
 namespace Piwik\Tests\Unit\DataTable;
 
-use Piwik\Config;
 use Piwik\DataTable\Manager;
 use Piwik\DataTable;
-use Piwik\DataTable\Row;
 
 /**
  * @group DataTable
  * @group ManagerTest
  * @group Core
  */
-class ManagerTest extends \PHPUnit_Framework_TestCase
+class ManagerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Manager
      */
     private $manager;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->manager = new Manager();
@@ -30,12 +28,11 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         return new DataTable();
     }
 
-    /**
-     * @expectedException \Piwik\DataTable\TableNotFoundException
-     * @expectedExceptionMessage table id 1 not found in memory
-     */
     public function test_getTable_shouldThrowException_IfTableIdDoesNotExist()
     {
+        $this->expectException(\Piwik\DataTable\TableNotFoundException::class);
+        $this->expectExceptionMessage('table id 1 not found in memory');
+
         $this->manager->getTable(1);
     }
 
@@ -232,12 +229,11 @@ class ManagerTest extends \PHPUnit_Framework_TestCase
         $table  = $this->createTestDataTable();
         $tables = array();
 
-        for ($i = 0; $i<$numTables; $i++) {
+        for ($i = 0; $i < $numTables; $i++) {
             $id = $this->manager->addTable($table);
             $tables[$id] = $table;
         }
 
         return $tables;
     }
-
 }

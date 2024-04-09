@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Period;
 use Piwik\Plugins\MultiSites\Dashboard;
 use Piwik\Tests\Framework\Fixture;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
-use Piwik\Translate;
 
 /**
  * @group MultiSites
@@ -30,7 +29,7 @@ class DashboardTest extends IntegrationTestCase
 
     private $numSitesToCreate = 3;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -38,7 +37,7 @@ class DashboardTest extends IntegrationTestCase
             Fixture::createWebsite('2012-12-12 00:00:00', $ecommerce = 0, 'Site ' . $i);
         }
 
-        Translate::loadAllTranslations();
+        Fixture::loadAllTranslations();
 
         $this->dashboard = $this->getMockBuilder('Piwik\Plugins\MultiSites\Dashboard')
                                 ->setMethods(null)
@@ -65,8 +64,8 @@ class DashboardTest extends IntegrationTestCase
         );
         $this->assertEquals($expectedTotals, $dashboard->getTotals());
 
-        $expectedSites = array (
-            array (
+        $expectedSites = [
+            [
                 'label' => 'Site 1',
                 'nb_visits' => '0',
                 'nb_actions' => '0',
@@ -81,8 +80,22 @@ class DashboardTest extends IntegrationTestCase
                 'main_url' => 'http://piwik.net',
                 'nb_conversions' => 0,
                 'nb_conversions_evolution' => '0%',
-            ),
-            array (
+                'ratio' => 1,
+                'previous_nb_visits' => 0,
+                'periodName' => 'day',
+                'previousRange' => 'Wed, Dec 12',
+                'previous_nb_actions' => 0,
+                'previous_Actions_nb_pageviews' => 0,
+                'previous_Goal_revenue' => 0,
+                'previous_Goal_nb_conversions' => 0,
+                'visits_evolution_trend' => 0,
+                'actions_evolution_trend' => 0,
+                'pageviews_evolution_trend' => 0,
+                'revenue_evolution_trend' => 0,
+                'nb_conversions_evolution_trend' => 0,
+                'currencySymbol' => '$',
+            ],
+            [
                 'label' => 'Site 2',
                 'nb_visits' => '0',
                 'nb_actions' => '0',
@@ -97,8 +110,22 @@ class DashboardTest extends IntegrationTestCase
                 'main_url' => 'http://piwik.net',
                 'nb_conversions' => 0,
                 'nb_conversions_evolution' => '0%',
-            ),
-            array (
+                'ratio' => 1,
+                'previous_nb_visits' => 0,
+                'periodName' => 'day',
+                'previousRange' => 'Wed, Dec 12',
+                'previous_nb_actions' => 0,
+                'previous_Actions_nb_pageviews' => 0,
+                'previous_Goal_revenue' => 0,
+                'previous_Goal_nb_conversions' => 0,
+                'visits_evolution_trend' => 0,
+                'actions_evolution_trend' => 0,
+                'pageviews_evolution_trend' => 0,
+                'revenue_evolution_trend' => 0,
+                'nb_conversions_evolution_trend' => 0,
+                'currencySymbol' => '$',
+            ],
+            [
                 'label' => 'Site 3',
                 'nb_visits' => '0',
                 'nb_actions' => '0',
@@ -113,8 +140,22 @@ class DashboardTest extends IntegrationTestCase
                 'main_url' => 'http://piwik.net',
                 'nb_conversions' => 0,
                 'nb_conversions_evolution' => '0%',
-            ),
-        );
+                'ratio' => 1,
+                'previous_nb_visits' => 0,
+                'periodName' => 'day',
+                'previousRange' => 'Wed, Dec 12',
+                'previous_nb_actions' => 0,
+                'previous_Actions_nb_pageviews' => 0,
+                'previous_Goal_revenue' => 0,
+                'previous_Goal_nb_conversions' => 0,
+                'visits_evolution_trend' => 0,
+                'actions_evolution_trend' => 0,
+                'pageviews_evolution_trend' => 0,
+                'revenue_evolution_trend' => 0,
+                'nb_conversions_evolution_trend' => 0,
+                'currencySymbol' => '$',
+            ],
+        ];
         $this->assertEquals($expectedSites, $dashboard->getSites(array(), $limit = 10));
     }
 
@@ -139,6 +180,20 @@ class DashboardTest extends IntegrationTestCase
                 'main_url' => 'http://piwik.net',
                 'nb_conversions' => 0,
                 'nb_conversions_evolution' => '0%',
+                'ratio' => 1,
+                'previous_nb_visits' => 0,
+                'periodName' => 'day',
+                'previousRange' => 'Wed, Dec 12',
+                'previous_nb_actions' => 0,
+                'previous_Actions_nb_pageviews' => 0,
+                'previous_Goal_revenue' => 0,
+                'previous_Goal_nb_conversions' => 0,
+                'visits_evolution_trend' => 0,
+                'actions_evolution_trend' => 0,
+                'pageviews_evolution_trend' => 0,
+                'revenue_evolution_trend' => 0,
+                'nb_conversions_evolution_trend' => 0,
+                'currencySymbol' => '$',
             ),
         );
         $dashboard->search('site 2');
@@ -508,7 +563,5 @@ class DashboardTest extends IntegrationTestCase
         }
 
         return $sites;
-
     }
-
 }

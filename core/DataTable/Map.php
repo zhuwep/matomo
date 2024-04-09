@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,7 @@ namespace Piwik\DataTable;
 use Closure;
 use Piwik\Common;
 use Piwik\DataTable;
-use Piwik\DataTable\Renderer\Console;
+use Piwik\DataTable\Renderer\Html;
 
 /**
  * Stores an array of {@link DataTable}s indexed by one type of {@link DataTable} metadata (such as site ID
@@ -108,6 +108,35 @@ class Map implements DataTableInterface
         foreach ($this->getDataTables() as $table) {
             $table->filter($className, $parameters);
         }
+    }
+
+    /**
+     * Apply a callback to all tables contained by this instance and tables with the same key in $otherTables.
+     *
+     * This method is used to iterate over multiple DataTable\Map's concurrently.
+     *
+     * $filter will be called with multiple DataTable instances, the first is the instance contained in
+     * this Map instance. The rest are the corresponding instances found in $otherTables. The position of
+     * the parameter in $filter corresponds with the position in $otherTables.
+     *
+     * If a key exists in this instance but not in one of the otherTables, $filter will be invoked with null
+     * for that parameter.
+     *
+     * @param Map[] $otherTables Other tables to invoke $filter with.
+     * @param callable $filter A function like `function (DataTable $thisTable, $otherTable1, $otherTable2, ...) {}`.
+     * @return mixed[] The return value of each `multiFilter()` call made on child tables, indexed by the keys in this Map instance.
+     */
+    public function multiFilter($otherTables, $filter)
+    {
+        $result = [];
+        foreach ($this->getDataTables() as $key => $childTable) {
+            $otherChildTables = array_map(function ($otherTable) use ($key) {
+                return !empty($otherTable) && $otherTable->hasTable($key) ? $otherTable->getTable($key) : null;
+            }, $otherTables);
+
+            $result[$key] = $childTable->multiFilter($otherChildTables, $filter);
+        }
+        return $result;
     }
 
     /**
@@ -221,7 +250,7 @@ class Map implements DataTableInterface
      */
     public function __toString()
     {
-        $renderer = new Console();
+        $renderer = new Html();
         $renderer->setTable($this);
         return (string)$renderer;
     }
@@ -385,7 +414,7 @@ class Map implements DataTableInterface
      * query results into one DataTable w/ different rows differentiated by site ID.
      *
      * Note: This DataTable/Map will be destroyed and will be no longer usable after the tables have been merged into
-     *       the new dataTable to reduce memory usage. Destroying all DataTables witihn the Map also seems to fix a
+     *       the new dataTable to reduce memory usage. Destroying all DataTables within the Map also seems to fix a
      *       Segmentation Fault that occurred in the AllWebsitesDashboard when having > 16k sites.
      *
      * @return DataTable|Map
@@ -489,7 +518,7 @@ class Map implements DataTableInterface
      */
     public function getEmptyClone()
     {
-        $dataTableMap = new Map;
+        $dataTableMap = new Map();
         $dataTableMap->setKeyName($this->getKeyName());
         return $dataTableMap;
     }
@@ -510,6 +539,19 @@ class Map implements DataTableInterface
             }
         }
         return array_values($data);
+    }
+
+    /**
+     * Delete row metadata by name in every row.
+     *
+     * @param       $name
+     * @param bool $deleteRecursiveInSubtables
+     */
+    public function deleteRowsMetadata($name, $deleteRecursiveInSubtables = false)
+    {
+        foreach ($this->getDataTables() as $table) {
+            $table->deleteRowsMetadata($name, $deleteRecursiveInSubtables);
+        }
     }
 
     /**

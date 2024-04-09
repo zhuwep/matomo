@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -169,7 +169,7 @@ class Range extends Period
         return $out;
     }
 
-    protected function getMaxN($lastN)
+    protected function getMaxN(int $lastN): int
     {
         switch ($this->strPeriod) {
             case 'day':
@@ -220,7 +220,7 @@ class Range extends Period
 
         parent::generate();
 
-        if (preg_match('/(last|previous)([0-9]*)/', $this->strDate, $regs)) {
+        if (preg_match('/^(last|previous)([0-9]*)$/', $this->strDate, $regs)) {
             $lastN = $regs[2];
             $lastOrPrevious = $regs[1];
             if (!is_null($this->defaultEndDate)) {
@@ -244,7 +244,7 @@ class Range extends Period
                 }
             }
 
-            $lastN = $this->getMaxN($lastN);
+            $lastN = $this->getMaxN((int) $lastN);
 
             // last1 means only one result ; last2 means 2 results so we remove only 1 to the days/weeks/etc
             $lastN--;
@@ -263,7 +263,7 @@ class Range extends Period
             if (strpos($strDateEnd, '-') === false) {
                 $timezone = $this->timezone;
             }
-            $endDate = Date::factory($strDateEnd, $timezone);
+            $endDate = Date::factory($strDateEnd, $timezone)->setTime("00:00:00");
         } else {
             throw new Exception($this->translator->translate('General_ExceptionInvalidDateRange', array($this->strDate, ' \'lastN\', \'previousN\', \'YYYY-MM-DD,YYYY-MM-DD\'')));
         }
@@ -290,7 +290,7 @@ class Range extends Period
      */
     public static function parseDateRange($dateString)
     {
-        $matched = preg_match('/^([0-9]{4}-[0-9]{1,2}-[0-9]{1,2}),(([0-9]{4}-[0-9]{1,2}-[0-9]{1,2})|today|now|yesterday)$/D', trim($dateString), $regs);
+        $matched = preg_match('/^((?:[0-9]{4}-[0-9]{1,2}-[0-9]{1,2})|last[ -]?(?:week|month|year)),((?:[0-9]{4}-[0-9]{1,2}-[0-9]{1,2})|today|now|yesterday|last[ -]?(?:week|month|year))$/Di', trim($dateString), $regs);
 
         if (empty($matched)) {
             return false;
@@ -324,7 +324,8 @@ class Range extends Period
      */
     protected function processOptimalSubperiods($startDate, $endDate)
     {
-        while ($startDate->isEarlier($endDate)
+        while (
+            $startDate->isEarlier($endDate)
             || $startDate == $endDate) {
             $endOfPeriod = null;
 
@@ -336,7 +337,8 @@ class Range extends Period
             $endOfYear   = $year->getDateEnd();
             $startOfYear = $year->getDateStart();
 
-            if ($startDate == $startOfYear
+            if (
+                $startDate == $startOfYear
                 && ($endOfYear->isEarlier($endDate)
                     || $endOfYear == $endDate
                     || $endOfYear->isLater($this->today)
@@ -349,7 +351,8 @@ class Range extends Period
             ) {
                 $this->addSubperiod($year);
                 $endOfPeriod = $endOfYear;
-            } elseif ($startDate == $startOfMonth
+            } elseif (
+                $startDate == $startOfMonth
                 && ($endOfMonth->isEarlier($endDate)
                     || $endOfMonth == $endDate
                     || $endOfMonth->isLater($this->today)
@@ -372,20 +375,23 @@ class Range extends Period
                 $firstDayNextMonth      = $startDate->addPeriod(2, 'month')->setDay(1);
                 $useMonthsNextIteration = $firstDayNextMonth->isEarlier($endDate);
 
-                if ($useMonthsNextIteration
+                if (
+                    $useMonthsNextIteration
                     && $endOfWeek->isLater($endOfMonth)
                 ) {
                     $this->fillArraySubPeriods($startDate, $endOfMonth, 'day');
                     $endOfPeriod = $endOfMonth;
-                } //   If end of this week is later than end date, we use days
-                elseif ($this->isEndOfWeekLaterThanEndDate($endDate, $endOfWeek) &&
-                    ($endOfWeek->isEarlier($this->today)
-                        || $startOfWeek->toString() != $startDate->toString()
-                        || $endDate->isEarlier($this->today))
+                } elseif (
+                    $this->isEndOfWeekLaterThanEndDate($endDate, $endOfWeek) &&
+                    ($endOfWeek->isEarlier($this->today) ||
+                        $startOfWeek->toString() != $startDate->toString() ||
+                        $endDate->isEarlier($this->today))
                 ) {
+                    // If end of this week is later than end date, we use days
                     $this->fillArraySubPeriods($startDate, $endDate, 'day');
                     break 1;
-                } elseif ($startOfWeek->isEarlier($startDate)
+                } elseif (
+                    $startOfWeek->isEarlier($startDate)
                     && $endOfWeek->isEarlier($this->today)
                 ) {
                     $this->fillArraySubPeriods($startDate, $endOfWeek, 'day');
@@ -463,14 +469,23 @@ class Range extends Period
             $period = Common::getRequestVar('period');
         }
 
-        if (365 == $subXPeriods && 'day' == $period && Date::today()->isLeapYear()) {
+        if (365 == $subXPeriods && 'day' == $period && Date::factory($date)->isLeapYear()) {
             $subXPeriods = 366;
+        }
+
+        if ($period === 'range') {
+            $rangePeriod = new Range($period, $date);
+            $daysDifference = self::getNumDaysDifference($rangePeriod->getDateStart(), $rangePeriod->getDateEnd());
+            $end = $rangePeriod->getDateStart()->subDay(1);
+            $from = $end->subDay($daysDifference);
+
+            return array("$from,$end", false);
         }
 
         // can't get the last date for range periods & dates that use lastN/previousN
         $strLastDate = false;
         $lastPeriod  = false;
-        if ($period != 'range' && !preg_match('/(last|previous)([0-9]*)/', $date, $regs)) {
+        if (!preg_match('/(last|previous)([0-9]*)/', $date, $regs)) {
             if (strpos($date, ',')) {
                 // date in the form of 2011-01-01,2011-02-02
 
@@ -487,6 +502,23 @@ class Range extends Period
         }
 
         return array($strLastDate, $lastPeriod);
+    }
+
+    /**
+     * Return the number of days contained in this range
+     *
+     * @return int
+     * @throws Exception
+     */
+    public function getDayCount()
+    {
+         return (self::getNumDaysDifference($this->getDateStart(), $this->getDateEnd()) + 1);
+    }
+
+    private static function getNumDaysDifference(Date $date1, Date $date2)
+    {
+        $days = (abs($date1->getTimestamp() - $date2->getTimestamp())) / 60 / 60 / 24;
+        return (int) round($days);
     }
 
     /**

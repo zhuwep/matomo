@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,12 +16,8 @@ class ServerFilesGenerator
 {
     public static function createFilesForSecurity()
     {
-        self::deleteHtAccessFiles();
         self::createHtAccessFiles();
-
-        self::deleteWebConfigFiles();
         self::createWebConfigFiles();
-
         self::createWebRootFiles();
     }
 
@@ -48,7 +44,7 @@ class ServerFilesGenerator
             "</IfModule>\n\n" .
 
             "# Allow to serve static files which are safe\n" .
-            "<Files ~ \"\\.(gif|ico|jpg|png|svg|js|css|htm|html|mp3|mp4|wav|ogg|avi|ttf|eot|woff|woff2|json)$\">\n" .
+            "<Files ~ \"\\.(gif|ico|jpg|png|svg|js|css|htm|html|mp3|mp4|wav|ogg|avi|ttf|eot|woff|woff2)$\">\n" .
             $allow . "\n" .
             "</Files>\n";
 
@@ -60,12 +56,19 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
 </IfModule>
 </Files>";
 
+        $allowManifestFile =
+            "# Allow to serve manifest.json\n" .
+            "<Files \"manifest.json\">\n" .
+            $allow . "\n" .
+            "</Files>\n";
+
         $directoriesToProtect = array(
-            '/js'        => $allowAny . $noCachePreview,
-            '/libs'      => $denyAll . $allowStaticAssets,
-            '/vendor'    => $denyAll . $allowStaticAssets,
-            '/plugins'   => $denyAll . $allowStaticAssets,
-            '/misc/user' => $denyAll . $allowStaticAssets,
+            '/js'           => $allowAny . $noCachePreview,
+            '/libs'         => $denyAll . $allowStaticAssets,
+            '/vendor'       => $denyAll . $allowStaticAssets,
+            '/plugins'      => $denyAll . $allowStaticAssets . $allowManifestFile,
+            '/misc/user'    => $denyAll . $allowStaticAssets,
+            '/node_modules' => $denyAll . $allowStaticAssets,
         );
         foreach ($directoriesToProtect as $directoryToProtect => $content) {
             self::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $overwrite = true, $content);
@@ -74,14 +77,19 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
         // deny access to these folders
         $directoriesToProtect = array(
             PIWIK_USER_PATH . '/config' => $denyAll,
-            PIWIK_INCLUDE_PATH. '/core' => $denyAll,
+            PIWIK_INCLUDE_PATH . '/core' => $denyAll,
             PIWIK_INCLUDE_PATH . '/lang' => $denyAll,
             StaticContainer::get('path.tmp') => $denyAll,
         );
-	    
+
         if (!empty($GLOBALS['CONFIG_INI_PATH_RESOLVER']) && is_callable($GLOBALS['CONFIG_INI_PATH_RESOLVER'])) {
             $file = call_user_func($GLOBALS['CONFIG_INI_PATH_RESOLVER']);
             $directoriesToProtect[dirname($file)] = $denyAll;
+        }
+
+        $gitDir = PIWIK_INCLUDE_PATH . '/.git';
+        if (is_dir($gitDir) && is_writable($gitDir)) {
+            $directoriesToProtect[$gitDir] = $denyAll;
         }
 
         foreach ($directoriesToProtect as $directoryToProtect => $content) {
@@ -100,7 +108,7 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
      * @param bool $overwrite whether to overwrite an existing file or not
      * @param string $content
      */
-    protected static function createHtAccess($path, $overwrite = true, $content)
+    protected static function createHtAccess($path, $overwrite, $content)
     {
         $file = $path . '/.htaccess';
 
@@ -120,7 +128,8 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
         if (!SettingsServer::isIIS()) {
             return;
         }
-        @file_put_contents(PIWIK_INCLUDE_PATH . '/web.config',
+        @file_put_contents(
+            PIWIK_INCLUDE_PATH . '/web.config',
             '<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <system.webServer>
@@ -159,16 +168,25 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
       <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
     </staticContent>
   </system.webServer>
-</configuration>');
+</configuration>'
+        );
 
         // deny direct access to .php files
         $directoriesToProtect = array(
             '/libs',
             '/vendor',
             '/plugins',
+            '/node_modules',
         );
+
+        $additionForPlugins = '
+        <alwaysAllowedUrls>
+          <add url="/plugins/HeatmapSessionRecording/configs.php" />
+        </alwaysAllowedUrls>';
+
         foreach ($directoriesToProtect as $directoryToProtect) {
-            @file_put_contents(PIWIK_INCLUDE_PATH . $directoryToProtect . '/web.config',
+            @file_put_contents(
+                PIWIK_INCLUDE_PATH . $directoryToProtect . '/web.config',
                 '<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <system.webServer>
@@ -176,11 +194,12 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
       <requestFiltering>
         <denyUrlSequences>
           <add sequence=".php" />
-        </denyUrlSequences>
+        </denyUrlSequences>' . ($directoryToProtect === '/plugins' ? $additionForPlugins : '') . '
       </requestFiltering>
     </security>
   </system.webServer>
-</configuration>');
+</configuration>'
+            );
         }
     }
 
@@ -191,6 +210,7 @@ Header set Cache-Control \"Cache-Control: private, no-cache, no-store\"
         @unlink($path . '/libs/web.config');
         @unlink($path . '/vendor/web.config');
         @unlink($path . '/plugins/web.config');
+        @unlink($path . '/node_modules/web.config');
     }
 
     /**
@@ -308,6 +328,7 @@ HTACCESS_ALLOW;
             '/vendor',
             '/plugins',
             '/misc/user',
+            '/node_modules',
             '/config',
             '/core',
             '/lang',
@@ -324,5 +345,4 @@ HTACCESS_ALLOW;
             }
         }
     }
-
 }

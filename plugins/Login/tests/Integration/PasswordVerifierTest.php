@@ -12,7 +12,8 @@ use Piwik\Date;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 use Piwik\Plugins\Login\PasswordVerifier;
 
-class CustomPasswordVerifier extends PasswordVerifier {
+class CustomPasswordVerifier extends PasswordVerifier
+{
     public function hasBeenVerifiedAndHalfTimeValid()
     {
         return parent::hasBeenVerifiedAndHalfTimeValid();
@@ -21,15 +22,16 @@ class CustomPasswordVerifier extends PasswordVerifier {
 
 class PasswordVerifierTest extends IntegrationTestCase
 {
-
     /**
      * @var CustomPasswordVerifier
      */
     private $verifier;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
+
+        \Zend_Session::$_unitTestEnabled = true;
 
         $this->verifier = new CustomPasswordVerifier();
         $this->verifier->setDisableRedirect();
@@ -128,5 +130,4 @@ class PasswordVerifierTest extends IntegrationTestCase
     {
         return $this->verifier->requirePasswordVerifiedRecently(array('module' => 'Login', 'action' => 'test'));
     }
-
 }

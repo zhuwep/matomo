@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -20,7 +20,7 @@ class GetLanguage extends Base
         parent::init();
         $this->dimension     = new Language();
         $this->name          = Piwik::translate('UserLanguage_BrowserLanguage');
-        $this->documentation = ''; // TODO
+        $this->documentation = Piwik::translate('UserLanguage_getLanguageDocumentation');
         $this->order = 8;
     }
 
@@ -29,16 +29,15 @@ class GetLanguage extends Base
         $view->config->show_search = false;
         $view->config->columns_to_display = array('label', 'nb_visits');
         $view->config->show_exclude_low_population = false;
-        $view->config->addTranslation('label', $this->dimension->getName());
 
         $view->requestConfig->filter_sort_column = 'nb_visits';
         $view->requestConfig->filter_sort_order  = 'desc';
     }
 
-    public function getRelatedReports() {
+    public function getRelatedReports()
+    {
         return array(
             ReportsProvider::factory('UserLanguage', 'getLanguageCode'),
         );
     }
-
 }

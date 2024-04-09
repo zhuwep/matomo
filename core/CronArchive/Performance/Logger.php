@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,10 +11,9 @@ namespace Piwik\CronArchive\Performance;
 use Piwik\ArchiveProcessor;
 use Piwik\Common;
 use Piwik\Config;
-use Piwik\Option;
 use Piwik\Timer;
 use Piwik\Url;
-use Psr\Log\LoggerInterface;
+use Piwik\Log\LoggerInterface;
 
 class Logger
 {
@@ -50,10 +49,17 @@ class Logger
             return;
         }
 
-        $measurement = new Measurement($category, $name, $activeArchivingParams->getSite()->getId(),
-            $activeArchivingParams->getPeriod()->getRangeString(), $activeArchivingParams->getPeriod()->getLabel(),
-            $activeArchivingParams->getSegment()->getString(), $timer->getTime(), $timer->getMemoryLeakValue(),
-            $timer->getPeakMemoryValue());
+        $measurement = new Measurement(
+            $category,
+            $name,
+            $activeArchivingParams->getSite()->getId(),
+            $activeArchivingParams->getPeriod()->getRangeString(),
+            $activeArchivingParams->getPeriod()->getLabel(),
+            $activeArchivingParams->getSegment()->getString(),
+            $timer->getTime(),
+            $timer->getMemoryLeakValue(),
+            $timer->getPeakMemoryValue()
+        );
 
         $params = array_merge($_GET);
         unset($params['pid']);

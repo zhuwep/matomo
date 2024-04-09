@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,7 +9,6 @@
 namespace Piwik\API\DataTableManipulator;
 
 use Piwik\API\DataTableManipulator;
-use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\Plugin\ReportsProvider;
@@ -22,7 +21,6 @@ use Piwik\Plugin\ReportsProvider;
  */
 class Flattener extends DataTableManipulator
 {
-
     private $includeAggregateRows = false;
 
     /**
@@ -102,9 +100,15 @@ class Flattener extends DataTableManipulator
      * @param string $dimensionName
      * @param bool $parentLogo
      */
-    private function flattenRow(Row $row, $rowId, DataTable $dataTable, $level, $dimensionName,
-                                $labelPrefix = '', $parentLogo = false)
-    {
+    private function flattenRow(
+        Row $row,
+        $rowId,
+        DataTable $dataTable,
+        $level,
+        $dimensionName,
+        $labelPrefix = '',
+        $parentLogo = false
+    ) {
         $dimensions = $dataTable->getMetadata('dimensions');
 
         if (empty($dimensions)) {
@@ -232,5 +236,4 @@ class Flattener extends DataTableManipulator
 
         return $request;
     }
-
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,34 +8,32 @@
  */
 namespace Piwik;
 
-use Piwik\Cache\Backend;
 use Piwik\Container\StaticContainer;
 
 class Cache
 {
-
     /**
      * This can be considered as the default cache to use in case you don't know which one to pick. It does not support
      * the caching of any objects though. Only boolean, numbers, strings and arrays are supported. Whenever you request
      * an entry from the cache it will fetch the entry. Cache entries might be persisted but not necessarily. It
      * depends on the configured backend.
      *
-     * @return Cache\Lazy
+     * @return \Matomo\Cache\Lazy
      */
     public static function getLazyCache()
     {
-        return StaticContainer::get('Piwik\Cache\Lazy');
+        return StaticContainer::get('Matomo\Cache\Lazy');
     }
 
     /**
      * This class is used to cache any data during one request. It won't be persisted between requests and it can
      * cache all kind of data, even objects or resources. This cache is very fast.
      *
-     * @return Cache\Transient
+     * @return \Matomo\Cache\Transient
      */
     public static function getTransientCache()
     {
-        return StaticContainer::get('Piwik\Cache\Transient');
+        return StaticContainer::get('Matomo\Cache\Transient');
     }
 
     /**
@@ -49,11 +47,11 @@ class Cache
      * All cache entries it contains have the same life time. For fast performance it won't validate any cache ids.
      * It is not possible to cache any objects using this cache.
      *
-     * @return Cache\Eager
+     * @return \Matomo\Cache\Eager
      */
     public static function getEagerCache()
     {
-        return StaticContainer::get('Piwik\Cache\Eager');
+        return StaticContainer::get('Matomo\Cache\Eager');
     }
 
     public static function flushAll()
@@ -65,11 +63,11 @@ class Cache
 
     /**
      * @param $type
-     * @return Cache\Backend
+     * @return \Matomo\Cache\Backend
      */
     public static function buildBackend($type)
     {
-        $factory = new Cache\Backend\Factory();
+        $factory = new \Matomo\Cache\Backend\Factory();
         $options = self::getOptions($type);
 
         $backend = $factory->buildBackend($type, $options);
@@ -83,12 +81,10 @@ class Cache
 
         switch ($type) {
             case 'file':
-
                 $options = array('directory' => StaticContainer::get('path.cache'));
                 break;
 
             case 'chained':
-
                 foreach ($options['backends'] as $backend) {
                     $options[$backend] = self::getOptions($backend);
                 }
@@ -96,7 +92,6 @@ class Cache
                 break;
 
             case 'redis':
-
                 if (!empty($options['timeout'])) {
                     $options['timeout'] = (float)Common::forceDotAsSeparatorForDecimalPoint($options['timeout']);
                 }

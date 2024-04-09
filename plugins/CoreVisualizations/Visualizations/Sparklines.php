@@ -1,22 +1,26 @@
 <?php
+
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  *
  */
+
 namespace Piwik\Plugins\CoreVisualizations\Visualizations;
 
 use Piwik\API\Request;
 use Piwik\Common;
 use Piwik\DataTable;
 use Piwik\Metrics;
+use Piwik\Metrics\Formatter as MetricFormatter;
 use Piwik\Period\Factory;
+use Piwik\Plugin\Report;
+use Piwik\Plugin\ReportsProvider;
 use Piwik\Plugin\ViewDataTable;
 use Piwik\Plugins\API\Filter\DataComparisonFilter;
 use Piwik\SettingsPiwik;
-use Piwik\Url;
 use Piwik\View;
 
 /**
@@ -65,25 +69,35 @@ class Sparklines extends ViewDataTable
     {
         $view = new View('@CoreVisualizations/_dataTableViz_sparklines.twig');
 
-        $columnsList = array();
+        $columnsList = [];
         if ($this->config->hasSparklineMetrics()) {
             foreach ($this->config->getSparklineMetrics() as $cols) {
                 $columns = $cols['columns'];
                 if (!is_array($columns)) {
-                    $columns = array($columns);
+                    $columns = [$columns];
                 }
 
                 $columnsList = array_merge($columns, $columnsList);
             }
         }
 
-        $view->allMetricsDocumentation = Metrics::getDefaultMetricsDocumentation();
+        $view->allMetricsDocumentation = array_merge(Metrics::getDefaultMetricsDocumentation(), $this->config->metrics_documentation);
 
         $this->requestConfig->request_parameters_to_modify['columns'] = $columnsList;
         $this->requestConfig->request_parameters_to_modify['format_metrics'] = '1';
 
+        /**
+         * This special request parameter is used to include trend indication columns for all evolution columns
+         * this is done to be able to determine safely in the view if an evolution is positive or negative, as this
+         * can't be done with formatted evolution values due to language specific signs being used.
+         *
+         * @see DataComparisonFilter::compareChangePercents
+         */
+        $this->requestConfig->request_parameters_to_modify['include_trends'] = '1';
+
         $request = $this->getRequestArray();
-        if ($this->isComparing()
+        if (
+            $this->isComparing()
             && !empty($request['comparePeriods'])
             && count($request['comparePeriods']) == 1
         ) {
@@ -109,9 +123,33 @@ class Sparklines extends ViewDataTable
         return $view->render();
     }
 
+    /**
+     * Load the datatable from the API using the pre-configured request object
+     *
+     * @param array $forcedParams
+     *
+     * @return DataTable
+     */
+    protected function loadDataTableFromAPI(array $forcedParams = [])
+    {
+        if (!is_null($this->dataTable)) {
+            // data table is already there
+            // this happens when setDataTable has been used
+            return $this->dataTable;
+        }
+
+        if ($this->isComparing()) {
+            $forcedParams['compare'] = '1';
+        }
+
+        $this->dataTable = $this->request->loadDataTableFromAPI($forcedParams);
+
+        return $this->dataTable;
+    }
+
     private function fetchConfiguredSparklines()
     {
-        $data = $this->loadDataTableFromAPI();
+        $data = $this->loadDataTableFromAPI(['format_metrics' => '0']);
 
         $this->applyFilters($data);
 
@@ -121,18 +159,28 @@ class Sparklines extends ViewDataTable
             }
         }
 
+        $report = ReportsProvider::factory($this->requestConfig->getApiModuleToRequest(), $this->requestConfig->getApiMethodToRequest());
+        $processedMetrics = Report::getProcessedMetricsForTable($data, $report);
+        $metricFormatter = new MetricFormatter();
+        $idSite = $this->getRequestArray()['idSite'] ?? false;
+
         $firstRow = $data->getFirstRow();
-        $comparisons = $firstRow->getComparisons();
+        if ($firstRow) {
+            $comparisons = $firstRow->getComparisons();
+        } else {
+            $comparisons = null;
+        }
 
         $originalDate = Common::getRequestVar('date');
         $originalPeriod = Common::getRequestVar('period');
 
-        if ($this->isComparing() && !empty($comparisons)) {
+        $isComparing = $this->isComparing() && !empty($comparisons);
+        if ($isComparing) {
             $comparisonRows = [];
             foreach ($comparisons->getRows() as $comparisonRow) {
                 $segment = $comparisonRow->getMetadata('compareSegment');
                 if ($segment === false) {
-                    $segment = Request::getRawSegmentFromRequest() ?: '';;
+                    $segment = Request::getRawSegmentFromRequest() ?: '';
                 }
 
                 $date = $comparisonRow->getMetadata('compareDate');
@@ -160,19 +208,40 @@ class Sparklines extends ViewDataTable
                 continue;
             }
 
-            $sparklineUrlParams = array(
+            if (!is_array($column)) {
+                $column = [$column];
+            }
+
+            $columnMetrics = [];
+            foreach ($column as $col) {
+                foreach ($processedMetrics as $metricObj) {
+                    if ($metricObj->getName() === $col) {
+                        $columnMetrics[$col] = $metricObj;
+                        break;
+                    }
+                }
+            }
+
+            $sparklineUrlParams = array_merge($this->config->custom_parameters, [
                 'columns' => $column,
                 'module'  => $this->requestConfig->getApiModuleToRequest(),
                 'action'  => $this->requestConfig->getApiMethodToRequest()
-            );
+            ]);
 
-            if ($this->isComparing() && !empty($comparisons)) {
-                $periodObj = Factory::build($originalPeriod, $originalDate);
+            $periodObj = Factory::build($originalPeriod, $originalDate);
+            $comparePeriods = $data->getMetadata('comparePeriods');
+            $compareDates = $data->getMetadata('compareDates');
 
+            // the first entry includes the original period and we need to remove it
+            $compareDatesWithoutOriginalDate = $compareDates ? array_slice($compareDates, 1) : [];
+            $comparePeriodsWithoutOriginalPeriod = $comparePeriods ? array_slice($comparePeriods, 1) : [];
+
+            $periodSelector = new EvolutionPeriodSelector($this->config);
+            $comparisonPeriods = $periodSelector->getComparisonPeriodObjects($comparePeriodsWithoutOriginalPeriod, $compareDatesWithoutOriginalDate);
+            $sparklineUrlParams = $periodSelector->setDatePeriods($sparklineUrlParams, $periodObj, $comparisonPeriods, $isComparing);
+
+            if ($isComparing) {
                 $sparklineUrlParams['compareSegments'] = [];
-
-                $comparePeriods = $data->getMetadata('comparePeriods');
-                $compareDates = $data->getMetadata('compareDates');
 
                 $compareSegments = $data->getMetadata('compareSegments');
                 foreach ($compareSegments as $segmentIndex => $segment) {
@@ -188,9 +257,18 @@ class Sparklines extends ViewDataTable
 
                         $columnToUse = $this->removeUniqueVisitorsIfNotEnabledForPeriod($column, $period);
 
-                        list($compareValues, $compareDescriptions, $evolutions) = $this->getValuesAndDescriptions($compareRow, $columnToUse, '_change');
+                        [$compareValues, $compareDescriptions, $evolutions] = $this->getValuesAndDescriptions($compareRow, $columnToUse, '_change', '_trend');
 
                         foreach ($compareValues as $i => $value) {
+                            if (!isset($column[$i])) {
+                                continue;
+                            }
+                            if (isset($columnMetrics[$column[$i]]) && $columnMetrics[$column[$i]]) {
+                                $value = $columnMetrics[$columnToUse[$i]]->format($value, $metricFormatter);
+                            } elseif (strpos($columnToUse[$i], 'revenue') !== false && $idSite > 0) {
+                                $value = $metricFormatter->getPrettyMoney($value, $idSite);
+                            }
+
                             $metricInfo = [
                                 'value' => $value,
                                 'description' => $compareDescriptions[$i],
@@ -212,16 +290,24 @@ class Sparklines extends ViewDataTable
 
                     $params = array_merge($sparklineUrlParams, [
                         'segment' => $segment,
-                        'period' => $periodObj->getLabel(),
-                        'date' => $periodObj->getRangeString(),
                     ]);
+
                     $this->config->addSparkline($params, $metrics, $desc = null, null, ($order * 100) + $segmentIndex, $title, $sparklineMetricIndex, $seriesIndices, $graphParams);
                 }
             } else {
-                list($values, $descriptions) = $this->getValuesAndDescriptions($firstRow, $column);
+                [$values, $descriptions] = $this->getValuesAndDescriptions($firstRow, $column);
 
                 $metrics = [];
                 foreach ($values as $i => $value) {
+                    if (!isset($column[$i])) {
+                        continue;
+                    }
+                    if (isset($columnMetrics[$column[$i]]) && $columnMetrics[$column[$i]]) {
+                        $value = $columnMetrics[$column[$i]]->format($value, $metricFormatter);
+                    } elseif (strpos($column[$i], 'revenue') !== false && $idSite > 0) {
+                        $value = $metricFormatter->getPrettyMoney($value, $idSite);
+                    }
+
                     $newMetric = [
                         'value' => $value,
                         'description' => $descriptions[$i],
@@ -234,7 +320,7 @@ class Sparklines extends ViewDataTable
 
                 $computeEvolution = $this->config->compute_evolution;
                 if ($computeEvolution) {
-                    $evolution = $computeEvolution(array_combine($column, $values));
+                    $evolution = $computeEvolution(array_combine((is_array($column) ? $column : [$column]), $values), $processedMetrics);
                     $newMetric['evolution'] = $evolution;
                 }
 
@@ -257,20 +343,23 @@ class Sparklines extends ViewDataTable
         $table->applyQueuedFilters();
     }
 
-    private function getValuesAndDescriptions(DataTable\Row $firstRow, $columns, $evolutionColumnNameSuffix = null)
+    private function getValuesAndDescriptions($firstRow, $columns, $evolutionColumnNameSuffix = null, $trendColumnNameSuffix = null)
     {
         if (!is_array($columns)) {
-            $columns = array($columns);
+            $columns = [$columns];
         }
 
         $translations = $this->config->translations;
 
-        $values = array();
-        $descriptions = array();
+        $values = [];
+        $descriptions = [];
         $evolutions = [];
 
         foreach ($columns as $col) {
-            $value = $firstRow->getColumn($col);
+            $value = 0;
+            if ($firstRow) {
+                $value = $firstRow->getColumn($col);
+            }
 
             if ($value === false) {
                 $value = 0;
@@ -278,8 +367,9 @@ class Sparklines extends ViewDataTable
 
             if ($evolutionColumnNameSuffix !== null) {
                 $evolution = $firstRow->getColumn($col . $evolutionColumnNameSuffix);
+                $trend = $firstRow->getColumn($col . $trendColumnNameSuffix);
                 if ($evolution !== false) {
-                    $evolutions[] = ['percent' => ltrim($evolution, '+'), 'tooltip' => ''];
+                    $evolutions[] = ['percent' => ltrim($evolution, '+'), 'trend' => $trend, 'tooltip' => ''];
                 }
             }
 
@@ -294,6 +384,10 @@ class Sparklines extends ViewDataTable
     {
         if (SettingsPiwik::isUniqueVisitorsEnabled($period)) {
             return $columns;
+        }
+
+        if (!is_array($columns)) {
+            $columns = [$columns];
         }
 
         return array_diff($columns, ['nb_users', 'nb_uniq_visitors']);

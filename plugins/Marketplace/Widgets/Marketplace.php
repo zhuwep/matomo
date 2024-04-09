@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,11 +8,7 @@
  */
 namespace Piwik\Plugins\Marketplace\Widgets;
 
-use Piwik\Common;
 use Piwik\Piwik;
-use Piwik\Plugins\Marketplace\Api\Client;
-use Piwik\Plugins\Marketplace\Input\PurchaseType;
-use Piwik\Plugins\Marketplace\Input\Sort;
 use Piwik\Widget\Widget;
 use Piwik\Widget\WidgetConfig;
 
@@ -30,6 +26,4 @@ class Marketplace extends Widget
         $config->setOrder(19);
         $config->setIsEnabled(!Piwik::isUserIsAnonymous());
     }
-
-
 }

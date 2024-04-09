@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,11 +9,10 @@
 namespace Piwik\Plugins\Diagnostics\tests\Integration\Commands;
 
 use Piwik\Application\Kernel\GlobalSettingsProvider;
-use Piwik\Ini\IniReader;
+use Matomo\Ini\IniReader;
 use Piwik\Plugins\Diagnostics\ConfigReader;
 use Piwik\Plugins\ExampleSettingsPlugin\SystemSettings;
 use Piwik\Settings\FieldConfig;
-use Piwik\Tests\Fixtures\OneVisitorTwoVisits;
 use Piwik\Tests\Framework\Mock\FakeAccess;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -29,7 +28,7 @@ class ConfigReaderTest extends IntegrationTestCase
      */
     private $configReader;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

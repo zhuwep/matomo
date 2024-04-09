@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,6 @@ use Piwik\Theme;
 
 class ThemeMock extends Theme
 {
-
     /**
      * @var string[]
      */
@@ -32,7 +31,7 @@ class ThemeMock extends Theme
     /**
      * @param Plugin $plugin
      */
-    function __construct($plugin)
+    public function __construct($plugin)
     {
         $this->plugin = $plugin;
     }

@@ -68,7 +68,7 @@ class TagManagerTeaser
         Option::delete(self::DISABLE_GLOBALLY_KEY);
 
         // no need to keep any old login entries
-        $this->getTable()->save(array());
+        $this->getTable()->delete();
     }
 
     public function isEnabledGlobally()
@@ -81,5 +81,4 @@ class TagManagerTeaser
     {
         return new PluginSettingsTable('CorePluginsAdmin', $this->login);
     }
-
 }

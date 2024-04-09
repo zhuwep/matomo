@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,11 +14,13 @@ use Piwik\Archive\Chunk;
 use Piwik\ArchiveProcessor;
 use Piwik\ArchiveProcessor\Rules;
 use Piwik\Common;
+use Piwik\Container\StaticContainer;
 use Piwik\Date;
 use Piwik\Db;
 use Piwik\Period;
 use Piwik\Period\Range;
 use Piwik\Segment;
+use Piwik\Log\LoggerInterface;
 
 /**
  * Data Access object used to query archives
@@ -47,11 +49,17 @@ class ArchiveSelector
 
     /**
      * @param ArchiveProcessor\Parameters $params
-     * @param bool $minDatetimeArchiveProcessedUTC deprecated. will be removed in Matomo 4.
-     * @return array|bool
+     * @param bool $minDatetimeArchiveProcessedUTC deprecated. Will be removed in Matomo 4.
+     * @return array An array with four values:
+     *               - the latest archive ID or false if none
+     *               - the latest visits value for the latest archive, regardless of whether the archive is invalidated or not
+     *               - the latest visits converted value for the latest archive, regardless of whether the archive is invalidated or not
+     *               - whether there is an archive that exists or not. if this is true and the latest archive is false, it means
+     *                 the archive found was not usable (for example, it was invalidated and we are not looking for invalidated archives)
+     *               - the ts_archived for the latest usable archive
      * @throws Exception
      */
-    public static function getArchiveIdAndVisits(ArchiveProcessor\Parameters $params, $minDatetimeArchiveProcessedUTC = false)
+    public static function getArchiveIdAndVisits(ArchiveProcessor\Parameters $params, $minDatetimeArchiveProcessedUTC = false, $includeInvalidated = null)
     {
         $idSite       = $params->getSite()->getId();
         $period       = $params->getPeriod()->getId();
@@ -62,83 +70,123 @@ class ArchiveSelector
         $numericTable = ArchiveTableCreator::getNumericTable($dateStart);
 
         $requestedPlugin = $params->getRequestedPlugin();
+        $requestedReport = $params->getArchiveOnlyReport();
+
         $segment         = $params->getSegment();
         $plugins = array("VisitsSummary", $requestedPlugin);
+        $plugins = array_filter($plugins);
 
         $doneFlags      = Rules::getDoneFlags($plugins, $segment);
-        $doneFlagValues = Rules::getSelectableDoneFlagValues();
 
-        $results = self::getModel()->getArchiveIdAndVisits($numericTable, $idSite, $period, $dateStartIso, $dateEndIso, $doneFlags, $doneFlagValues);
+        $requestedPluginDoneFlags = empty($requestedPlugin) ? [] : Rules::getDoneFlags([$requestedPlugin], $segment);
+        $allPluginsDoneFlag = Rules::getDoneFlagArchiveContainsAllPlugins($segment);
 
-        if (empty($results)) {
-            return false;
+        $doneFlagValues = Rules::getSelectableDoneFlagValues($includeInvalidated === null ? true : $includeInvalidated, $params, $includeInvalidated === null);
+
+        $results = self::getModel()->getArchiveIdAndVisits($numericTable, $idSite, $period, $dateStartIso, $dateEndIso, null, $doneFlags);
+        if (empty($results)) { // no archive found
+            return self::archiveInfoBcResult([
+                'idArchives' => false,
+                'visits' => false,
+                'visitsConverted' => false,
+                'archiveExists' => false,
+                'tsArchived' => false,
+                'doneFlagValue' => false,
+                'existingRecords' => null,
+            ]);
         }
 
-        $idArchive = self::getMostRecentIdArchiveFromResults($segment, $requestedPlugin, $results);
+        $result = self::findArchiveDataWithLatestTsArchived($results, $requestedPluginDoneFlags, $allPluginsDoneFlag);
 
-        $idArchiveVisitsSummary = self::getMostRecentIdArchiveFromResults($segment, "VisitsSummary", $results);
+        $tsArchived = isset($result['ts_archived']) ? $result['ts_archived'] : false;
+        $visits = isset($result['nb_visits']) ? $result['nb_visits'] : false;
+        $visitsConverted = isset($result['nb_visits_converted']) ? $result['nb_visits_converted'] : false;
+        $value = isset($result['value']) ? $result['value'] : false;
 
-        list($visits, $visitsConverted) = self::getVisitsMetricsFromResults($idArchive, $idArchiveVisitsSummary, $results);
+        $existingRecords = null;
 
-        if (false === $visits && false === $idArchive) {
-            return false;
-        }
-
-        return array($idArchive, $visits, $visitsConverted);
-    }
-
-    protected static function getVisitsMetricsFromResults($idArchive, $idArchiveVisitsSummary, $results)
-    {
-        $visits = $visitsConverted = false;
-        $archiveWithVisitsMetricsWasFound = ($idArchiveVisitsSummary !== false);
-
-        if ($archiveWithVisitsMetricsWasFound) {
-            $visits = $visitsConverted = 0;
-        }
-
-        foreach ($results as $result) {
-            if (in_array($result['idarchive'], array($idArchive, $idArchiveVisitsSummary))) {
-                $value = (int)$result['value'];
-                if (empty($visits)
-                    && $result['name'] == self::NB_VISITS_RECORD_LOOKED_UP
-                ) {
-                    $visits = $value;
-                }
-                if (empty($visitsConverted)
-                    && $result['name'] == self::NB_VISITS_CONVERTED_RECORD_LOOKED_UP
-                ) {
-                    $visitsConverted = $value;
-                }
-            }
-        }
-
-        return array($visits, $visitsConverted);
-    }
-
-    protected static function getMostRecentIdArchiveFromResults(Segment $segment, $requestedPlugin, $results)
-    {
-        $idArchive = false;
-        $namesRequestedPlugin = Rules::getDoneFlags(array($requestedPlugin), $segment);
-
-        foreach ($results as $result) {
-            if ($idArchive === false
-                && in_array($result['name'], $namesRequestedPlugin)
+        $result['idarchive'] = empty($result['idarchive']) ? [] : [$result['idarchive']];
+        if (!empty($result['partial'])) {
+            // when we are not looking for a specific report, or if we have found a non-partial archive
+            // that we expect to have the full set of reports for the requested plugin, then we can just
+            // return it with the additionally found partial archives.
+            //
+            // if, however, there is no full archive, and only a set of partial archives, then
+            // we have to check whether the requested data is actually within them. if we just report the
+            // partial archives, Archive.php will find no archive data and simply report this. returning no
+            // idarchive here, however, will initiate archiving, causing the missing data to populate.
+            if (
+                empty($requestedReport)
+                || !empty($result['idarchive'])
             ) {
-                $idArchive = $result['idarchive'];
-                break;
+                $result['idarchive'] = array_merge($result['idarchive'], $result['partial']);
+            } else {
+                $existingRecords = self::getModel()->getRecordsContainedInArchives($dateStart, $result['partial'], $requestedReport);
+                if (!empty($existingRecords)) {
+                    $result['idarchive'] = array_merge($result['idarchive'], $result['partial']);
+                }
             }
         }
 
-        return $idArchive;
+        if (
+            empty($result['idarchive'])
+            || (isset($result['value'])
+                && !in_array($result['value'], $doneFlagValues))
+        ) { // the archive cannot be considered valid for this request (has wrong done flag value)
+            return self::archiveInfoBcResult([
+                'idArchives' => false,
+                'visits' => $visits,
+                'visitsConverted' => $visitsConverted,
+                'archiveExists' => true,
+                'tsArchived' => $tsArchived,
+                'doneFlagValue' => $value,
+                'existingRecords' => null,
+            ]);
+        }
+
+        if (!empty($minDatetimeArchiveProcessedUTC) && !is_object($minDatetimeArchiveProcessedUTC)) {
+            $minDatetimeArchiveProcessedUTC = Date::factory($minDatetimeArchiveProcessedUTC);
+        }
+
+        // the archive is too old
+        if (
+            $minDatetimeArchiveProcessedUTC
+            && !empty($result['idarchive'])
+            && Date::factory($tsArchived)->isEarlier($minDatetimeArchiveProcessedUTC)
+        ) {
+            return self::archiveInfoBcResult([
+                'idArchives' => false,
+                'visits' => $visits,
+                'visitsConverted' => $visitsConverted,
+                'archiveExists' => true,
+                'tsArchived' => $tsArchived,
+                'doneFlagValue' => $value,
+                'existingRecords' => null,
+            ]);
+        }
+
+        $idArchives = !empty($result['idarchive']) ? $result['idarchive'] : false;
+
+        return self::archiveInfoBcResult([
+            'idArchives' => $idArchives,
+            'visits' => $visits,
+            'visitsConverted' => $visitsConverted,
+            'archiveExists' => true,
+            'tsArchived' => $tsArchived,
+            'doneFlagValue' => $value,
+            'existingRecords' => $existingRecords,
+        ]);
     }
 
     /**
      * Queries and returns archive IDs for a set of sites, periods, and a segment.
      *
-     * @param array $siteIds
-     * @param array $periods
+     * @param int[] $siteIds
+     * @param Period[] $periods
      * @param Segment $segment
-     * @param array $plugins List of plugin names for which data is being requested.
+     * @param string[] $plugins List of plugin names for which data is being requested.
+     * @param bool $includeInvalidated true to include archives that are DONE_INVALIDATED, false if only DONE_OK.
+     * @param bool $_skipSetGroupConcatMaxLen for tests
      * @return array Archive IDs are grouped by archive name and period range, ie,
      *               array(
      *                   'VisitsSummary.done' => array(
@@ -147,8 +195,74 @@ class ArchiveSelector
      *               )
      * @throws
      */
-    public static function getArchiveIds($siteIds, $periods, $segment, $plugins)
-    {
+    public static function getArchiveIds(
+        $siteIds,
+        $periods,
+        $segment,
+        $plugins,
+        $includeInvalidated = true,
+        $_skipSetGroupConcatMaxLen = false
+    ) {
+        return self::getArchiveIdsAndStates(
+            $siteIds,
+            $periods,
+            $segment,
+            $plugins,
+            $includeInvalidated,
+            $_skipSetGroupConcatMaxLen
+        )[0];
+    }
+
+    /**
+     * Queries and returns archive IDs and the associated doneFlag
+     * values for a set of sites, periods, and a segment.
+     *
+     * @param int[] $siteIds
+     * @param Period[] $periods
+     * @param Segment $segment
+     * @param string[] $plugins List of plugin names for which data is being requested.
+     * @param bool $includeInvalidated true to include archives that are DONE_INVALIDATED, false if only DONE_OK.
+     * @param bool $_skipSetGroupConcatMaxLen for tests
+     *
+     * @return array Archive IDs are grouped by archive name and period range, ie,
+     *               array(
+     *                   array(
+     *                       'VisitsSummary.done' => array(
+     *                           '2010-01-01' => array(1,2,3)
+     *                       )
+     *                   )
+     *                   array(
+     *                       100 => array(
+     *                           'VisitsSummary.done' => array(
+     *                               '2010-01-01' => array(
+     *                                   1 => 1,
+     *                                   2 => 4,
+     *                                   3 => 5
+     *                               )
+     *                           )
+     *                       )
+     *                   )
+     *               )
+     * @throws
+     */
+    public static function getArchiveIdsAndStates(
+        $siteIds,
+        $periods,
+        $segment,
+        $plugins,
+        $includeInvalidated = true,
+        $_skipSetGroupConcatMaxLen = false
+    ): array {
+        $logger = StaticContainer::get(LoggerInterface::class);
+
+        if (!$_skipSetGroupConcatMaxLen) {
+            try {
+                Db::get()->query('SET SESSION group_concat_max_len=' . (128 * 1024));
+            } catch (\Exception $ex) {
+                $logger->info("Could not set group_concat_max_len MySQL session variable.");
+            }
+        }
+
         if (empty($siteIds)) {
             throw new \Exception("Website IDs could not be read from the request, ie. idSite=");
         }
@@ -157,12 +271,13 @@ class ArchiveSelector
             $siteIds[$index] = (int) $siteId;
         }
 
-        $getArchiveIdsSql = "SELECT idsite, name, date1, date2, MAX(idarchive) as idarchive
+        $getArchiveIdsSql = "SELECT idsite, date1, date2,
+                                    GROUP_CONCAT(CONCAT(idarchive,'|',`name`,'|',`value`) ORDER BY idarchive DESC SEPARATOR ',') AS archives
                                FROM %s
                               WHERE idsite IN (" . implode(',', $siteIds) . ")
-                                AND " . self::getNameCondition($plugins, $segment) . "
+                                AND " . self::getNameCondition($plugins, $segment, $includeInvalidated) . "
                                 AND %s
-                           GROUP BY idsite, date1, date2, name";
+                           GROUP BY idsite, date1, date2";
 
         $monthToPeriods = array();
         foreach ($periods as $period) {
@@ -177,11 +292,12 @@ class ArchiveSelector
         $db = Db::get();
 
         // for every month within the archive query, select from numeric table
-        $result = array();
+        $idarchives = [];
+        $idarchiveStates = [];
+
         foreach ($monthToPeriods as $table => $periods) {
             $firstPeriod = reset($periods);
-
-            $bind = array();
+            $bind = [];
 
             if ($firstPeriod instanceof Range) {
                 $dateCondition = "date1 = ? AND date2 = ?";
@@ -206,20 +322,45 @@ class ArchiveSelector
             }
 
             $sql = sprintf($getArchiveIdsSql, $table, $dateCondition);
-
-
             $archiveIds = $db->fetchAll($sql, $bind);
 
-            // get the archive IDs
+            // get the archive IDs. we keep all archives until the first all plugins archive.
+            // everything older than that one is discarded.
             foreach ($archiveIds as $row) {
-                //FIXMEA duplicate with Archive.php
                 $dateStr = $row['date1'] . ',' . $row['date2'];
+                $idSite = $row['idsite'];
 
-                $result[$row['name']][$dateStr][] = $row['idarchive'];
+                $archives = $row['archives'];
+                $pairs = explode(',', $archives);
+
+                foreach ($pairs as $pair) {
+                    $parts = explode('|', $pair);
+
+                    if (count($parts) != 3) { // GROUP_CONCAT got cut off, have to ignore the rest
+                        // note: in this edge case, we end up not selecting the all plugins archive because it will be older than the partials.
+                        // not ideal, but it avoids an exception.
+                        $logger->info("GROUP_CONCAT got cut off in ArchiveSelector." . __FUNCTION__ . ' for idsite = ' . $idSite . ', period = ' . $dateStr);
+                        continue;
+                    }
+
+                    [$idarchive, $doneFlag, $value] = $parts;
+
+                    $idarchives[$doneFlag][$dateStr][] = $idarchive;
+                    $idarchiveStates[$idSite][$doneFlag][$dateStr][$idarchive] = (int) $value;
+
+                    if (
+                        strpos($doneFlag, '.') === false // all plugins archive
+                        // sanity check: DONE_PARTIAL shouldn't be used w/ done archives, but in case we see one,
+                        // don't treat it like an all plugins archive
+                        && $value != ArchiveWriter::DONE_PARTIAL
+                    ) {
+                        break; // found the all plugins archive, don't need to look in older archives since we have everything here
+                    }
+                }
             }
         }
 
-        return $result;
+        return [$idarchives, $idarchiveStates];
     }
 
     /**
@@ -237,67 +378,31 @@ class ArchiveSelector
     public static function getArchiveData($archiveIds, $recordNames, $archiveDataType, $idSubtable)
     {
         $chunk = new Chunk();
-
         $db = Db::get();
 
-        // create the SQL to select archive data
-        $loadAllSubtables = $idSubtable == Archive::ID_SUBTABLE_LOAD_ALL_SUBTABLES;
-        if ($loadAllSubtables) {
-            $name = reset($recordNames);
+        $loadAllSubtables = $idSubtable === Archive::ID_SUBTABLE_LOAD_ALL_SUBTABLES;
+        [$getValuesSql, $bind] = self::getSqlTemplateToFetchArchiveData($recordNames, $idSubtable);
 
-            // select blobs w/ name like "$name_[0-9]+" w/o using RLIKE
-            $nameEnd = strlen($name) + 1;
-            $nameEndAppendix = $nameEnd + 1;
-            $appendix = $chunk->getAppendix();
-            $lenAppendix = strlen($appendix);
-
-            $checkForChunkBlob  = "SUBSTRING(name, $nameEnd, $lenAppendix) = '$appendix'";
-            $checkForSubtableId = "(SUBSTRING(name, $nameEndAppendix, 1) >= '0'
-                                    AND SUBSTRING(name, $nameEndAppendix, 1) <= '9')";
-
-            $whereNameIs = "(name = ? OR (name LIKE ? AND ( $checkForChunkBlob OR $checkForSubtableId ) ))";
-            $bind = array($name, $name . '%');
-        } else {
-            if ($idSubtable === null) {
-                // select root table or specific record names
-                $bind = array_values($recordNames);
-            } else {
-                // select a subtable id
-                $bind = array();
-                foreach ($recordNames as $recordName) {
-                    // to be backwards compatibe we need to look for the exact idSubtable blob and for the chunk
-                    // that stores the subtables (a chunk stores many blobs in one blob)
-                    $bind[] = $chunk->getRecordNameForTableId($recordName, $idSubtable);
-                    $bind[] = self::appendIdSubtable($recordName, $idSubtable);
-                }
-            }
-
-            $inNames     = Common::getSqlStringFieldsArray($bind);
-            $whereNameIs = "name IN ($inNames)";
-        }
-
-        $getValuesSql = "SELECT value, name, idsite, date1, date2, ts_archived
-                                FROM %s
-                                WHERE idarchive IN (%s)
-                                  AND " . $whereNameIs;
+        $archiveIdsPerMonth = self::getArchiveIdsByYearMonth($archiveIds);
 
         // get data from every table we're querying
         $rows = array();
-        foreach ($archiveIds as $period => $ids) {
+        foreach ($archiveIdsPerMonth as $yearMonth => $ids) {
             if (empty($ids)) {
-                throw new Exception("Unexpected: id archive not found for period '$period' '");
+                throw new Exception("Unexpected: id archive not found for period '$yearMonth' '");
             }
 
-            // $period = "2009-01-04,2009-01-04",
-            $date = Date::factory(substr($period, 0, 10));
+            // $yearMonth = "2022-11",
+            $date = Date::factory($yearMonth . '-01');
 
-            $isNumeric = $archiveDataType == 'numeric';
+            $isNumeric = $archiveDataType === 'numeric';
             if ($isNumeric) {
                 $table = ArchiveTableCreator::getNumericTable($date);
             } else {
                 $table = ArchiveTableCreator::getBlobTable($date);
             }
 
+            $ids      = array_map('intval', $ids);
             $sql      = sprintf($getValuesSql, $table, implode(',', $ids));
             $dataRows = $db->fetchAll($sql, $bind);
 
@@ -349,7 +454,7 @@ class ArchiveSelector
         return $recordName . "_" . $id;
     }
 
-    private static function uncompress($data)
+    public static function uncompress($data)
     {
         return @gzuncompress($data);
     }
@@ -360,18 +465,306 @@ class ArchiveSelector
      *
      * @param array $plugins
      * @param Segment $segment
+     * @param bool $includeInvalidated
      * @return string
      */
-    private static function getNameCondition(array $plugins, Segment $segment)
+    private static function getNameCondition(array $plugins, Segment $segment, $includeInvalidated = true)
     {
         // the flags used to tell how the archiving process for a specific archive was completed,
         // if it was completed
         $doneFlags    = Rules::getDoneFlags($plugins, $segment);
         $allDoneFlags = "'" . implode("','", $doneFlags) . "'";
 
-        $possibleValues = Rules::getSelectableDoneFlagValues();
+        $possibleValues = Rules::getSelectableDoneFlagValues($includeInvalidated, null, $checkAuthorizedToArchive = false);
 
         // create the SQL to find archives that are DONE
         return "((name IN ($allDoneFlags)) AND (value IN (" . implode(',', $possibleValues) . ")))";
+    }
+
+    /**
+     * This method takes the output of Model::getArchiveIdAndVisits() and selects data from the
+     * latest archives.
+     *
+     * This includes:
+     * - the idarchive with the latest ts_archived ($results will be ordered by ts_archived desc)
+     * - the visits/converted visits of the latest archive, which includes archives for VisitsSummary alone
+     *   ($requestedPluginDoneFlags will have the done flag for the overall archive plus a done flag for
+     *   VisitsSummary by itself)
+     * - the ts_archived for the latest idarchive
+     * - the doneFlag value for the latest archive
+     *
+     * @param $results
+     * @param $doneFlags
+     * @return array
+     */
+    private static function findArchiveDataWithLatestTsArchived($results, $requestedPluginDoneFlags, $allPluginsDoneFlag)
+    {
+        $doneFlags = array_merge($requestedPluginDoneFlags, [$allPluginsDoneFlag]);
+
+        // find latest idarchive for each done flag
+        $idArchives = [];
+        $tsArchiveds = [];
+        foreach ($results as $row) {
+            $doneFlag = $row['name'];
+            if (!isset($idArchives[$doneFlag])) {
+                $idArchives[$doneFlag] = $row['idarchive'];
+                $tsArchiveds[$doneFlag] = $row['ts_archived'];
+            }
+        }
+
+        $archiveData = [
+            self::NB_VISITS_RECORD_LOOKED_UP => false,
+            self::NB_VISITS_CONVERTED_RECORD_LOOKED_UP => false,
+        ];
+
+        foreach ($results as $result) {
+            if (
+                in_array($result['name'], $doneFlags)
+                && in_array($result['idarchive'], $idArchives)
+                && $result['value'] != ArchiveWriter::DONE_PARTIAL
+            ) {
+                $archiveData = $result;
+                if (empty($archiveData[self::NB_VISITS_RECORD_LOOKED_UP])) {
+                    $archiveData[self::NB_VISITS_RECORD_LOOKED_UP] = 0;
+                }
+                if (empty($archiveData[self::NB_VISITS_CONVERTED_RECORD_LOOKED_UP])) {
+                    $archiveData[self::NB_VISITS_CONVERTED_RECORD_LOOKED_UP] = 0;
+                }
+                break;
+            }
+        }
+
+        foreach ([self::NB_VISITS_RECORD_LOOKED_UP, self::NB_VISITS_CONVERTED_RECORD_LOOKED_UP] as $metric) {
+            foreach ($results as $result) {
+                if (!in_array($result['idarchive'], $idArchives)) {
+                    continue;
+                }
+
+                if (empty($archiveData[$metric])) {
+                    if (!empty($result[$metric]) || $result[$metric] === 0 || $result[$metric] === '0') {
+                        $archiveData[$metric] = $result[$metric];
+                    }
+                }
+            }
+        }
+
+        // add partial archives
+        $mainTsArchived = isset($tsArchiveds[$allPluginsDoneFlag]) ? $tsArchiveds[$allPluginsDoneFlag] : null;
+        foreach ($results as $row) {
+            if (!isset($idArchives[$row['name']])) {
+                continue;
+            }
+
+            $thisTsArchived = Date::factory($row['ts_archived']);
+            if (
+                $row['value'] == ArchiveWriter::DONE_PARTIAL
+                && (empty($mainTsArchived) || !Date::factory($mainTsArchived)->isLater($thisTsArchived))
+            ) {
+                $archiveData['partial'][] = $row['idarchive'];
+
+                if (empty($archiveData['ts_archived'])) {
+                    $archiveData['ts_archived'] = $row['ts_archived'];
+                }
+            }
+        }
+
+        return $archiveData;
+    }
+
+    /**
+     * provides BC result for getArchiveIdAndVisits
+     * @param array $archiveInfo
+     * @return array
+     */
+    private static function archiveInfoBcResult(array $archiveInfo)
+    {
+        $archiveInfo[0] = $archiveInfo['idArchives'];
+        $archiveInfo[1] = $archiveInfo['visits'];
+        $archiveInfo[2] = $archiveInfo['visitsConverted'];
+        $archiveInfo[3] = $archiveInfo['archiveExists'];
+        $archiveInfo[4] = $archiveInfo['tsArchived'];
+        $archiveInfo[5] = $archiveInfo['doneFlagValue'];
+        return $archiveInfo;
+    }
+
+    public static function querySingleBlob(array $archiveIds, string $recordName)
+    {
+        $chunk = new Chunk();
+
+        [$getValuesSql, $bind] = self::getSqlTemplateToFetchArchiveData(
+            [$recordName],
+            Archive::ID_SUBTABLE_LOAD_ALL_SUBTABLES,
+            true
+        );
+
+        $archiveIdsPerMonth = self::getArchiveIdsByYearMonth($archiveIds);
+
+        $periodsSeen = [];
+
+        // $yearMonth = "2022-11",
+        foreach ($archiveIdsPerMonth as $yearMonth => $ids) {
+            $date = Date::factory($yearMonth . '-01');
+
+            $table = ArchiveTableCreator::getBlobTable($date);
+
+            $ids      = array_map('intval', $ids);
+            $sql      = sprintf($getValuesSql, $table, implode(',', $ids));
+
+            $cursor = Db::get()->query($sql, $bind);
+            while ($row = $cursor->fetch()) {
+                $period = $row['date1'] . ',' . $row['date2'];
+                $recordName = $row['name'];
+
+                // FIXME: This hack works around a strange bug that occurs when getting
+                //         archive IDs through ArchiveProcessing instances. When a table
+                //         does not already exist, for some reason the archive ID for
+                //         today (or from two days ago) will be added to the Archive
+                //         instances list. The Archive instance will then select data
+                //         for periods outside of the requested set.
+                //         working around the bug here, but ideally, we need to figure
+                //         out why incorrect idarchives are being selected.
+                if (empty($archiveIds[$period])) {
+                    continue;
+                }
+
+                // only use the first period/blob name combination seen (since we order by ts_archived descending)
+                if (!empty($periodsSeen[$period][$recordName])) {
+                    continue;
+                }
+
+                $periodsSeen[$period][$recordName] = true;
+
+                $row['value'] = ArchiveSelector::uncompress($row['value']);
+                if ($chunk->isRecordNameAChunk($row['name'])) {
+                    // $blobs = array([subtableID] = [blob of subtableId])
+                    $blobs = Common::safe_unserialize($row['value']);
+                    if (!is_array($blobs)) {
+                        yield $row;
+                    }
+
+                    ksort($blobs);
+
+                    // $rawName = eg 'PluginName_ArchiveName'
+                    $rawName = $chunk->getRecordNameWithoutChunkAppendix($row['name']);
+                    foreach ($blobs as $subtableId => $blob) {
+                        yield array_merge($row, [
+                            'value' => $blob,
+                            'name' => ArchiveSelector::appendIdSubtable($rawName, $subtableId),
+                        ]);
+                    }
+                } else {
+                    yield $row;
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns SQL to fetch data from an archive table. The SQL has two %s placeholders, one for the
+     * archive table name and another for the comma separated list of archive IDs to look for.
+     *
+     * @param array $recordNames The list of records to look for.
+     * @param string|int $idSubtable The idSubtable to look for or 'all' to load all of them.
+     * @param boolean $orderBySubtableId If true, orders the result set by start date ascending, subtable ID
+     *                                   ascending and ts_archived descending. Only applied if loading all
+     *                                   subtables for a single record.
+     *
+     *                                   This parameter is used when aggregating blob data for a single record
+     *                                   without loading entire datatable trees in memory.
+     * @return array The sql and bind values.
+     */
+    private static function getSqlTemplateToFetchArchiveData(array $recordNames, $idSubtable, $orderBySubtableId = false)
+    {
+        $chunk = new Chunk();
+
+        $orderBy = 'ORDER BY ts_archived ASC';
+
+        // create the SQL to select archive data
+        $loadAllSubtables = $idSubtable === Archive::ID_SUBTABLE_LOAD_ALL_SUBTABLES;
+        if ($loadAllSubtables) {
+            $name = reset($recordNames);
+
+            // select blobs w/ name like "$name_[0-9]+" w/o using RLIKE
+            $nameEnd = strlen($name) + 1;
+            $nameEndAppendix = $nameEnd + 1;
+            $appendix = $chunk->getAppendix();
+            $lenAppendix = strlen($appendix);
+
+            $checkForChunkBlob  = "SUBSTRING(name, $nameEnd, $lenAppendix) = '$appendix'";
+            $checkForSubtableId = "(SUBSTRING(name, $nameEndAppendix, 1) >= '0'
+                                    AND SUBSTRING(name, $nameEndAppendix, 1) <= '9')";
+
+            $whereNameIs = "(name = ? OR (name LIKE ? AND ( $checkForChunkBlob OR $checkForSubtableId ) ))";
+            $bind = array($name, addcslashes($name, '%_') . '%');
+
+            if ($orderBySubtableId && count($recordNames) == 1) {
+                $idSubtableAsInt = self::getExtractIdSubtableFromBlobNameSql($chunk, $name);
+
+                $orderBy = "ORDER BY date1 ASC, " . // ordering by date just so column order in tests will be predictable
+                    " $idSubtableAsInt ASC,
+                  ts_archived DESC"; // ascending order so we use the latest data found
+            }
+        } else {
+            if ($idSubtable === null) {
+                // select root table or specific record names
+                $bind = array_values($recordNames);
+            } else {
+                // select a subtable id
+                $bind = array();
+                foreach ($recordNames as $recordName) {
+                    // to be backwards compatible we need to look for the exact idSubtable blob and for the chunk
+                    // that stores the subtables (a chunk stores many blobs in one blob)
+                    $bind[] = $chunk->getRecordNameForTableId($recordName, $idSubtable);
+                    $bind[] = self::appendIdSubtable($recordName, $idSubtable);
+                }
+            }
+
+            $inNames     = Common::getSqlStringFieldsArray($bind);
+            $whereNameIs = "name IN ($inNames)";
+        }
+
+        $getValuesSql = "SELECT value, name, idsite, date1, date2, ts_archived
+                                FROM %s
+                                WHERE idarchive IN (%s)
+                                  AND " . $whereNameIs . "
+                             $orderBy"; // ascending order so we use the latest data found
+
+        return [$getValuesSql, $bind];
+    }
+
+    private static function getArchiveIdsByYearMonth(array $archiveIds)
+    {
+        // We want to fetch as many archives at once as possible instead of fetching each period individually
+        // eg instead of issueing one query per day we'll merge all the IDs of a given month into one query
+        // we group by YYYY-MM as we have one archive table per month
+        $archiveIdsPerMonth = [];
+        foreach ($archiveIds as $period => $ids) {
+            $yearMonth = substr($period, 0, 7); // eg 2022-11
+            if (empty($archiveIdsPerMonth[$yearMonth])) {
+                $archiveIdsPerMonth[$yearMonth] = [];
+            }
+            $archiveIdsPerMonth[$yearMonth] = array_merge($archiveIdsPerMonth[$yearMonth], $ids);
+        }
+        return $archiveIdsPerMonth;
+    }
+
+    // public for tests
+    public static function getExtractIdSubtableFromBlobNameSql(Chunk $chunk, $name)
+    {
+        // select blobs w/ name like "$name_[0-9]+" w/o using RLIKE
+        $nameEnd = strlen($name) + 1;
+        $nameEndAfterUnderscore = $nameEnd + 1;
+        $appendix = $chunk->getAppendix();
+        $lenAppendix = strlen($appendix);
+        $chunkEnd = $nameEnd + $lenAppendix;
+
+        $checkForChunkBlob  = "SUBSTRING(name, $nameEnd, $lenAppendix) = '$appendix'";
+
+        $extractSuffix = "SUBSTRING(name, IF($checkForChunkBlob, $chunkEnd, $nameEndAfterUnderscore))";
+        $locateSecondUnderscore = "IF((@secondunderscore := LOCATE('_', $extractSuffix) - 1) < 0, LENGTH(name), @secondunderscore)";
+        $extractIdSubtableStart = "IF( (@idsubtable := SUBSTRING($extractSuffix, 1, $locateSecondUnderscore)) = '', -1, @idsubtable )";
+        $idSubtableAsInt = "CAST($extractIdSubtableStart AS SIGNED)";
+
+        return $idSubtableAsInt;
     }
 }

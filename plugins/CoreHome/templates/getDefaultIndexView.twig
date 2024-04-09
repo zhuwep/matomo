@@ -5,17 +5,17 @@
     {% include "@CoreHome/_siteSelectHeader.twig" %}
     {% include "@CoreHome/_periodSelect.twig" %}
     {{ postEvent("Template.nextToCalendar") }}
-    {% render dashboardSettingsControl %}
+    <div vue-entry="Dashboard.DashboardSettings"></div>
     {% include "@CoreHome/_headerMessage.twig" %}
 {% endblock %}
 
 {% block content %}
-    {{ ajax.requestErrorDiv(emailSuperUser|default(''), areAdsForProfessionalServicesEnabled, currentModule) }}
+    {{ ajax.requestErrorDiv(contactEmail|default(''), areAdsForProfessionalServicesEnabled, currentModule, showMoreFaqInfo) }}
     {{ ajax.loadingDiv() }}
 
     <div id="content" class="home">
         {% if content %}{{ content }}{% endif %}
-        <div piwik-reporting-page ng-cloak></div>
+        <div vue-entry="CoreHome.ReportingPage"></div>
     </div>
     <div class="clear"></div>
 

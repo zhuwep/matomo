@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -37,8 +37,12 @@ class ComponentFactory
     public static function factory($pluginName, $componentClassSimpleName, $componentTypeClass)
     {
         if (empty($pluginName) || empty($componentClassSimpleName)) {
-            Log::debug("ComponentFactory::%s: empty plugin name or component simple name requested (%s, %s)",
-                __FUNCTION__, $pluginName, $componentClassSimpleName);
+            Log::debug(
+                "ComponentFactory::%s: empty plugin name or component simple name requested (%s, %s)",
+                __FUNCTION__,
+                $pluginName,
+                $componentClassSimpleName
+            );
 
             return null;
         }
@@ -53,13 +57,18 @@ class ComponentFactory
 
         $components = $plugin->findMultipleComponents($subnamespace, $componentTypeClass);
         foreach ($components as $class) {
-            if ($class == $desiredComponentClass) {
+            if ($class === $desiredComponentClass) {
                 return new $class();
             }
         }
 
-        Log::debug("ComponentFactory::%s: Could not find requested component (args = ['%s', '%s', '%s']).",
-            __FUNCTION__, $pluginName, $componentClassSimpleName, $componentTypeClass);
+        Log::debug(
+            "ComponentFactory::%s: Could not find requested component (args = ['%s', '%s', '%s']).",
+            __FUNCTION__,
+            $pluginName,
+            $componentClassSimpleName,
+            $componentTypeClass
+        );
 
         return null;
     }
@@ -99,8 +108,13 @@ class ComponentFactory
             }
         }
 
-        Log::debug("ComponentFactory::%s: Could not find component that satisfies predicate (args = ['%s', '%s', '%s']).",
-            __FUNCTION__, $componentTypeClass, $pluginName, get_class($predicate));
+        Log::debug(
+            "ComponentFactory::%s: Could not find component that satisfies predicate (args = ['%s', '%s', '%s']).",
+            __FUNCTION__,
+            $componentTypeClass,
+            $pluginName,
+            get_class($predicate)
+        );
 
         return null;
     }
@@ -115,8 +129,11 @@ class ComponentFactory
         $pluginManager = PluginManager::getInstance();
         try {
             if (!$pluginManager->isPluginActivated($pluginName)) {
-                Log::debug("ComponentFactory::%s: component for deactivated plugin ('%s') requested.",
-                    $function, $pluginName);
+                Log::debug(
+                    "ComponentFactory::%s: component for deactivated plugin ('%s') requested.",
+                    $function,
+                    $pluginName
+                );
 
                 return null;
             }

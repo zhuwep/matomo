@@ -9,6 +9,7 @@
 namespace Piwik\Plugins\TwoFactorAuth\tests\Integration;
 
 use Piwik\Container\StaticContainer;
+use Piwik\Piwik;
 use Piwik\Plugins\TwoFactorAuth\API;
 use Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeDao;
 use Piwik\Plugins\TwoFactorAuth\TwoFactorAuthentication;
@@ -39,7 +40,7 @@ class APITest extends IntegrationTestCase
      */
     private $twoFa;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -50,20 +51,19 @@ class APITest extends IntegrationTestCase
             Fixture::createWebsite('2014-01-02 03:04:05');
         }
 
-        foreach (['mylogin1', 'mylogin2'] as $user) {
+        foreach (['mylogin1', 'mylogin2', 'login'] as $user) {
             UsersAPI::getInstance()->addUser($user, '123abcDk3_l3', $user . '@matomo.org');
         }
         $this->twoFa = StaticContainer::get(TwoFactorAuthentication::class);
     }
 
-    /**
-     * @expectedExceptionMessage checkUserHasSuperUserAccess Fake exception
-     * @expectedException \Exception
-     */
     public function test_resetTwoFactorAuth_failsWhenNotPermissions()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('checkUserHasSuperUserAccess Fake exception');
+
         $this->setAdminUser();
-        $this->api->resetTwoFactorAuth('login');
+        $this->api->resetTwoFactorAuth('login', Fixture::ADMIN_USER_PASSWORD);
     }
 
     public function test_resetTwoFactorAuth_resetsSecret()
@@ -73,13 +73,20 @@ class APITest extends IntegrationTestCase
         $this->twoFa->saveSecret('mylogin1', '1234');
         $this->twoFa->saveSecret('mylogin2', '1234');
 
-        $this->assertTrue($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin1'));
-        $this->assertTrue($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin2'));
-        $this->api->resetTwoFactorAuth('mylogin1');
-        $this->assertFalse($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin1'));
-        $this->assertTrue($this->twoFa->isUserUsingTwoFactorAuthentication('mylogin2'));
+        $this->assertTrue(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin1'));
+        $this->assertTrue(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin2'));
+        $this->api->resetTwoFactorAuth('mylogin1', Fixture::ADMIN_USER_PASSWORD);
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin1'));
+        $this->assertTrue(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin2'));
 
         $this->assertEquals([], $this->recoveryCodes->getAllRecoveryCodesForLogin('mylogin1'));
+
+        //Reset without a password
+        Piwik::addAction('Login.userRequiresPasswordConfirmation', function (&$requiresPasswordConfirmation) {
+            $requiresPasswordConfirmation = false;
+        });
+        $this->api->resetTwoFactorAuth('mylogin2');
+        $this->assertFalse(TwoFactorAuthentication::isUserUsingTwoFactorAuthentication('mylogin2'));
     }
 
     protected function setAdminUser()
@@ -95,5 +102,11 @@ class APITest extends IntegrationTestCase
         return array(
             'Piwik\Access' => new FakeAccess()
         );
+    }
+
+    protected static function configureFixture($fixture)
+    {
+        parent::configureFixture($fixture);
+        $fixture->createSuperUser = true;
     }
 }

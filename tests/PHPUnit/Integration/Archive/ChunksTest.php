@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -33,7 +33,7 @@ class ChunksTest extends IntegrationTestCase
 {
     private $date = '2015-01-01';
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -59,17 +59,17 @@ class ChunksTest extends IntegrationTestCase
         $archiveRows = $this->getAllRowsFromArchiveBlobTable('name');
         $expectedArchiveNames = array(
             $recordName,
-            $recordName. '_chunk_0_99',
-            $recordName. '_chunk_1000_1099',
-            $recordName. '_chunk_100_199',
-            $recordName. '_chunk_200_299',
-            $recordName. '_chunk_300_399',
-            $recordName. '_chunk_400_499',
-            $recordName. '_chunk_500_599',
-            $recordName. '_chunk_600_699',
-            $recordName. '_chunk_700_799',
-            $recordName. '_chunk_800_899',
-            $recordName. '_chunk_900_999',
+            $recordName . '_chunk_0_99',
+            $recordName . '_chunk_1000_1099',
+            $recordName . '_chunk_100_199',
+            $recordName . '_chunk_200_299',
+            $recordName . '_chunk_300_399',
+            $recordName . '_chunk_400_499',
+            $recordName . '_chunk_500_599',
+            $recordName . '_chunk_600_699',
+            $recordName . '_chunk_700_799',
+            $recordName . '_chunk_800_899',
+            $recordName . '_chunk_900_999',
         );
 
         $this->assertEquals($expectedArchiveNames, array_column($archiveRows, 'name'));
@@ -125,11 +125,11 @@ class ChunksTest extends IntegrationTestCase
         return $dataTable->getSerialized();
     }
 
-    private function createArchiveProcessorParamaters()
+    private function createArchiveProcessorParameters()
     {
         $oPeriod = PeriodFactory::makePeriodFromQueryParams('UTC', 'day', $this->date);
 
-        $segment = new Segment(false, array(1));
+        $segment = new Segment(false, array(1), $oPeriod->getDateTimeStart(), $oPeriod->getDateTimeEnd());
         $params  = new Parameters(new Site(1), $oPeriod, $segment);
 
         return $params;
@@ -137,7 +137,7 @@ class ChunksTest extends IntegrationTestCase
 
     private function createPluginsArchiver()
     {
-        $params = $this->createArchiveProcessorParamaters();
+        $params = $this->createArchiveProcessorParameters();
 
         return new ArchiveProcessor\PluginsArchiver($params);
     }

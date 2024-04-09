@@ -1,9 +1,9 @@
 /*!
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * Screenshot integration tests.
  *
- * @link http://piwik.org
+ * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -21,14 +21,14 @@ describe("Live", function () {
         await page.goto("?module=CoreHome&action=index&idSite=1&period=year&date=2010-01-03#?idSite=1&period=year&date=2010-01-03&category=General_Visitors&subcategory=Live_VisitorLog");
 
         await page.waitForNetworkIdle();
-        await page.waitFor('.dataTableVizVisitorLog');
+        await page.waitForSelector('.dataTableVizVisitorLog');
 
         var report = await page.$('.reporting-page');
         expect(await report.screenshot()).to.matchImage('visitor_log');
     });
 
     it('should expand grouped actions', async function() {
-        await page.click('.dataTableVizVisitorLog .repeat.icon-refresh');
+        await page.evaluate(() => $('.dataTableVizVisitorLog .repeat.icon-refresh').click());
         await page.mouse.move(-10, -10);
 
         var report = await page.$('.dataTableVizVisitorLog .card.row:first-child');
@@ -75,6 +75,16 @@ describe("Live", function () {
         expect(await dialog.screenshot()).to.matchImage('visitor_profile');
     });
 
+    it('should load additional visits in visitor log', async function() {
+
+        await page.click('.visitor-profile-more-info a');
+
+        await page.waitForNetworkIdle();
+
+        var dialog = await page.$('.ui-dialog');
+        expect(await dialog.screenshot()).to.matchImage('visitor_profile_more_visits');
+    });
+
     it('should hide all action details', async function() {
         await page.evaluate(function(){
             $('.visitor-profile-toggle-actions').click();
@@ -106,12 +116,10 @@ describe("Live", function () {
     });
 
     it('should show action tooltip', async function() {
-        var action = await page.jQuery('.visitor-profile-visits li:first-child .visitor-profile-actions .action:first-child');
-        await action.hover();
-        await page.waitForSelector('.ui-tooltip');
+        await page.hover('.visitor-profile-visits li:first-child .visitor-profile-actions .action:first-child');
+        await page.waitForSelector('.ui-tooltip', {visible: true, timeout: 250});
 
-        const elem = await page.$('.ui-tooltip');
-        expect(await elem.screenshot()).to.matchImage('visitor_profile_action_tooltip');
+        expect(await page.screenshotSelector('.ui-tooltip')).to.matchImage('visitor_profile_action_tooltip');
     });
 
     it('should show limited profile message', async function () {
@@ -124,12 +132,26 @@ describe("Live", function () {
             $('.card:first-child .visitor-log-visitor-profile-link').click();
         });
 
-        await page.waitForSelector('.ui-dialog');
+        await page.waitForSelector('.ui-dialog', {visible: true});
         await page.waitForNetworkIdle();
         await page.mouse.move(-10, -10);
 
         var dialog = await page.$('.ui-dialog');
         expect(await dialog.screenshot()).to.matchImage('visitor_profile_limited');
+    });
+
+    it('should show visitor log next page', async function() {
+        await page.goto("?module=CoreHome&action=index&idSite=1&period=year&date=2010-01-03#?idSite=1&period=year&date=2010-01-03&category=General_Visitors&subcategory=Live_VisitorLog");
+
+        await page.waitForNetworkIdle();
+        await page.waitForSelector('.dataTableVizVisitorLog');
+
+        const link = await page.jQuery('.dataTableNext');
+        await link.click();
+        await page.waitForNetworkIdle();
+
+        var report = await page.$('.reporting-page');
+        expect(await report.screenshot()).to.matchImage('visitor_log_page_next');
     });
 
     it('should show visitor log purge message when purged and no data', async function() {
@@ -138,7 +160,6 @@ describe("Live", function () {
         testEnvironment.save();
 
         await page.goto("?module=CoreHome&action=index&idSite=1&period=year&date=2005-01-03#?idSite=1&period=year&date=2005-01-03&category=General_Visitors&subcategory=Live_VisitorLog");
-
         await page.waitForNetworkIdle();
 
         var report = await page.$('.reporting-page');

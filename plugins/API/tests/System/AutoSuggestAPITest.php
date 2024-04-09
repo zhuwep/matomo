@@ -1,8 +1,8 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
- * @link    http://piwik.org
+ * @link    https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -10,16 +10,15 @@ namespace Piwik\Plugins\API\tests\System;
 
 use Piwik\API\Request;
 use Piwik\Application\Environment;
+use Piwik\ArchiveProcessor\Rules;
 use Piwik\Cache as PiwikCache;
 use Piwik\Columns\Dimension;
 use Piwik\Common;
-use Piwik\DataTable\Manager;
 use Piwik\Date;
+use Piwik\Option;
 use Piwik\Plugins\API\API;
 use Piwik\Plugins\CustomVariables\Columns\CustomVariableName;
 use Piwik\Plugins\CustomVariables\Columns\CustomVariableValue;
-use Piwik\Plugins\CustomVariables\Model;
-use Piwik\Tests\Fixtures\ManyVisitsWithGeoIP;
 use Piwik\Tests\Fixtures\ManyVisitsWithGeoIPAndEcommerce;
 use Piwik\Tests\Framework\TestCase\SystemTestCase;
 use Piwik\Tracker\Cache;
@@ -48,18 +47,32 @@ class AutoSuggestAPITest extends SystemTestCase
 {
     public static $fixture = null; // initialized below class definition
 
+    private static $originalAutoSuggestLookBack = null;
+
     protected static $processed = 0;
     protected static $skipped = array();
+    private static $hasArchivedData = false;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
+        $date = mktime(0, 0, 0, 1, 1, 2018);
+
+        $lookBack = ceil((time() - $date) / 86400);
+
+        self::$originalAutoSuggestLookBack = API::$_autoSuggestLookBack;
+
+        API::$_autoSuggestLookBack = $lookBack;
+        self::$fixture->dateTime = Date::factory($date)->getDatetime();
+
         parent::setUpBeforeClass();
 
         API::setSingletonInstance(CachedAPI::getInstance());
     }
 
-    public static function tearDownAfterClass()
+    public static function tearDownAfterClass(): void
     {
+        API::$_autoSuggestLookBack = self::$originalAutoSuggestLookBack;
+
         parent::tearDownAfterClass();
 
         CachedAPI::$cache = [];
@@ -71,7 +84,6 @@ class AutoSuggestAPITest extends SystemTestCase
      */
     public function testApi($api, $params)
     {
-        // Refresh cache for CustomVariables\Model
         Cache::clearCacheGeneral();
 
         $this->runApiTests($api, $params);
@@ -97,8 +109,43 @@ class AutoSuggestAPITest extends SystemTestCase
                     'date' => '1998-07-12,today',
                     'period' => 'range',
                     'otherRequestParameters' => array('filter_limit' => 1000)));
-
         }
+        return $apiForTesting;
+    }
+
+    /**
+     * @dataProvider getApiForTestingBrowserArchivingDisabled
+     */
+    public function testApiBrowserArchivingDisabled($api, $params)
+    {
+        if (!self::$hasArchivedData) {
+            self::$hasArchivedData = true;
+            // need to make sure data is archived before disabling the archiving
+            Request::processRequest('API.get', array(
+                'date' => '2018-01-10', 'period' => 'year', 'idSite' => $params['idSite'],
+                'trigger' => 'archivephp'
+            ));
+        }
+
+        Cache::clearCacheGeneral();
+        // disable browser archiving so the APIs are used
+        Option::set(Rules::OPTION_BROWSER_TRIGGER_ARCHIVING, 0);
+
+        $this->runApiTests($api, $params);
+
+        Option::set(Rules::OPTION_BROWSER_TRIGGER_ARCHIVING, 1);
+    }
+
+    public function getApiForTestingBrowserArchivingDisabled()
+    {
+        $idSite = self::$fixture->idSite;
+        $segments = self::getSegmentsMetadata($onlyWithSuggestedValuesApi = true);
+
+        $apiForTesting = array();
+        foreach ($segments as $segment) {
+            $apiForTesting[] = $this->getApiForTestingForSegment($idSite, $segment);
+        }
+
         return $apiForTesting;
     }
 
@@ -126,9 +173,9 @@ class AutoSuggestAPITest extends SystemTestCase
             'method=API.getSuggestedValuesForSegment'
             . '&segmentName=' . $params['segmentToComplete']
             . '&idSite=' . $params['idSite']
-            . '&format=php&serialize=0'
+            . '&format=json'
         );
-        $response = $request->process();
+        $response = json_decode($request->process(), true);
         $this->assertApiResponseHasNoError($response);
         $topSegmentValue = @$response[0];
 
@@ -171,7 +218,6 @@ class AutoSuggestAPITest extends SystemTestCase
         } else {
             self::$skipped[] = $params['segmentToComplete'];
         }
-
     }
 
     public function getAnotherApiForTesting()
@@ -196,7 +242,7 @@ class AutoSuggestAPITest extends SystemTestCase
     public function testCheckOtherTestsWereComplete()
     {
         // Check that only a few haven't been tested specifically (these are all custom variables slots since we only test slot 1, 2, 5 (see the fixture) and example dimension slots and bandwidth)
-        $maximumSegmentsToSkip = 17;
+        $maximumSegmentsToSkip = 24;
         $this->assertLessThan($maximumSegmentsToSkip, count(self::$skipped), 'SKIPPED ' . count(self::$skipped) . ' segments --> some segments had no "auto-suggested values"
             but we should try and test the autosuggest for all new segments. Segments skipped were: ' . implode(', ', self::$skipped));
 
@@ -206,9 +252,8 @@ class AutoSuggestAPITest extends SystemTestCase
         $this->assertGreaterThan($minimumSegmentsToTest, self::$processed, $message);
     }
 
-    public static function getSegmentsMetadata()
+    public static function getSegmentsMetadata($onlyWithSuggestedValuesApi = false)
     {
-        // Refresh cache for CustomVariables\Model
         Cache::clearCacheGeneral();
         PiwikCache::getTransientCache()->flushAll();
 
@@ -222,25 +267,23 @@ class AutoSuggestAPITest extends SystemTestCase
             $environment->getContainer()->get('Piwik\Plugin\Manager')->loadActivatedPlugins();
 
             foreach (Dimension::getAllDimensions() as $dimension) {
-                if ($dimension instanceof CustomVariableName
+                if (
+                    $dimension instanceof CustomVariableName
                     || $dimension instanceof CustomVariableValue
                 ) {
-                    continue; // added manually below
+                    continue; // ignore custom variables dimensions as they are tested in the plugin
                 }
 
                 foreach ($dimension->getSegments() as $segment) {
                     if ($segment->isInternal()) {
                         continue;
                     }
+                    if ($onlyWithSuggestedValuesApi && !$segment->getSuggestedValuesApi()) {
+                        continue;
+                    }
                     $segments[] = $segment->getSegment();
                 }
             }
-
-            // add CustomVariables manually since the data provider may not have access to the DB
-            for ($i = 1; $i != Model::DEFAULT_CUSTOM_VAR_COUNT + 1; ++$i) {
-                $segments = array_merge($segments, self::getCustomVariableSegments($i));
-            }
-            $segments = array_merge($segments, self::getCustomVariableSegments());
         } catch (\Exception $ex) {
             $exception = $ex;
 
@@ -256,35 +299,10 @@ class AutoSuggestAPITest extends SystemTestCase
         return $segments;
     }
 
-    private static function getCustomVariableSegments($columnIndex = null)
-    {
-        $result = array(
-            'customVariableName',
-            'customVariableValue',
-            'customVariablePageName',
-            'customVariablePageValue',
-        );
-
-        if ($columnIndex !== null) {
-            foreach ($result as &$name) {
-                $name = $name . $columnIndex;
-            }
-        }
-
-        return $result;
-    }
-
     public static function getPathToTestDirectory()
     {
         return dirname(__FILE__);
     }
 }
 
-$date = mktime(0, 0, 0, 1, 1, 2018);
-
-$lookBack = ceil((time() - $date) / 86400);
-
-API::$_autoSuggestLookBack = $lookBack;
-
 \Piwik\Plugins\API\tests\System\AutoSuggestAPITest::$fixture = new ManyVisitsWithGeoIPAndEcommerce();
-\Piwik\Plugins\API\tests\System\AutoSuggestAPITest::$fixture->dateTime = Date::factory($date)->getDatetime();

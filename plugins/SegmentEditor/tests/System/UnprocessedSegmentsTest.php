@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,6 +17,7 @@ use Piwik\Plugins\SegmentEditor\API;
 use Piwik\Plugins\VisitsSummary;
 use Piwik\Tests\Fixtures\OneVisitorTwoVisits;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
+use Piwik\CronArchive\SegmentArchiving;
 
 /**
  * @group SegmentEditor
@@ -37,7 +38,7 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
         Rules::setBrowserTriggerArchiving(false);
 
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertNotContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(!in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'customSegmentUnprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -57,7 +58,7 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
         Rules::setBrowserTriggerArchiving(false);
 
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertNotContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments)); // auto archive is forced when browser archiving is fully disabled
 
         $this->runAnyApiTest('VisitsSummary.get', 'realTimeSegmentUnprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -69,15 +70,15 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
 
     public function test_apiOutput_whenUnprocessedAutoArchiveSegmentUsed_WithBrowserArchivingDisabled()
     {
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, self::$fixture->idSite, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        Rules::setBrowserTriggerArchiving(false);
-
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'autoArchiveSegmentUnprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -89,15 +90,15 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
 
     public function test_apiOutput_whenUnprocessedAutoArchiveSegmentUsed_WithBrowserArchivingDisabled_AndEncodedSegment()
     {
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, self::$fixture->idSite, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        Rules::setBrowserTriggerArchiving(false);
-
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'autoArchiveSegmentUnprocessedEncoded', [
             'idSite' => self::$fixture->idSite,
@@ -109,18 +110,24 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
 
     public function test_apiOutput_whenPreprocessedSegmentUsed_WithBrowserArchivingDisabled()
     {
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, self::$fixture->idSite, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        VisitsSummary\API::getInstance()->get(self::$fixture->idSite, 'week',
-            Date::factory(self::$fixture->dateTime)->toString(), self::TEST_SEGMENT); // archive
-
+        Rules::setBrowserTriggerArchiving(true);
+        VisitsSummary\API::getInstance()->get(
+            self::$fixture->idSite,
+            'week',
+            Date::factory(self::$fixture->dateTime)->toString(),
+            self::TEST_SEGMENT
+        ); // archive (make sure there's data for actual test)
         Rules::setBrowserTriggerArchiving(false);
 
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'autoArchiveSegmentPreprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -132,13 +139,17 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
 
     public function test_apiOutput_whenPreprocessedCustomSegmentUsed_WithBrowserArchivingDisabled()
     {
-        VisitsSummary\API::getInstance()->get(self::$fixture->idSite, 'week',
-            Date::factory(self::$fixture->dateTime)->toString(), self::TEST_SEGMENT); // archive
+        VisitsSummary\API::getInstance()->get(
+            self::$fixture->idSite,
+            'week',
+            Date::factory(self::$fixture->dateTime)->toString(),
+            self::TEST_SEGMENT
+        ); // archive
 
         Rules::setBrowserTriggerArchiving(false);
 
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertNotContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(!in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'customSegmentPreprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -152,18 +163,22 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
     {
         $this->clearLogData();
 
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, self::$fixture->idSite, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        VisitsSummary\API::getInstance()->get(self::$fixture->idSite, 'week',
-            Date::factory(self::$fixture->dateTime)->toString(), self::TEST_SEGMENT); // archive
-
-        Rules::setBrowserTriggerArchiving(false);
+        VisitsSummary\API::getInstance()->get(
+            self::$fixture->idSite,
+            'week',
+            Date::factory(self::$fixture->dateTime)->toString(),
+            self::TEST_SEGMENT
+        ); // archive
 
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'autoArchiveSegmentNoDataPreprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -177,15 +192,15 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
     {
         $this->clearLogData();
 
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, self::$fixture->idSite, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        Rules::setBrowserTriggerArchiving(false);
-
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'noLogDataSegmentUnprocessed', [
             'idSite' => self::$fixture->idSite,
@@ -197,15 +212,15 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
 
     public function test_apiOutput_whenMultipleSitesRequested_OneWithDataOneNot_AndBrowserArchivingDisabled()
     {
+        Rules::setBrowserTriggerArchiving(false);
+
         $idSegment = API::getInstance()->add('testsegment', self::TEST_SEGMENT, $idSite = false, $autoArchive = true);
 
         $storedSegment = API::getInstance()->get($idSegment);
         $this->assertNotEmpty($storedSegment);
 
-        Rules::setBrowserTriggerArchiving(false);
-
         $segments = Rules::getSegmentsToProcess([self::$fixture->idSite]);
-        $this->assertContains(self::TEST_SEGMENT, $segments);
+        self::assertTrue(in_array(self::TEST_SEGMENT, $segments));
 
         $this->runAnyApiTest('VisitsSummary.get', 'noLogDataSegmentUnprocessedMultiSite', [
             'idSite' => 'all',
@@ -213,6 +228,29 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
             'period' => 'week',
             'segment' => self::TEST_SEGMENT,
         ]);
+    }
+
+    public function test_add_realTimeEnabledInApi_whenRealTimeDisabledInConfig()
+    {
+        $this->expectExceptionMessage('Real time segments are disabled. You need to enable auto archiving.');
+        $this->expectException(\Exception::class);
+        $config = Config::getInstance();
+        $general = $config->General;
+        $general['enable_create_realtime_segments'] = 0;
+        $config->General = $general;
+
+        API::getInstance()->add('testsegment', self::TEST_SEGMENT, $idSite = false, $autoArchive = false);
+    }
+
+    public function test_add_realTimeEnabledInApi_whenRealTimeEnabledInConfigShouldWork()
+    {
+        $config = Config::getInstance();
+        $general = $config->General;
+        $general['enable_create_realtime_segments'] = 1;
+        $config->General = $general;
+
+        $id = API::getInstance()->add('testsegment', self::TEST_SEGMENT, $idSite = false, $autoArchive = false);
+        $this->assertNotEmpty($id);
     }
 
     public static function getOutputPrefix()
@@ -228,10 +266,13 @@ class UnprocessedSegmentsTest extends IntegrationTestCase
     public function provideContainerConfig()
     {
         return [
-            Config::class => \DI\decorate(function (Config $previous) {
+            Config::class => \Piwik\DI::decorate(function (Config $previous) {
                 $previous->General['browser_archiving_disabled_enforce'] = 1;
                 return $previous;
             }),
+
+            SegmentArchiving::class => \Piwik\DI::autowire()
+                ->constructorParameter('beginningOfTimeLastNInYears', 15)
         ];
     }
 

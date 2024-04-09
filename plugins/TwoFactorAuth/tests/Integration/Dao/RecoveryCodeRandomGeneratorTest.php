@@ -8,7 +8,6 @@
 
 namespace Piwik\Plugins\TwoFactorAuth\tests\Integration\Dao;
 
-use Piwik\Common;
 use Piwik\Plugins\TwoFactorAuth\Dao\RecoveryCodeRandomGenerator;
 use Piwik\Tests\Framework\TestCase\IntegrationTestCase;
 
@@ -24,7 +23,7 @@ class RecoveryCodeRandomGeneratorTest extends IntegrationTestCase
      */
     private $generator;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -33,12 +32,11 @@ class RecoveryCodeRandomGeneratorTest extends IntegrationTestCase
 
     public function test_generatorCode_length()
     {
-        $this->assertSame(16, Common::mb_strlen($this->generator->generateCode()));
+        $this->assertSame(16, mb_strlen($this->generator->generateCode()));
     }
 
     public function test_generatorCode_alwaysDifferent()
     {
         $this->assertNotEquals($this->generator->generateCode(), $this->generator->generateCode());
     }
-
 }

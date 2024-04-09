@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
+ * Matomo - free/libre analytics platform
  *
  * @link https://matomo.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@
 namespace Piwik;
 
 use Exception;
+use Piwik\DataTable\Filter\EnrichRecordWithGoalMetricSums;
 use Piwik\Tracker\GoalManager;
 
 /**
@@ -286,10 +287,10 @@ class DataArray
 
         $newRowToAdd[Metrics::INDEX_EVENT_SUM_EVENT_VALUE] = round($newRowToAdd[Metrics::INDEX_EVENT_SUM_EVENT_VALUE], static::EVENT_VALUE_PRECISION);
         $oldRowToUpdate[Metrics::INDEX_EVENT_SUM_EVENT_VALUE] += $newRowToAdd[Metrics::INDEX_EVENT_SUM_EVENT_VALUE];
-        $oldRowToUpdate[Metrics::INDEX_EVENT_MAX_EVENT_VALUE] = round(max($newRowToAdd[Metrics::INDEX_EVENT_MAX_EVENT_VALUE], $oldRowToUpdate[Metrics::INDEX_EVENT_MAX_EVENT_VALUE]), static::EVENT_VALUE_PRECISION);
+        $oldRowToUpdate[Metrics::INDEX_EVENT_MAX_EVENT_VALUE] = round(max(0, $newRowToAdd[Metrics::INDEX_EVENT_MAX_EVENT_VALUE], $oldRowToUpdate[Metrics::INDEX_EVENT_MAX_EVENT_VALUE]), static::EVENT_VALUE_PRECISION);
 
         // Update minimum only if it is set
-        if ($newRowToAdd[Metrics::INDEX_EVENT_MIN_EVENT_VALUE] !== false) {
+        if ($newRowToAdd[Metrics::INDEX_EVENT_MIN_EVENT_VALUE] !== false && $newRowToAdd[Metrics::INDEX_EVENT_MIN_EVENT_VALUE] !== null) {
             if ($oldRowToUpdate[Metrics::INDEX_EVENT_MIN_EVENT_VALUE] === false) {
                 $oldRowToUpdate[Metrics::INDEX_EVENT_MIN_EVENT_VALUE] = round($newRowToAdd[Metrics::INDEX_EVENT_MIN_EVENT_VALUE], static::EVENT_VALUE_PRECISION);
             } else {
@@ -378,31 +379,7 @@ class DataArray
     protected function enrichWithConversions(&$data)
     {
         foreach ($data as &$values) {
-            if (!isset($values[Metrics::INDEX_GOALS])) {
-                continue;
-            }
-
-            $revenue = $conversions = 0;
-            foreach ($values[Metrics::INDEX_GOALS] as $idgoal => $goalValues) {
-                // Do not sum Cart revenue since it is a lost revenue
-                if ($idgoal >= GoalManager::IDGOAL_ORDER) {
-                    $revenue += $goalValues[Metrics::INDEX_GOAL_REVENUE];
-                    $conversions += $goalValues[Metrics::INDEX_GOAL_NB_CONVERSIONS];
-                }
-            }
-            $values[Metrics::INDEX_NB_CONVERSIONS] = $conversions;
-
-            // 25.00 recorded as 25
-            if (round($revenue) == $revenue) {
-                $revenue = round($revenue);
-            }
-            $values[Metrics::INDEX_REVENUE] = $revenue;
-
-            // if there are no "visit" column, we force one to prevent future complications
-            // eg. This helps the setDefaultColumnsToDisplay() call
-            if (!isset($values[Metrics::INDEX_NB_VISITS])) {
-                $values[Metrics::INDEX_NB_VISITS] = 0;
-            }
+            EnrichRecordWithGoalMetricSums::enrichWithConversions($values);
         }
     }
 
